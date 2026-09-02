@@ -1,0 +1,29 @@
+{
+  "name": "rfastack",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An Opinionated React Fullstack Architecture for Next.js Applications",
+  "license": "SEE LICENSE.md",
+  "type": "module",
+  "packageManager": "bun@1.4.0",
+  "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "@fontsource-variable/newsreader": "5.3.0",
+    "@fontsource-variable/spline-sans": "5.3.0",
+    "@fontsource/fragment-mono": "5.3.0",
+    "mermaid": "11.17.2",
+    "vitepress": "1.6.4",
+    "vitepress-plugin-mermaid": "2.0.17",
+    "vue": "3.5.42"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.62.1",
+    "debug": "4.4.3"
+  }
+}

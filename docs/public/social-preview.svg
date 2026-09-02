@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">RFAStack social preview</title>
+  <desc id="desc">An architectural field manual cover for RFAStack.</desc>
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#244bd8" stroke-opacity=".08"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="#f3efe3"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <path d="M56 56h1088v518H56z" fill="none" stroke="#1c1b17" stroke-width="3"/>
+  <path d="M56 132h1088" stroke="#1c1b17" stroke-width="2"/>
+  <text x="88" y="102" fill="#244bd8" font-family="monospace" font-size="18" letter-spacing="2">FIELD MANUAL / REACT + NEXT.JS</text>
+  <text x="88" y="320" fill="#1c1b17" font-family="Georgia, serif" font-size="156" letter-spacing="-9">RFAStack</text>
+  <text x="94" y="397" fill="#1c1b17" font-family="Georgia, serif" font-size="39">An Opinionated React Fullstack Architecture</text>
+  <text x="94" y="447" fill="#1c1b17" font-family="Georgia, serif" font-size="39">for Next.js Applications</text>
+  <path d="M88 502h690" stroke="#244bd8" stroke-width="7"/>
+  <circle cx="1038" cy="467" r="66" fill="none" stroke="#c73b25" stroke-width="4"/>
+  <text x="1038" y="459" text-anchor="middle" fill="#c73b25" font-family="Georgia, serif" font-size="36">RFA</text>
+  <text x="1038" y="490" text-anchor="middle" fill="#c73b25" font-family="monospace" font-size="12">01 / 04</text>
+</svg>

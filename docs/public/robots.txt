@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /RFAStack/
+
+Sitemap: https://ishk-sftckz.github.io/RFAStack/sitemap.xml

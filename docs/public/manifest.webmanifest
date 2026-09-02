@@ -1,0 +1,17 @@
+{
+  "name": "RFAStack — An Opinionated React Fullstack Architecture for Next.js Applications",
+  "short_name": "RFAStack",
+  "description": "A feature-based modular application architecture organized as vertical full-stack slices and adapted to Next.js.",
+  "start_url": "/RFAStack/",
+  "scope": "/RFAStack/",
+  "display": "standalone",
+  "background_color": "#f3efe3",
+  "theme_color": "#f3efe3",
+  "icons": [
+    {
+      "src": "/RFAStack/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
