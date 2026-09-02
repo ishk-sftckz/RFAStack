@@ -52,7 +52,7 @@ The business rule should not need to import Next.js to decide whether an order c
 
 ```mermaid
 flowchart TD
-  App[App Router adapters] --> Public[Feature public interface]
+  App[src/app adapters] --> Public[Feature public interface]
   Public --> Rule[Feature rules and use cases]
   Rule --> Port[Feature integration contract]
   Port --> Platform[Platform implementation]
@@ -60,7 +60,7 @@ flowchart TD
   Rule -. allowed .-> Shared
 ```
 
-This is dependency direction, not ceremony. A direct feature query can be enough. Introduce a port and adapter when the business operation needs isolation, substitution, or independent testing—not because a diagram contains a box for it.
+Dependency direction should clarify a real boundary without adding empty layers. A direct feature query can be enough. Introduce a port and adapter when the business operation needs isolation, substitution, or independent testing. A box in a diagram is not a reason to create one.
 
 ### Domain-Driven Design: name and protect capabilities
 
@@ -78,7 +78,7 @@ It does not require tactical DDD patterns everywhere. An entity, aggregate, repo
 
 ## The RFAStack synthesis
 
-Together, the foundations produce a feature-based modular architecture with vertical full-stack slices:
+Applied together, the foundations produce a feature-based modular architecture with vertical full-stack slices:
 
 | Foundation | Question it contributes | RFAStack mechanism |
 | --- | --- | --- |
@@ -153,12 +153,12 @@ A structure is doing useful work when it can answer these questions without gues
 
 If the answers come only from team memory, the boundaries are conceptual but not yet encoded.
 
-## When the model fits—and when it does not
+## When the model fits and when it does not
 
 RFAStack is useful when an application has multiple business capabilities, full-stack changes, a mix of server and client execution, and enough contributors that discoverability matters.
 
 It can be excessive for a short-lived campaign page, a narrow prototype, or a small read-only site. Keep those systems direct. The structure should respond to change pressure, not architectural aspiration.
 
-The tradeoff is ongoing discipline. Teams must review dependency direction, resist vague shared folders, and move code when ownership becomes clearer. That work is visible and discussable—which is precisely the point.
+The tradeoff is ongoing discipline. Teams must review dependency direction, resist vague shared folders, and move code when ownership becomes clearer. Without that discipline, four boundaries become four more junk drawers.
 
 Next: [map these concepts onto a concrete Next.js folder structure](./folder-structure).

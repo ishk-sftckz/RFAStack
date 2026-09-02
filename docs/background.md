@@ -7,7 +7,7 @@ description: Why feature ownership and explicit dependency direction matter as a
 
 **RFAStack — An Opinionated React Fullstack Architecture for Next.js Applications** starts from a recurring failure mode: a product can remain easy to deploy while becoming increasingly difficult to change.
 
-RFAStack is a feature-based modular application architecture organized as vertical full-stack slices and adapted to Next.js. It is not a prescribed technology bundle. The word “Stack” names the project; the architecture governs ownership, dependencies, framework boundaries, server/client separation, and data flow.
+RFAStack is a feature-based modular architecture for Next.js. Business capabilities are organized as vertical full-stack slices, while framework code and integrations stay at explicit boundaries.
 
 ## The application still works. The structure stops helping.
 
@@ -73,7 +73,7 @@ Once code enters `shared/`, `common/`, or `utils/`, every feature can reach it. 
 
 Next.js gives an application routes, layouts, Server Components, Server Actions, and Route Handlers. Those are execution and delivery mechanisms. When the framework entry tree also becomes the home of business behavior, route structure starts deciding domain structure.
 
-The result is not merely untidy folders. It is coupling: changing the delivery mechanism risks changing the rule it delivers.
+This creates coupling. Changing the delivery mechanism now risks changing the rule it delivers.
 
 ## The design target: local reasoning
 
@@ -90,7 +90,7 @@ The structure makes the common change path visible:
 
 ```mermaid
 flowchart LR
-  Entry[App Router entry] --> Contract[Feature interface]
+  Entry[src/app entry] --> Contract[Feature interface]
   Contract --> Behavior[Feature behavior]
   Behavior --> Adapter[Platform adapter]
   Entry -. generic primitives .-> Shared[Shared]
@@ -126,9 +126,9 @@ Those constraints are intentionally opinionated. They reduce the number of reaso
 
 ## What this release covers
 
-This field manual focuses on two connected questions:
+This first version focuses on two connected questions:
 
-- **Where does code belong?** The [Folder Structure](./folder-structure) chapter maps business features, App Router entries, integrations, and generic code.
+- **Where does code belong?** The [Folder Structure](./folder-structure) chapter maps business features, Next.js entries, integrations, and generic code.
 - **How does data cross boundaries?** The [Data Fetching & Mutation](./data-fetching-and-mutation) chapter chooses among Server Components, Server Actions, Route Handlers, TanStack Query, and oRPC.
 
 Detailed cache policy and protected-resource design deserve their own treatment and are outside this edition. The examples still validate untrusted input, keep secrets on the server, and require authorization at every public server boundary.

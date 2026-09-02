@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import DefaultTheme from 'vitepress/theme'
-import FieldNoteNotFound from './FieldNoteNotFound.vue'
+import NotFoundPage from './NotFoundPage.vue'
 </script>
 
 <template>
   <DefaultTheme.Layout>
-    <template #not-found><FieldNoteNotFound /></template>
+    <template #not-found><NotFoundPage /></template>
   </DefaultTheme.Layout>
 </template>

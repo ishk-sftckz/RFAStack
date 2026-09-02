@@ -47,11 +47,53 @@ test('architecture map names and explains the four responsibility boundaries', a
   const map = page.getByRole('img', { name: 'RFAStack architecture map' })
   await expect(map).toBeVisible()
 
-  for (const boundary of ['App Router', 'Features', 'Platform', 'Shared']) {
+  for (const boundary of ['src/app', 'src/features', 'src/platform', 'src/shared']) {
     await expect(map.getByText(boundary, { exact: true })).toBeVisible()
   }
 
-  await expect(page.getByText('Text alternative: the App Router delegates')).toBeVisible()
+  await expect(page.getByText('Text alternative: requests enter through src/app')).toBeVisible()
+})
+
+test('architecture map labels do not overlap their examples', async ({ page }) => {
+  await page.goto('./')
+
+  const overlaps = await page.locator('.map-node--platform').evaluate((node) => {
+    const title = node.querySelector<SVGGraphicsElement>('.map-node__title')?.getBBox()
+    const examples = node.querySelector<SVGGraphicsElement>('.map-node__copy')?.getBBox()
+
+    if (!title || !examples) return true
+    return !(
+      title.x + title.width <= examples.x ||
+      examples.x + examples.width <= title.x ||
+      title.y + title.height <= examples.y ||
+      examples.y + examples.height <= title.y
+    )
+  })
+
+  expect(overlaps).toBe(false)
+})
+
+test('dark mode uses a legible wordmark asset', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile-chromium', 'Desktop navigation exposes the wordmark.')
+  await page.goto('./')
+
+  await page.getByRole('switch', { name: 'Switch to dark theme' }).click()
+
+  const darkWordmark = page.locator('.VPNavBarTitle img.logo.dark')
+  await expect(darkWordmark).toBeVisible()
+  await expect(darkWordmark).toHaveAttribute('src', '/RFAStack/wordmark-dark.svg')
+})
+
+test('homepage tagline has enough leading when it wraps', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile-chromium', 'Desktop width reproduces the reported headline issue.')
+  await page.goto('./')
+
+  const spacing = await page.locator('.manual-tagline').evaluate((element) => {
+    const styles = getComputedStyle(element)
+    return Number.parseFloat(styles.lineHeight) / Number.parseFloat(styles.fontSize)
+  })
+
+  expect(spacing).toBeGreaterThanOrEqual(1.1)
 })
 
 test('internal links retain the GitHub Pages base path', async ({ page }) => {
@@ -102,11 +144,11 @@ test('code examples expose working copy controls', async ({ context, page }, tes
 test('chapter navigation follows the intended reading order', async ({ page }) => {
   await page.goto('./folder-structure')
 
-  await expect(page.getByRole('link', { name: /Previous field note Concepts/ })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: /Previous chapter Concepts/ })).toHaveAttribute(
     'href',
     '/RFAStack/concepts',
   )
-  await expect(page.getByRole('link', { name: /Next field note Data Fetching & Mutation/ })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: /Next chapter Data Fetching & Mutation/ })).toHaveAttribute(
     'href',
     '/RFAStack/data-fetching-and-mutation',
   )
@@ -126,11 +168,11 @@ test('mobile readers can open the site navigation and chapter sidebar', async ({
   await expect(page.getByLabel('Sidebar Navigation')).toBeVisible()
 })
 
-test('unknown routes render the custom field-note 404', async ({ page }) => {
+test('unknown routes render the custom 404 page', async ({ page }) => {
   await page.goto('./missing-page')
 
-  await expect(page.getByRole('heading', { level: 1, name: 'This route has no field note.' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Return to the architecture map' })).toHaveAttribute(
+  await expect(page.getByRole('heading', { level: 1, name: "This page doesn't exist." })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Return to the guide' })).toHaveAttribute(
     'href',
     '/RFAStack/',
   )

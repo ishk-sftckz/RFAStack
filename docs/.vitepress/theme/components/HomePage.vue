@@ -3,17 +3,17 @@ import { withBase } from 'vitepress'
 import ArchitectureMap from './ArchitectureMap.vue'
 
 const chapters = [
-  ['01', 'Background & Motivation', 'See why technical-layer folders make feature work expensive as a product grows.', '/background'],
-  ['02', 'Concepts', 'Connect vertical slices, Screaming Architecture, dependency direction, and domain boundaries.', '/concepts'],
-  ['03', 'Folder Structure', 'Place routes, business capabilities, integrations, and shared primitives with intent.', '/folder-structure'],
-  ['04', 'Data Fetching & Mutation', 'Choose an execution boundary from operation type, execution location, and consumers.', '/data-fetching-and-mutation'],
+  ['01', 'Background & Motivation', 'Why organizing by technical layer makes product changes harder over time.', '/background'],
+  ['02', 'Concepts', 'How feature modules, vertical slices, dependency direction, and domain boundaries fit together.', '/concepts'],
+  ['03', 'Folder Structure', 'A concrete home for routes, features, integrations, and shared code.', '/folder-structure'],
+  ['04', 'Data Fetching & Mutation', 'When to use Server Components, Server Actions, Route Handlers, TanStack Query, and oRPC.', '/data-fetching-and-mutation'],
 ] as const
 
 const boundaries = [
-  ['A', 'App Router', 'Thin framework entry adapters: routes, layouts, pages, loading states, and HTTP boundaries.'],
-  ['F', 'Features', 'Business capabilities: their UI, rules, use cases, queries, mutations, and server code.'],
-  ['P', 'Platform', 'App-local infrastructure: databases, observability, email, storage, and vendor adapters.'],
-  ['S', 'Shared', 'Deliberately generic primitives with no feature ownership and no hidden business policy.'],
+  ['A', 'src/app', 'The Next.js boundary. Routes, layouts, pages, handlers, and route-only composition live here.'],
+  ['F', 'src/features', 'Each business capability owns its UI, rules, reads, mutations, and server code.'],
+  ['P', 'src/platform', 'Database, email, storage, observability, and other app-level integrations.'],
+  ['S', 'src/shared', 'UI primitives, types, and utilities that carry no product-specific behavior.'],
 ] as const
 </script>
 
@@ -21,14 +21,13 @@ const boundaries = [
   <main class="manual-home">
     <section class="manual-hero">
       <div class="manual-hero__copy">
-        <p class="manual-index">FIELD MANUAL / REACT + NEXT.JS</p>
+        <p class="manual-index">REACT FULLSTACK ARCHITECTURE / NEXT.JS</p>
         <h1>RFAStack</h1>
         <p class="manual-tagline">An Opinionated React Fullstack Architecture for Next.js Applications</p>
-        <p class="manual-lede">A feature-based modular application architecture organized as vertical full-stack slices and adapted to Next.js.</p>
-        <p class="manual-clarifier">“Stack” is the project name. RFAStack describes how an application is shaped—not a fixed inventory of libraries.</p>
+        <p class="manual-lede">Organize a Next.js application around the product capabilities it delivers. Routes stay thin while each feature owns its UI, rules, reads, mutations, and server code.</p>
         <div class="manual-actions">
           <a class="manual-button" :href="withBase('/background')">Start with the problem</a>
-          <a class="manual-text-link" :href="withBase('/folder-structure')">Inspect the structure →</a>
+          <a class="manual-text-link" :href="withBase('/folder-structure')">See the folder structure →</a>
         </div>
       </div>
       <div class="manual-hero__stamp" aria-hidden="true"><span>RFA</span><small>01 / 04</small></div>
@@ -36,17 +35,17 @@ const boundaries = [
 
     <section class="manual-map-section" aria-labelledby="architecture-at-a-glance">
       <header class="section-heading">
-        <p class="manual-index">PLATE 01 / RESPONSIBILITY MAP</p>
+        <p class="manual-index">BOUNDARY MAP / REQUEST TO BEHAVIOR</p>
         <h2 id="architecture-at-a-glance">Architecture at a glance</h2>
-        <p>Framework code receives the request. A feature owns the behavior. Platform adapters perform integration work. Shared code stays small and generic.</p>
+        <p>A request enters through <code>src/app</code> and moves into the feature that owns the behavior. Features can call app-level integrations and small, generic building blocks.</p>
       </header>
       <ArchitectureMap />
     </section>
 
     <section class="boundary-section" aria-labelledby="responsibility-boundaries">
       <header class="section-heading section-heading--compact">
-        <p class="manual-index">FOUR BOUNDARIES / ONE DIRECTION</p>
-        <h2 id="responsibility-boundaries">Responsibility before reuse</h2>
+        <p class="manual-index">PLACEMENT RULES / CLEAR OWNERSHIP</p>
+        <h2 id="responsibility-boundaries">Four folders, four responsibilities</h2>
       </header>
       <ol class="boundary-grid">
         <li v-for="([mark, title, copy], index) in boundaries" :key="title">
@@ -57,10 +56,10 @@ const boundaries = [
       </ol>
     </section>
 
-    <section class="reading-path" aria-labelledby="read-the-field-manual">
+    <section class="reading-path" aria-labelledby="read-the-guide">
       <header class="section-heading section-heading--compact">
-        <p class="manual-index">READING ORDER / 35 MINUTES</p>
-        <h2 id="read-the-field-manual">Read the field manual</h2>
+        <p class="manual-index">GUIDE / FOUR CHAPTERS</p>
+        <h2 id="read-the-guide">Read the guide</h2>
       </header>
       <ol class="chapter-list">
         <li v-for="chapter in chapters" :key="chapter[0]">

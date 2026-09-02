@@ -61,7 +61,7 @@ export default withMermaid(
     },
     themeConfig: {
       siteTitle: false,
-      logo: { src: '/wordmark.svg', alt: 'RFAStack' },
+      logo: { light: '/wordmark.svg', dark: '/wordmark-dark.svg', alt: 'RFAStack' },
       nav: [
         { text: 'Guide', link: '/background' },
         { text: 'Structure', link: '/folder-structure' },
@@ -80,13 +80,13 @@ export default withMermaid(
         },
       ],
       search: { provider: 'local', options: { detailedView: true } },
-      outline: { level: [2, 3], label: 'On this field note' },
+      outline: { level: [2, 3], label: 'On this page' },
       editLink: {
         pattern: 'https://github.com/ishk-sftckz/RFAStack/edit/main/docs/:path',
-        text: 'Edit this field note',
+        text: 'Edit this page',
       },
       lastUpdated: { text: 'Revised', formatOptions: { dateStyle: 'medium' } },
-      docFooter: { prev: 'Previous field note', next: 'Next field note' },
+      docFooter: { prev: 'Previous chapter', next: 'Next chapter' },
       socialLinks: [{ icon: 'github', link: 'https://github.com/ishk-sftckz/RFAStack' }],
       footer: {
         message: 'Code: MIT · Writing, diagrams, and visual assets: CC BY 4.0',

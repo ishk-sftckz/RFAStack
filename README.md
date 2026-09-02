@@ -2,31 +2,43 @@
 
 **An Opinionated React Fullstack Architecture for Next.js Applications**
 
-RFAStack is a feature-based modular application architecture organized as vertical full-stack slices and adapted to Next.js.
+A Next.js project is easy to navigate while it is small. Then one product change starts crossing routes, components, hooks, services, schemas, and API handlers scattered across the repository.
 
-“Stack” is the project name. RFAStack describes an architectural approach—module ownership, dependency direction, framework boundaries, server/client separation, and data flow—not a fixed list of technologies.
+RFAStack keeps the code for a business capability together. An `orders` feature owns its UI, rules, reads, mutations, and server code. `src/app` stays focused on the Next.js boundary. Integrations live in `src/platform`; code that is genuinely generic lives in `src/shared`.
 
-[Read the field manual →](https://ishk-sftckz.github.io/RFAStack/)
+[Read the architecture guide →](https://ishk-sftckz.github.io/RFAStack/)
 
-![RFAStack field manual preview](docs/public/social-preview.png)
+![RFAStack architecture guide preview](docs/public/social-preview.png)
 
-## Inside the guide
+## The shape
 
-- **Background & Motivation** — how technical-layer structures scatter one business change.
-- **Concepts** — the synthesis of feature modularity, vertical slices, Screaming Architecture, Clean Architecture, and Domain-Driven Design.
-- **Folder Structure** — concrete ownership rules for `src/app`, `src/features`, `src/platform`, and `src/shared`.
-- **Data Fetching & Mutation** — a decision model for Server Components, Server Actions, Route Handlers, TanStack Query, and oRPC.
+```text
+src/
+  app/          # Next.js entry points and route composition
+  features/     # Business capabilities with end-to-end ownership
+  platform/     # Database, email, storage, and vendor integrations
+  shared/       # Generic UI, types, and utilities
+```
 
-## Run locally
+The folders encode ownership. A change to order cancellation has one obvious starting point, and framework or infrastructure code cannot quietly become the home of business policy.
 
-The repository pins Bun 1.4.0 through `packageManager` and `bun.lock`.
+## Start reading
+
+1. [Background & Motivation](https://ishk-sftckz.github.io/RFAStack/background) explains where common Next.js structures begin to hurt.
+2. [Concepts](https://ishk-sftckz.github.io/RFAStack/concepts) connects feature modules, vertical slices, Screaming Architecture, Clean Architecture, and Domain-Driven Design.
+3. [Folder Structure](https://ishk-sftckz.github.io/RFAStack/folder-structure) turns those ideas into concrete placement and dependency rules.
+4. [Data Fetching & Mutation](https://ishk-sftckz.github.io/RFAStack/data-fetching-and-mutation) chooses among Server Components, Server Actions, Route Handlers, TanStack Query, and oRPC.
+
+## Run the site locally
+
+The repository uses Bun 1.4.0.
 
 ```bash
 bun install --frozen-lockfile
 bun run docs:dev
 ```
 
-Build, preview, and test the publication:
+To build, preview, or run the browser tests:
 
 ```bash
 bun run docs:build
@@ -36,11 +48,7 @@ bun run test
 
 ## Contributing
 
-Corrections, clearer examples, and evidence-backed challenges are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Architectural changes should explain the failure mode they address, the mechanism they introduce, and the tradeoff they create.
-
-## Author
-
-RFAStack is written and maintained by [Ishk](https://github.com/ishk-sftckz).
+Found a rule that does not hold up in a real codebase? Open an issue with the failure mode, the alternative, and its tradeoffs. Corrections and clearer examples are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 ## License
 

@@ -1,6 +1,6 @@
 ---
 title: Folder Structure
-description: A concrete Next.js App Router structure for feature-owned full-stack behavior.
+description: A concrete Next.js structure for feature-owned full-stack behavior.
 ---
 
 # Folder Structure
@@ -282,7 +282,7 @@ Names should expose ownership and runtime without requiring file inspection.
 
 Consistency matters more than finding a suffix for every file. The naming system should shorten discovery, not simulate a framework within the framework.
 
-## App Router mapping
+## How Next.js files map to `src/app`
 
 Next.js special files map cleanly to RFAStack responsibilities:
 
@@ -308,7 +308,7 @@ For a checkout flow that reads inventory and creates an order, pick an explicit 
 - an application-level operation coordinates them when no single feature truthfully owns the process;
 - an event links them when asynchronous delivery and independent failure are required.
 
-Start with direct, typed calls. Add messaging or abstraction when the runtime behavior—not aesthetic symmetry—requires it.
+Start with direct, typed calls. Add messaging or abstraction when the runtime behavior requires it, not for aesthetic symmetry.
 
 ## Placement guide
 

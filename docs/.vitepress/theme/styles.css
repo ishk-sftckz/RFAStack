@@ -167,7 +167,7 @@ body {
   line-height: 0.74;
 }
 
-.manual-tagline {
+.manual-home .manual-tagline {
   max-width: 810px;
   margin: 46px 0 0;
   color: var(--rfa-ink);
@@ -175,24 +175,14 @@ body {
   font-size: clamp(28px, 4vw, 49px);
   font-weight: 490;
   letter-spacing: -0.035em;
-  line-height: 1.04;
+  line-height: 1.12;
 }
 
-.manual-lede {
+.manual-home .manual-lede {
   max-width: 720px;
   margin: 28px 0 0;
   color: var(--rfa-ink-soft);
   font-size: clamp(18px, 2vw, 22px);
-  line-height: 1.55;
-}
-
-.manual-clarifier {
-  max-width: 720px;
-  margin: 18px 0 0;
-  padding-left: 16px;
-  border-left: 3px solid var(--rfa-vermilion);
-  color: var(--rfa-ink-soft);
-  font-size: 14px;
   line-height: 1.55;
 }
 
