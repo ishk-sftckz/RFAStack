@@ -23,6 +23,15 @@ test('homepage exposes the complete RFAStack reading path', async ({ page }) => 
 
   await expect(page.getByRole('heading', { level: 1, name: 'RFAStack' })).toBeVisible()
   await expect(page.getByText('An Opinionated React Fullstack Architecture for Next.js Applications')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Read the docs' })).toHaveAttribute(
+    'href',
+    '/RFAStack/background',
+  )
+  await expect(page.getByRole('link', { name: 'View on GitHub' })).toHaveAttribute(
+    'href',
+    'https://github.com/ishk-sftckz/RFAStack',
+  )
+  await expect(page.getByRole('heading', { level: 2, name: 'Documentation' })).toBeVisible()
 
   const guideLinks = [
     ['Background & Motivation', 'background'],
@@ -39,6 +48,18 @@ test('homepage exposes the complete RFAStack reading path', async ({ page }) => 
       `/RFAStack/${path}`,
     )
   }
+})
+
+test('desktop navigation stays focused on docs and source', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile-chromium', 'Desktop navigation is hidden on mobile.')
+  await page.goto('./')
+
+  const links = page.locator('.VPNavBarMenuLink')
+  await expect(links).toHaveCount(2)
+  await expect(links.nth(0)).toHaveText('Docs')
+  await expect(links.nth(0)).toHaveAttribute('href', '/RFAStack/background')
+  await expect(links.nth(1)).toHaveText('GitHub')
+  await expect(links.nth(1)).toHaveAttribute('href', 'https://github.com/ishk-sftckz/RFAStack')
 })
 
 test('architecture map names and explains the four responsibility boundaries', async ({ page }) => {
@@ -94,6 +115,19 @@ test('homepage tagline has enough leading when it wraps', async ({ page }, testI
   })
 
   expect(spacing).toBeGreaterThanOrEqual(1.1)
+})
+
+test('homepage title stays on one line on mobile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile-chromium', 'Mobile-only hero layout contract.')
+  await page.goto('./')
+
+  const title = page.getByRole('heading', { level: 1, name: 'RFAStack' })
+  const lines = await title.evaluate((element) => {
+    const styles = getComputedStyle(element)
+    return element.getBoundingClientRect().height / Number.parseFloat(styles.lineHeight)
+  })
+
+  expect(lines).toBeLessThan(1.2)
 })
 
 test('internal links retain the GitHub Pages base path', async ({ page }) => {
@@ -161,7 +195,7 @@ test('mobile readers can open the site navigation and chapter sidebar', async ({
   const siteNavigation = page.getByRole('button', { name: 'mobile navigation' })
   await siteNavigation.click()
   await expect(siteNavigation).toHaveAttribute('aria-expanded', 'true')
-  await expect(page.locator('#VPNavScreen').getByRole('link', { name: 'Guide' })).toBeVisible()
+  await expect(page.locator('#VPNavScreen').getByRole('link', { name: 'Docs' })).toBeVisible()
 
   await siteNavigation.click()
   await page.getByRole('button', { name: 'Menu' }).click()

@@ -26,11 +26,10 @@ const boundaries = [
         <p class="manual-tagline">An Opinionated React Fullstack Architecture for Next.js Applications</p>
         <p class="manual-lede">Organize a Next.js application around the product capabilities it delivers. Routes stay thin while each feature owns its UI, rules, reads, mutations, and server code.</p>
         <div class="manual-actions">
-          <a class="manual-button" :href="withBase('/background')">Start with the problem</a>
-          <a class="manual-text-link" :href="withBase('/folder-structure')">See the folder structure →</a>
+          <a class="manual-button" :href="withBase('/background')">Read the docs</a>
+          <a class="manual-text-link" href="https://github.com/ishk-sftckz/RFAStack">View on GitHub →</a>
         </div>
       </div>
-      <div class="manual-hero__stamp" aria-hidden="true"><span>RFA</span><small>01 / 04</small></div>
     </section>
 
     <section class="manual-map-section" aria-labelledby="architecture-at-a-glance">
@@ -56,10 +55,10 @@ const boundaries = [
       </ol>
     </section>
 
-    <section class="reading-path" aria-labelledby="read-the-guide">
+    <section class="reading-path" aria-labelledby="documentation">
       <header class="section-heading section-heading--compact">
-        <p class="manual-index">GUIDE / FOUR CHAPTERS</p>
-        <h2 id="read-the-guide">Read the guide</h2>
+        <p class="manual-index">DOCS / FOUR CHAPTERS</p>
+        <h2 id="documentation">Documentation</h2>
       </header>
       <ol class="chapter-list">
         <li v-for="chapter in chapters" :key="chapter[0]">

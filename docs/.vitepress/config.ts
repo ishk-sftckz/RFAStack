@@ -63,9 +63,7 @@ export default withMermaid(
       siteTitle: false,
       logo: { light: '/wordmark.svg', dark: '/wordmark-dark.svg', alt: 'RFAStack' },
       nav: [
-        { text: 'Guide', link: '/background' },
-        { text: 'Structure', link: '/folder-structure' },
-        { text: 'Data flow', link: '/data-fetching-and-mutation' },
+        { text: 'Docs', link: '/background' },
         { text: 'GitHub', link: 'https://github.com/ishk-sftckz/RFAStack' },
       ],
       sidebar: [
