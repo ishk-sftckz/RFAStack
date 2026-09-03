@@ -5,9 +5,9 @@ description: The established architectural ideas synthesized and adapted by RFAS
 
 # Concepts
 
-RFAStack combines established ideas into one operating model for a Next.js application. The synthesis is original; the foundations are not presented as new inventions.
+RFAStack adapts established architectural ideas to the constraints of a Next.js application.
 
-The central move is simple: organize the application by business capability, keep each capability vertically complete, make dependencies point toward behavior, and treat framework code as an adapter at the edge.
+It organizes the application by business capability, keeps each capability vertically complete, points dependencies toward behavior, and treats framework code as an adapter at the edge.
 
 ## Four foundations, one application model
 
@@ -27,7 +27,7 @@ features/
 
 The directory names expose product capabilities. A reader can begin with what the system does before learning how a route or ORM delivers it.
 
-This does not hide Next.js. `src/app` remains an explicit framework boundary. It changes the order in which the repository explains itself: business capabilities are stable; delivery mechanics are visible at the edge.
+Next.js remains visible in `src/app` as an explicit framework boundary. The repository presents stable business capabilities first and keeps delivery mechanics at the edge.
 
 ### Vertical Slice Architecture: keep a change together
 
@@ -42,7 +42,7 @@ RFAStack treats a feature as a vertical full-stack slice. An `orders` capability
 - server-only use cases;
 - its repository contract or implementation when that complexity is warranted.
 
-The slice is not required to contain every possible layer. It is required to own the behavior end to end.
+A slice can contain only the layers its behavior needs while still owning that behavior end to end.
 
 ### Clean Architecture: control dependency direction
 
@@ -76,40 +76,32 @@ RFAStack uses selected DDD habits:
 
 It does not require tactical DDD patterns everywhere. An entity, aggregate, repository, or domain service should exist because it clarifies real behavior. A read-only dashboard card does not need an aggregate root to qualify as architecture.
 
-## The RFAStack synthesis
+## How RFAStack uses these concepts
 
-Applied together, the foundations produce a feature-based modular architecture with vertical full-stack slices:
+Each foundation answers a different architectural question:
 
-| Foundation | Question it contributes | RFAStack mechanism |
+| Foundation | Question it answers | RFAStack mechanism |
 | --- | --- | --- |
 | Screaming Architecture | What does this system do? | Top-level feature names reveal business capabilities. |
 | Vertical Slice Architecture | What changes together? | UI, rules, reads, mutations, and server work live with the feature. |
 | Clean Architecture | Which direction may dependencies point? | Framework and integration details depend on feature contracts and behavior. |
 | Domain-Driven Design | Who owns this concept? | Product language defines boundaries and cross-feature relationships. |
 
-The result governs more than location. It defines the legal direction of knowledge.
+Together, these rules determine where code belongs and which modules may depend on it.
 
 ## Seven operating principles
 
-### 1. Organize business behavior by feature
+| Principle | What it requires |
+| --- | --- |
+| 1. Organize business behavior by feature | A business capability is the primary unit of ownership. Technical categories can exist inside the feature when they improve navigation. |
+| 2. Keep framework entries thin | Pages, layouts, Route Handlers, and Server Actions adapt framework inputs and outputs, then delegate business policy to the owning feature. |
+| 3. Separate integration from decision | Platform modules connect to databases, queues, email providers, and observability services. Features decide when and why those integrations are used. |
+| 4. Share deliberately | Shared code must be generic in both name and behavior. Repeated feature code can remain repeated until a stable common concept emerges. |
+| 5. Expose small feature interfaces | Other parts of the application import only the operations and components a feature intentionally exposes, keeping its internal layout private. |
+| 6. Make server and client ownership visible | Server-only code sits behind an obvious boundary and imports `server-only` when appropriate. Client components use `'use client'` at the smallest useful interactive boundary. |
+| 7. Add layers for observed complexity | A feature can begin with a component and a query, then add a model, use case, repository contract, or adapter when its behavior requires them. |
 
-A capability is the primary unit of ownership. Technical categories can exist inside the feature when they improve navigation.
-
-### 2. Keep framework entries thin
-
-Pages, layouts, Route Handlers, and Server Actions adapt framework inputs and outputs. They compose and delegate; they do not become the default home of policy.
-
-### 3. Separate integration from decision
-
-Platform modules connect to a database, queue, email provider, or observability service. Features decide when and why those integrations are used.
-
-### 4. Share deliberately
-
-Shared code must be generic in both name and behavior. Repeated feature code is allowed to remain repeated until a stable common concept emerges.
-
-### 5. Expose small feature interfaces
-
-Other parts of the application import the operation or component a feature intentionally exposes. They do not deep-import whichever internal file is convenient.
+A small public interface lets callers use a feature without learning its internal layout:
 
 ```ts
 // preferred: the feature chooses its public surface
@@ -119,17 +111,9 @@ import { getOrderDetails } from '@/features/orders/order.queries'
 import { getOrderDetails } from '@/features/orders/server/internal/query-builder'
 ```
 
-### 6. Make server and client ownership visible
+## Cross-feature coordination
 
-Server-only code sits behind an obvious boundary and imports `server-only` when appropriate. Client components use `'use client'` at the smallest meaningful interactive boundary. A feature can span both environments without making either ambiguous.
-
-### 7. Add layers for observed complexity
-
-A feature can begin with a component and a query. It can later acquire a model, use case, repository contract, or adapter. Architecture should make growth safe without charging every small feature the maximum structural cost on day one.
-
-## Features are not isolated islands
-
-Business capabilities interact. The architecture makes that interaction visible instead of pretending it does not exist.
+Business capabilities interact through explicit relationships.
 
 When `checkout` needs a price from `catalog`, choose an explicit relationship:
 
@@ -157,7 +141,7 @@ If the answers come only from team memory, the boundaries are conceptual but not
 
 RFAStack is useful when an application has multiple business capabilities, full-stack changes, a mix of server and client execution, and enough contributors that discoverability matters.
 
-It can be excessive for a short-lived campaign page, a narrow prototype, or a small read-only site. Keep those systems direct. The structure should respond to change pressure, not architectural aspiration.
+A short-lived campaign page, narrow prototype, or small read-only site can keep a more direct structure. Add RFAStack’s additional boundaries when repeated full-stack changes or coordination costs justify them.
 
 The tradeoff is ongoing discipline. Teams must review dependency direction, resist vague shared folders, and move code when ownership becomes clearer. Without that discipline, four boundaries become four more junk drawers.
 
