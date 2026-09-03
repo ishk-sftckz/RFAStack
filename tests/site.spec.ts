@@ -202,6 +202,34 @@ test('mobile readers can open the site navigation and chapter sidebar', async ({
   await expect(page.getByLabel('Sidebar Navigation')).toBeVisible()
 })
 
+test('sidebar separates introductory chapters from collapsible guides', async ({ page }, testInfo) => {
+  await page.goto('./background')
+
+  if (testInfo.project.name === 'mobile-chromium') {
+    await page.getByRole('button', { name: 'Menu' }).click()
+  }
+
+  const sidebar = page.getByLabel('Sidebar Navigation')
+  const introduction = sidebar.getByRole('link', { name: 'Introduction', exact: true })
+  const guides = sidebar.getByRole('link', { name: 'Guides', exact: true })
+  const background = sidebar.getByRole('link', { name: 'Background & Motivation' })
+  const folderStructure = sidebar.getByRole('link', { name: 'Folder Structure' })
+
+  await expect(introduction).toBeVisible()
+  await expect(introduction).toHaveAttribute('href', '/RFAStack/background')
+  await expect(guides).toBeVisible()
+  await expect(guides).toHaveAttribute('href', '/RFAStack/folder-structure')
+  await expect(background).toBeVisible()
+  await expect(folderStructure).toBeVisible()
+
+  await introduction.locator('..').getByRole('button', { name: 'toggle section' }).click()
+  await expect(background).toBeHidden()
+  await expect(folderStructure).toBeVisible()
+
+  await guides.locator('..').getByRole('button', { name: 'toggle section' }).click()
+  await expect(folderStructure).toBeHidden()
+})
+
 test('unknown routes render the custom 404 page', async ({ page }) => {
   await page.goto('./missing-page')
 

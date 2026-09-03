@@ -70,10 +70,24 @@ export default withMermaid(
         {
           text: 'React Fullstack Architecture',
           items: [
-            { text: 'Background & Motivation', link: '/background' },
-            { text: 'Concepts', link: '/concepts' },
-            { text: 'Folder Structure', link: '/folder-structure' },
-            { text: 'Data Fetching & Mutation', link: '/data-fetching-and-mutation' },
+            {
+              text: 'Introduction',
+              link: '/background',
+              collapsed: false,
+              items: [
+                { text: 'Background & Motivation', link: '/background' },
+                { text: 'Concepts', link: '/concepts' },
+              ],
+            },
+            {
+              text: 'Guides',
+              link: '/folder-structure',
+              collapsed: false,
+              items: [
+                { text: 'Folder Structure', link: '/folder-structure' },
+                { text: 'Data Fetching & Mutation', link: '/data-fetching-and-mutation' },
+              ],
+            },
           ],
         },
       ],
