@@ -1,15 +1,15 @@
 ---
 title: Concepts
-description: The established architectural ideas synthesized and adapted by RFAStack.
+description: The architectural foundations behind RFAStack's feature ownership and dependency model.
 ---
 
 # Concepts
 
-RFAStack adapts established architectural ideas to the constraints of a Next.js application.
+This chapter explains the architectural ideas behind how RFAStack organizes a Next.js application.
 
-It organizes the application by business capability, keeps each capability vertically complete, points dependencies toward behavior, and treats framework code as an adapter at the edge.
+They explain why a business capability owns its behavior, why framework and integration code stay at explicit boundaries, and why dependencies have a declared direction. They are foundations for application structure, not a catalog of every concern RFAStack addresses.
 
-## Four foundations, one application model
+## Four foundations for application structure
 
 ### Screaming Architecture: reveal the business
 
@@ -76,7 +76,7 @@ RFAStack uses selected DDD habits:
 
 It does not require tactical DDD patterns everywhere. An entity, aggregate, repository, or domain service should exist because it clarifies real behavior. A read-only dashboard card does not need an aggregate root to qualify as architecture.
 
-## How RFAStack uses these concepts
+## How these concepts shape RFAStack
 
 Each foundation answers a different architectural question:
 
@@ -89,7 +89,7 @@ Each foundation answers a different architectural question:
 
 Together, these rules determine where code belongs and which modules may depend on it.
 
-## Seven operating principles
+## Seven principles for structure and dependency
 
 | Principle | What it requires |
 | --- | --- |
@@ -137,7 +137,7 @@ A structure is doing useful work when it can answer these questions without gues
 
 If the answers come only from team memory, the boundaries are conceptual but not yet encoded.
 
-## When the model fits and when it does not
+## When this structure fits and when it does not
 
 RFAStack is useful when an application has multiple business capabilities, full-stack changes, a mix of server and client execution, and enough contributors that discoverability matters.
 

@@ -76,15 +76,22 @@ export default withMermaid(
               collapsed: false,
               items: [
                 { text: 'Background & Motivation', link: '/background' },
-                { text: 'Concepts', link: '/concepts' },
               ],
             },
             {
-              text: 'Guides',
-              link: '/folder-structure',
+              text: 'Architecture Foundations',
+              link: '/concepts',
               collapsed: false,
               items: [
+                { text: 'Concepts', link: '/concepts' },
                 { text: 'Folder Structure', link: '/folder-structure' },
+              ],
+            },
+            {
+              text: 'Async Data Management',
+              link: '/data-fetching-and-mutation',
+              collapsed: false,
+              items: [
                 { text: 'Data Fetching & Mutation', link: '/data-fetching-and-mutation' },
               ],
             },

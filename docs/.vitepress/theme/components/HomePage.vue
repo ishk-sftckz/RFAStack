@@ -3,17 +3,16 @@ import { withBase } from 'vitepress'
 import ArchitectureMap from './ArchitectureMap.vue'
 
 const chapters = [
-  ['01', 'Background & Motivation', 'One shortcut looks harmless. This chapter follows what happens when every feature invents its own path.', '/background'],
-  ['02', 'Concepts', 'Screaming Architecture, Vertical Slices, Clean Architecture, and DDD each answer a different question. RFAStack brings those answers together.', '/concepts'],
-  ['03', 'Folder Structure', 'The four folders are easy to copy. The ownership and import rules are what make them useful.', '/folder-structure'],
-  ['04', 'Data Fetching & Mutation', 'Decide from the operation first; choose Server Actions, Route Handlers, TanStack Query, or oRPC second.', '/data-fetching-and-mutation'],
+  ['01', 'Background & Motivation', 'Why working Next.js applications become harder to change when each feature follows a different rule.', '/background'],
+  ['02', 'Architecture Foundations', 'How feature ownership, public interfaces, and dependency direction decide where code belongs.', '/concepts'],
+  ['03', 'Async Data Management', 'How to choose a path for reads and mutations across server code, browser state, and external callers.', '/data-fetching-and-mutation'],
 ] as const
 
 const concerns = [
-  ['01', 'Business rules stay with the feature', 'The orders feature owns what cancellation means. Pages and handlers may start the operation; they do not decide whether it is allowed.'],
-  ['02', 'Server renders call the feature directly', 'A Server Component can call a feature query without creating an internal API. Add an HTTP boundary when a browser, mobile app, webhook, or external caller needs one.'],
-  ['03', 'First-party mutations start with Server Actions', 'Use a Server Action for a form or interactive UI that belongs to this application. When another client needs the mutation, put the same feature use case behind a Route Handler or RPC procedure.'],
-  ['04', 'Integrations do the work; features make the decision', 'Database, email, storage, and telemetry belong in platform code. The feature decides when to use them and which business rule applies.'],
+  ['01', 'Start with the operation', 'Decide what the code must do and who needs it before choosing a Server Action, Route Handler, or client-side library.'],
+  ['02', 'Business rules belong to features', 'Put the rule in one feature, then let pages, actions, and handlers call it instead of rewriting it.'],
+  ['03', 'Reads and mutations should be traceable', 'You should be able to follow the caller to the feature, then follow the feature to the database or outside service.'],
+  ['04', 'Extra structure needs a requirement', 'Keep the direct path until the browser, an external caller, or protected data requires another boundary.'],
 ] as const
 </script>
 
@@ -34,39 +33,39 @@ const concerns = [
 
     <section class="positioning-section" aria-labelledby="why-rfastack">
       <header class="section-heading">
-        <p class="manual-index">THE GAP / NEXT.JS STOPS AT THE FRAMEWORK</p>
-        <h2 id="why-rfastack">Next.js gives you the pieces. You still have to design the application.</h2>
-        <p>Pages, Server Components, Server Actions, and Route Handlers tell you where code runs. They do not tell you where an order rule belongs, which feature may call it, or how a mutation should reach the database. RFAStack gives those decisions a default.</p>
+        <p class="manual-index">THE GAP / APPLICATION DECISIONS</p>
+        <h2 id="why-rfastack">You can know the Next.js APIs and still be unsure where your code belongs</h2>
+        <p>The documentation can show you how a Server Component, Server Action, or Route Handler works. Your application still needs rules for when to use each one, where business logic lives, and what several callers should share.</p>
       </header>
       <div class="problem-ledger">
         <article>
-          <p class="ledger-index">01 / THE SHORTCUT</p>
-          <p>The page needs data, so it calls the database. The form needs to write, so its handler owns the mutation. Both choices are reasonable.</p>
+          <p class="ledger-index">01 / THE FIRST FEATURE</p>
+          <p>A page reads from the database. A mutation stays in a Server Action. A helper goes into <code>utils</code>. Each choice works for the feature in front of you.</p>
         </article>
         <article>
-          <p class="ledger-index">02 / SIX FILES LATER</p>
-          <p>Then cancellation changes. The rule is in a component, authorization is in a handler, and cache invalidation lives somewhere else. You have to trace the whole path again.</p>
+          <p class="ledger-index">02 / THE PATTERNS DRIFT</p>
+          <p>Another page calls an internal endpoint for the same kind of read. Another mutation keeps its checks somewhere else. Each implementation works, but the next developer has no clear pattern to follow.</p>
         </article>
         <article class="problem-ledger__answer">
-          <p class="ledger-index">03 / THE DEFAULT</p>
-          <p>Put order behavior in <code>features/orders</code>. Let the route receive the request and platform code talk to the database. One feature owns the change.</p>
+          <p class="ledger-index">03 / THE SHARED RULE</p>
+          <p>Keep business rules with the feature that owns them. Pages, Server Actions, and Route Handlers can call the same operation through the boundary they need.</p>
         </article>
       </div>
     </section>
 
     <section class="outcome-section" aria-labelledby="local-reasoning">
-      <p class="manual-index">THE DEFAULT / FEATURE OWNS THE CHANGE</p>
+      <p class="manual-index">THE COST / UNCERTAINTY</p>
       <div class="outcome-statement">
-        <h2 id="local-reasoning">Order behavior belongs in the orders feature</h2>
-        <p>Open <code>features/orders</code> and you should find the order UI, validation, reads, mutations, and business rules. If changing cancellation sends you through unrelated technical folders, the ownership is still too vague. A small read-only site can stay simpler; this boundary earns its keep when changes cross UI, server code, and storage.</p>
+        <h2 id="local-reasoning">A small change should not begin with a repository-wide search</h2>
+        <p>You should be able to find the feature, see where its rules live, and follow each read or mutation to the data it touches. When two paths do the same work and nobody can explain why, every change starts with investigation. That uncertainty slows reviews, encourages repeated mistakes, and becomes technical debt.</p>
       </div>
     </section>
 
     <section class="model-section" aria-labelledby="full-stack-model">
       <header class="section-heading">
-        <p class="manual-index">DATA FLOW / START WITH THE OPERATION</p>
-        <h2 id="full-stack-model">A folder structure cannot tell you how data should move</h2>
-        <p>A page can sit in the right folder and still call the wrong layer. Start with the operation: is it a read or mutation, where must it run, and who consumes it? Those answers tell you whether to use a direct server call, Server Action, Route Handler, or client query.</p>
+        <p class="manual-index">THE APPROACH / DEFAULTS WITH BOUNDARIES</p>
+        <h2 id="full-stack-model">Give every business rule an owner and every data path a reason</h2>
+        <p>The folder tree, server code, and the way data moves should support the same decisions. Start with the direct path, then add structure when the application gives you a reason.</p>
       </header>
       <ol class="concern-grid" aria-label="RFAStack architectural concerns">
         <li v-for="([number, title, copy]) in concerns" :key="title">
@@ -79,25 +78,27 @@ const concerns = [
 
     <section class="manual-map-section" aria-labelledby="architecture-at-a-glance">
       <header class="section-heading">
-        <p class="manual-index">SOURCE TREE / FOUR FOLDERS, FOUR JOBS</p>
-        <h2 id="architecture-at-a-glance">The folder tree should tell you who owns the code</h2>
-        <p>A neat folder tree is easy to copy and easy to misuse. <code>src/app</code> owns Next.js entry points, not order policy. <code>src/features</code> owns product behavior. <code>src/platform</code> handles integrations, while <code>src/shared</code> holds code with no product-specific rule. Copy the names without the ownership rules and you get four new junk drawers.</p>
+        <p class="manual-index">ARCHITECTURE FOUNDATIONS / OWNERSHIP</p>
+        <h2 id="architecture-at-a-glance">The folder tree should show where product behavior belongs</h2>
+        <p>A neat folder tree is easy to copy and easy to misuse. <code>src/app</code> contains Next.js entry points. <code>src/features</code> owns product behavior. <code>src/platform</code> handles databases and outside services. <code>src/shared</code> holds code with no product-specific rule. Copy the names without the ownership rules and you get four new junk drawers.</p>
       </header>
       <ArchitectureMap />
     </section>
 
     <section class="reading-path" aria-labelledby="documentation">
       <header class="section-heading">
-        <p class="manual-index">READING PATH / RULES BEFORE FOLDERS</p>
-        <h2 id="documentation">Understand the rules before you copy the folders</h2>
-        <p>Start with why local choices become expensive and which architecture ideas RFAStack borrows. Then use the folder and data-flow guides to decide where code belongs and how each operation should run.</p>
+        <p class="manual-index">READING PATH / RFASTACK</p>
+        <h2 id="documentation">From code ownership to data flow</h2>
+        <p>Follow the decisions that shape a Next.js application across features, framework boundaries, server code, and data sources.</p>
       </header>
       <ol class="chapter-list" aria-label="RFAStack reading path">
         <li v-for="chapter in chapters" :key="chapter[0]">
           <a :href="withBase(chapter[3])">
             <span class="chapter-list__index">{{ chapter[0] }}</span>
             <span class="chapter-list__body"><strong>{{ chapter[1] }}</strong><small>{{ chapter[2] }}</small></span>
-            <span class="chapter-list__arrow" aria-hidden="true">↗</span>
+            <svg class="chapter-list__arrow" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 17 17 7M9 7h8v8" />
+            </svg>
           </a>
         </li>
       </ol>

@@ -1,5 +1,40 @@
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+
+const figure = ref<HTMLElement | null>(null)
+const motionReady = ref(false)
+const isVisible = ref(false)
+let observer: IntersectionObserver | undefined
+
+onMounted(() => {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+    isVisible.value = true
+    return
+  }
+
+  motionReady.value = true
+  observer = new IntersectionObserver(([entry]) => {
+    if (!entry?.isIntersecting) return
+
+    isVisible.value = true
+    observer?.disconnect()
+    observer = undefined
+  }, { threshold: 0.15 })
+
+  if (figure.value) observer.observe(figure.value)
+})
+
+onBeforeUnmount(() => observer?.disconnect())
+</script>
+
 <template>
-  <figure class="architecture-figure" tabindex="0" aria-label="Scrollable RFAStack architecture map">
+  <figure
+    ref="figure"
+    class="architecture-figure"
+    :class="{ 'is-motion-ready': motionReady, 'is-visible': isVisible }"
+    tabindex="0"
+    aria-label="Scrollable RFAStack architecture map"
+  >
     <svg class="architecture-map" viewBox="0 0 960 590" role="img" aria-label="RFAStack architecture map" xmlns="http://www.w3.org/2000/svg">
       <title>RFAStack architecture map</title>
       <desc>Requests enter through src/app and delegate to a feature in src/features. Feature code may call integrations in src/platform and generic primitives in src/shared.</desc>
