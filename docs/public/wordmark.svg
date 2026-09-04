@@ -5,5 +5,5 @@
     <path d="M2 23h56M25 23v35" stroke="#244bd8"/>
     <circle cx="46" cy="42" r="7" fill="#c73b25" stroke="none"/>
   </g>
-  <text x="76" y="43" fill="currentColor" font-family="Spline Sans, sans-serif" font-size="39" font-weight="650" letter-spacing="-1.5">RFAStack</text>
+  <text x="76" y="43" fill="currentColor" font-family="Geist, sans-serif" font-size="39" font-weight="650" letter-spacing="-1.5">RFAStack</text>
 </svg>

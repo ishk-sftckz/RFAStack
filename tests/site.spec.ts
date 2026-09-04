@@ -18,7 +18,7 @@ test('every public route renders its document', async ({ page }) => {
   }
 })
 
-test('homepage exposes the complete RFAStack reading path', async ({ page }) => {
+test('homepage presents RFAStack as a full-stack architecture model', async ({ page }) => {
   await page.goto('./')
 
   await expect(page.getByRole('heading', { level: 1, name: 'RFAStack' })).toBeVisible()
@@ -31,7 +31,32 @@ test('homepage exposes the complete RFAStack reading path', async ({ page }) => 
     'href',
     'https://github.com/ishk-sftckz/RFAStack',
   )
-  await expect(page.getByRole('heading', { level: 2, name: 'Documentation' })).toBeVisible()
+
+  await expect(page.getByRole('heading', {
+    level: 2,
+    name: 'Next.js gives you the pieces. You still have to design the application.',
+  })).toBeVisible()
+  await expect(page.getByText(
+    'A Next.js application rarely becomes hard to maintain overnight. It happens one reasonable shortcut at a time, until nobody is sure where business logic belongs or what a small change might break. RFAStack gives you an opinionated architecture to follow before the codebase reaches that point.',
+    { exact: true },
+  )).toBeVisible()
+  await expect(page.getByText('Then cancellation changes')).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'Order behavior belongs in the orders feature' })).toBeVisible()
+  await expect(page.getByText('this boundary earns its keep when changes cross UI')).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'A folder structure cannot tell you how data should move' })).toBeVisible()
+
+  const model = page.getByLabel('RFAStack architectural concerns')
+
+  for (const concern of [
+    'Business rules stay with the feature',
+    'Server renders call the feature directly',
+    'First-party mutations start with Server Actions',
+    'Integrations do the work; features make the decision',
+  ]) {
+    await expect(model.getByRole('heading', { level: 3, name: concern })).toBeVisible()
+  }
+
+  await expect(page.getByRole('heading', { level: 2, name: 'Understand the rules before you copy the folders' })).toBeVisible()
 
   const guideLinks = [
     ['Background & Motivation', 'background'],
@@ -40,10 +65,10 @@ test('homepage exposes the complete RFAStack reading path', async ({ page }) => 
     ['Data Fetching & Mutation', 'data-fetching-and-mutation'],
   ] as const
 
-  const main = page.locator('#VPContent')
+  const readingPath = page.getByLabel('RFAStack reading path')
 
   for (const [name, path] of guideLinks) {
-    await expect(main.getByRole('link', { name: new RegExp(name) })).toHaveAttribute(
+    await expect(readingPath.getByRole('link', { name: new RegExp(name) })).toHaveAttribute(
       'href',
       `/RFAStack/${path}`,
     )
@@ -199,7 +224,20 @@ test('mobile readers can open the site navigation and chapter sidebar', async ({
 
   await siteNavigation.click()
   await page.getByRole('button', { name: 'Menu' }).click()
-  await expect(page.getByLabel('Sidebar Navigation')).toBeVisible()
+  const sidebar = page.getByLabel('Sidebar Navigation')
+  await expect(sidebar).toBeVisible()
+  await expect(sidebar.getByRole('link', { name: 'RFAStack home' })).toBeVisible()
+  await expect(sidebar.locator('.sidebar-brand__logo.light')).toHaveAttribute('src', '/RFAStack/wordmark.svg')
+})
+
+test('guide prose uses Geist while headings retain the editorial display face', async ({ page }) => {
+  await page.goto('./background')
+
+  await expect(page.getByText(/React is a UI library that leaves broader application architecture/)).toHaveCSS(
+    'font-family',
+    /Geist Variable/,
+  )
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('font-family', /Newsreader Variable/)
 })
 
 test('sidebar separates introductory chapters from collapsible guides', async ({ page }, testInfo) => {

@@ -50,7 +50,7 @@ export default withMermaid(
     mermaid: {
       theme: 'base',
       themeVariables: {
-        fontFamily: 'Spline Sans Variable, sans-serif',
+        fontFamily: 'Geist Variable, sans-serif',
         primaryColor: '#e9edff',
         primaryTextColor: '#181713',
         primaryBorderColor: '#244bd8',
