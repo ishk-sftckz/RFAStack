@@ -5,38 +5,43 @@ description: A decision model for reads, mutations, execution location, and cons
 
 # Data Fetching & Mutation
 
-Choose a data boundary from the operation, the execution location, and the consumer. The library comes after those three decisions.
+An orders page needs data, so you add `/api/orders` and fetch from it in a Server Component. The handler calls a feature query, which calls the database. Both the page and the query already run on the server, but you’ve put an HTTP request between them. That extra request adds a round trip and can fail during prerendering at build time. [Next.js Backend for Frontend guide](https://nextjs.org/docs/app/guides/backend-for-frontend#server-components)
 
-This prevents a common inversion: adopting a client cache or RPC layer first, then forcing every server render, form, and endpoint through it whether the runtime needs that path or not.
+In RFAStack, start with direct feature queries for server rendering and Server Actions for mutations from your own UI. Use HTTP or RPC for browser reads and APIs consumed by other clients. Choose a library after you know which calls the application needs.
 
-## The three-question model
+## Choose the data path from the operation
 
-For every operation, ask:
+Before adding a query or mutation, answer three questions:
 
-1. **Is it a read or a mutation?** A read observes state. A mutation changes state or triggers an effect.
-2. **Where must it execute?** During server rendering, after browser interaction, or behind a public HTTP boundary?
-3. **Who consumes it?** One Server Component, first-party interactive UI, several application clients, or an external caller?
+1. **What does it do?** A read retrieves data. A mutation changes application state or triggers an effect.
+2. **Who calls it?** A Server Component, browser code, or another client such as a mobile app or external integration?
+3. **What does the caller need afterward?** One result, a refreshed page, or data that stays updated through polling, background refresh, or a shared client cache?
 
 ```mermaid
 flowchart TD
   Start[Operation] --> Kind{Read or mutation?}
-  Kind -->|Read| Render{Needed during render?}
-  Render -->|Yes| SC[Server Component → feature query]
-  Render -->|No| Browser{Browser needs ongoing lifecycle?}
-  Browser -->|Yes| Client[TanStack Query → HTTP or RPC]
-  Browser -->|No| SC
-  Kind -->|Mutation| Consumer{First-party UI only?}
-  Consumer -->|Yes| Action[Server Action → feature use case]
-  Consumer -->|No| API[Route Handler or oRPC procedure]
+
+  Kind -->|Read| Caller{Who calls it?}
+  Caller -->|Server Component| Query[Direct feature query]
+  Caller -->|Browser| Browser[HTTP or RPC request]
+  Caller -->|Another client| API[Route Handler or oRPC procedure]
+
+  Browser --> Cache{Needs polling, background refresh, or shared cache?}
+  Cache -->|Yes| TanStack[Add TanStack Query]
+  Cache -->|No| Request[Fetch or call the RPC client directly]
+
+  Kind -->|Mutation| Consumer{Who calls it?}
+  Consumer -->|Your React UI| Action[Server Action → feature use case]
+  Consumer -->|An API consumer| API
 ```
 
-Filters, pagination, and search parameters are reads even when the user changes them. Classify by effect on system state, not by the presence of a button.
+Changing a filter, page number, or search parameter usually selects different data to read. Classify the operation by what it does to application state. Opening a menu or changing an unsaved form field can stay in component state.
 
-## Reads during render: Server Components first
+## Read during rendering through a Server Component
 
-Server Components can perform asynchronous I/O while rendering. The current [Next.js data-fetching guide](https://nextjs.org/docs/app/getting-started/fetching-data) explicitly supports `fetch`, an ORM, or a database client in Server Components. [React’s Server Components reference](https://react.dev/reference/rsc/server-components) explains the underlying server-rendered model.
+If the orders page needs orders to render, call the orders query from the page.
 
-In RFAStack, the page calls a feature-owned query directly:
+Server Components support asynchronous reads through `fetch`, an ORM, or a database client. [Next.js data-fetching guide](https://nextjs.org/docs/app/getting-started/fetching-data)
 
 ```ts
 // src/features/orders/order.queries.ts
@@ -68,27 +73,21 @@ export default async function OrdersPage() {
 }
 ```
 
-This path has no internal HTTP request:
+The call goes directly from the page to the feature:
 
 ```text
 Server Component → feature query → database or external service
 ```
 
-The [Next.js Backend for Frontend guide](https://nextjs.org/docs/app/guides/backend-for-frontend) warns that fetching a Route Handler from a Server Component adds an HTTP round trip and can fail at build time for prerendered routes. Call the data source or application function directly when both caller and implementation already execute on the server.
+The page handles rendering. The feature decides which orders the account can see and which fields to return. When another route needs the same read, it calls the same query.
 
-### Why this is the default read path
+`toOrderSummary` returns a data transfer object, or DTO: the fields the UI needs and the caller is allowed to receive. Keep database credentials and query implementation in server-only code. React’s [Server Components reference](https://react.dev/reference/rsc/server-components) explains how server execution keeps those dependencies outside the client bundle.
 
-- credentials and query logic remain outside the client bundle;
-- the component receives exactly the DTO it renders;
-- there is no client loading effect for data required by the initial view;
-- the feature owns the read even when several routes present it;
-- the call remains ordinary TypeScript rather than an invented internal transport.
-
-Server Components do not create type safety by themselves. TypeScript, ORM-generated types, shared contracts, or runtime schemas provide that. Data from an external service remains untrusted and should be parsed before the feature relies on it.
+TypeScript and ORM-generated types help check the code that calls the query. Parse data from external services with a runtime schema before relying on its shape.
 
 ### Start independent reads together
 
-Do not create a waterfall when two reads are independent:
+An orders query and an account-balance query can both start once you know the account. Awaiting one before starting the other makes the second read wait unnecessarily.
 
 ```tsx
 export default async function DashboardPage() {
@@ -105,9 +104,9 @@ export default async function DashboardPage() {
 }
 ```
 
-When one read is slow and the surrounding page can be useful without it, move that work into a smaller async Server Component behind `<Suspense>`. The data still belongs to the feature; streaming changes when its presentation arrives.
+If one read is slow and the surrounding page is useful without it, move that read into a smaller async Server Component behind `<Suspense>`. The rest of the page can appear while that component waits for its data. [Next.js streaming guide](https://nextjs.org/docs/app/getting-started/fetching-data#streaming)
 
-## Passing server data into client interaction
+## Pass server data into client interaction
 
 A Client Component does not need to refetch data merely because it is interactive. Pass a serializable DTO from the Server Component:
 
@@ -117,14 +116,19 @@ const order = await getOrderDetails(orderId)
 return <OrderEditor initialOrder={order} />
 ```
 
-Use this when the browser needs an initial snapshot and local interaction, but not a long-lived server-state lifecycle.
+This fits an editor that loads an order and lets the user change fields locally before saving. Add browser fetching when the editor also needs fresh server data while it stays open.
 
-Next.js also documents streaming a promise to a Client Component, where React’s [`use` API](https://react.dev/reference/react/use) reads it inside a Suspense boundary:
+You can also pass a promise to a Client Component and read it with React’s [`use` API](https://react.dev/reference/react/use). A Suspense boundary shows the fallback while the promise resolves:
 
 ```tsx
 // Server Component
-export function OrdersPanel() {
-  const orders = listOrders()
+import { Suspense } from 'react'
+import { listOrdersForAccount } from '@/features/orders/order.queries'
+import { InteractiveOrderList } from '@/features/orders/ui/InteractiveOrderList'
+import { OrderListSkeleton } from '@/features/orders/ui/OrderListSkeleton'
+
+export function OrdersPanel({ accountId }: { accountId: string }) {
+  const orders = listOrdersForAccount(accountId)
 
   return (
     <Suspense fallback={<OrderListSkeleton />}>
@@ -134,11 +138,15 @@ export function OrdersPanel() {
 }
 ```
 
+Here, the parent supplies `accountId` from the authenticated session.
+
 ```tsx
+// src/features/orders/ui/InteractiveOrderList.tsx
 'use client'
 
 import { use } from 'react'
 import type { OrderSummary } from '../model/order.types'
+import { OrderTable } from './OrderTable'
 
 export function InteractiveOrderList({
   orders,
@@ -150,61 +158,57 @@ export function InteractiveOrderList({
 }
 ```
 
-Prefer an awaited serializable prop when streaming does not improve the experience. A Promise crossing the boundary is useful, but it adds Suspense behavior that the screen must design intentionally.
+Await the data and pass a serializable prop by default. Pass a promise when showing the surrounding UI earlier helps the user, and choose a fallback that makes sense for the waiting component.
 
-## Reads after browser interaction
+## Fetch from the browser when the interaction needs it
 
-Some reads truly belong to the browser lifecycle:
+Some screens need more data after the initial render:
 
-- live search after typing;
-- polling or background refresh;
-- infinite scrolling;
-- client-owned pagination without navigation;
-- browser API input;
-- data shared among several mounted interactive views.
+- Search results change as the user types.
+- Order status refreshes while the page stays open.
+- Infinite scrolling loads another batch.
+- Pagination updates the list without navigation.
+- A request depends on input from a browser API.
+- Several mounted views use the same cached data.
 
-These reads need a transport because the browser cannot import server implementation. Use a Route Handler, an external API, or an RPC client.
+Browser code reaches server data through HTTP or RPC. Use a Route Handler, an external API, or an RPC client for those requests.
 
-### Route Handler: an actual HTTP boundary
+A one-off request can use `fetch` directly. Add a query library when you need to coordinate caching, retries, background refresh, or requests shared by several components.
 
-[Next.js Route Handlers](https://nextjs.org/docs/app/getting-started/route-handlers) use the standard Web `Request` and `Response` APIs. Place the handler in `app`; let it adapt HTTP to a feature query.
+### Let Route Handlers adapt HTTP to feature queries
+
+[Next.js Route Handlers](https://nextjs.org/docs/app/getting-started/route-handlers) use the standard Web `Request` and `Response` APIs. Put the handler in `app` and call the feature query from it:
 
 ```ts
 // src/app/api/orders/route.ts
 import { listOrdersForAccount } from '@/features/orders/order.queries'
 import { requireAccount } from '@/features/identity/server/require-account'
 
-export async function GET(request: Request) {
+export async function GET() {
   const account = await requireAccount()
-  const url = new URL(request.url)
-  const cursor = url.searchParams.get('cursor') ?? undefined
-  const result = await listOrdersForAccount(account.id, { cursor })
+  const orders = await listOrdersForAccount(account.id)
 
-  return Response.json(result)
+  return Response.json(orders)
 }
 ```
 
-The handler owns HTTP concerns: query strings, status codes, headers, and response encoding. The feature query owns what listing orders means.
+The handler handles the HTTP request and response. The query scopes the read to the account and returns the order summaries.
 
-Use a Route Handler when HTTP is part of the requirement:
+If you add pagination, extend the query with validated pagination input. Let the handler read query-string values and translate them into that input.
 
-- browser code must fetch after hydration;
-- a webhook calls the application;
-- a mobile app or external integration consumes the endpoint;
-- the response is a non-UI format such as a file or feed.
+Route Handlers also fit webhooks, mobile clients, external integrations, and responses such as files or feeds. Keep each handler focused on translating its request into a feature operation and returning the appropriate response.
 
-Do not add a handler solely to make server code “look like an API.” That creates a network boundary without a consumer that needs one.
+## Use Server Actions for mutations from your own UI
 
-## Mutations from first-party UI: Server Actions
+A cancellation form needs to submit an order ID, check whether the account can cancel that order, and update the screen.
 
-Next.js implements mutations through React Server Functions. The [Next.js mutation guide](https://nextjs.org/docs/app/getting-started/mutating-data) uses the term Server Action when a Server Function is invoked in an action context such as a form or transition.
-
-A feature mutation file is a clear public entry:
+Use a Server Action for this path. Next.js uses that term for a React Server Function invoked in an action context, such as a form or transition. [Next.js mutation guide](https://nextjs.org/docs/app/getting-started/mutating-data)
 
 ```ts
 // src/features/orders/order.mutations.ts
 'use server'
 
+import { refresh } from 'next/cache'
 import { cancelOrderInput } from './model/order.schema'
 import { cancelOrderUseCase } from './server/cancel-order.use-case'
 import { requireAccount } from '@/features/identity/server/require-account'
@@ -219,6 +223,8 @@ export async function cancelOrder(formData: FormData) {
     accountId: account.id,
     orderId: input.orderId,
   })
+
+  refresh()
 }
 ```
 
@@ -236,61 +242,82 @@ export function CancelOrderForm({ orderId }: { orderId: string }) {
 }
 ```
 
-This path fits first-party UI because forms integrate with React transitions and can progressively enhance. A Client Component can import the action from a dedicated `'use server'` file when it needs pending state, optimistic state, or event-handler invocation.
+The action authenticates the caller and validates the submitted ID. `cancelOrderUseCase` must verify that the account owns the order and that the order can still be cancelled before changing it. That implementation is omitted here; passing an `accountId` alone does not perform those checks.
 
-### A Server Action is still a public server boundary
+A form rendered in a Server Component can submit before JavaScript loads or when JavaScript is disabled. A Client Component can import an action from a dedicated `'use server'` file when it needs pending feedback, optimistic state, or event-handler invocation. [Next.js Server Function examples](https://nextjs.org/docs/app/getting-started/mutating-data#server-components)
 
-The mutation guide states that Server Functions are reachable through direct POST requests, not only through the rendered button. Every action must:
+### Update the screen after the mutation succeeds
 
-1. authenticate the caller;
-2. authorize the operation against the target resource;
-3. validate untrusted input at runtime;
-4. return only data safe for that caller;
-5. keep secrets and server implementation behind a server-only boundary.
+The example calls [`refresh()`](https://nextjs.org/docs/app/api-reference/functions/refresh) after cancellation succeeds. This refreshes the client router so the page can render the updated result from the direct database query.
 
-Hiding an identifier in a form is not authorization. TypeScript is not runtime validation. UI visibility is not access control.
+If you cache the order query, also revalidate the affected cached data. Refreshing the page alone does not invalidate tagged data. Choose the revalidation behavior that matches how you cached the read. [Next.js mutation guide](https://nextjs.org/docs/app/getting-started/mutating-data#refresh-data)
 
-The example keeps these checks at the public entry and use-case boundary. A full protected-resource design is larger than this chapter, but omitting the minimum would teach an unsafe execution model.
+The example shows a successful submission. For expected failures, such as invalid input or an order that can no longer be cancelled, return a result the form can display. Adapt the action for `useActionState` to show that message and pending feedback beside the control. [Next.js error-handling guide](https://nextjs.org/docs/app/getting-started/error-handling#server-functions)
 
-### Do not use Server Actions as a general read transport
+### Check access inside every Server Action
 
-A Server Function can technically return data, but action semantics are designed around mutations, POST requests, and action dispatch. Use Server Components for reads during rendering. Use HTTP or RPC for ongoing browser reads. This keeps operation semantics visible and avoids turning every data need into an imperative action call.
+Server Functions are reachable through direct POST requests. A caller can submit a request without using the rendered form. [Next.js mutation guide](https://nextjs.org/docs/app/getting-started/mutating-data#what-are-server-functions)
 
-## Mutations for HTTP consumers: Route Handlers
+Every action must:
 
-When a mutation must be consumed as HTTP, adapt the request in `app` and delegate:
+1. Authenticate callers when the operation requires an account.
+2. Authorize the operation against the target resource.
+3. Validate untrusted input at runtime.
+4. Return only data safe for that caller.
+5. Keep secrets and server implementation in server-only modules.
+
+Treat the hidden `orderId` field as user input. Check ownership and cancellation rules on the server, even when the UI only shows the button for orders that appear eligible.
+
+### Keep independent reads out of Server Actions
+
+Server Functions can return data, but Server Actions are designed for mutations from the UI. Next.js queues action calls, so using them to fetch independent data introduces sequential execution. [Next.js Backend for Frontend guide](https://nextjs.org/docs/app/guides/backend-for-frontend#server-actions)
+
+Read through feature queries during server rendering. Use HTTP or RPC when browser code needs to request data.
+
+## Use Route Handlers for mutations consumed through an API
+
+A mobile app or external integration needs an endpoint with a defined request and response. Let the Route Handler validate the request and call the same cancellation use case:
 
 ```ts
 // src/app/api/orders/[orderId]/cancel/route.ts
-import { cancelOrderRequest } from '@/features/orders/model/order.schema'
+import { cancelOrderInput } from '@/features/orders/model/order.schema'
 import { cancelOrderUseCase } from '@/features/orders/server/cancel-order.use-case'
 import { requireAccount } from '@/features/identity/server/require-account'
 
 export async function POST(
-  request: Request,
+  _request: Request,
   context: RouteContext<'/api/orders/[orderId]/cancel'>,
 ) {
   const account = await requireAccount()
   const { orderId } = await context.params
-  const input = cancelOrderRequest.parse({ orderId, ...(await request.json()) })
+  const input = cancelOrderInput.parse({ orderId })
 
-  await cancelOrderUseCase({ accountId: account.id, ...input })
+  await cancelOrderUseCase({
+    accountId: account.id,
+    orderId: input.orderId,
+  })
+
   return new Response(null, { status: 204 })
 }
 ```
 
-The same feature use case can sit behind a Server Action and a Route Handler. The entry adapters differ because their consumers differ; business behavior remains one implementation.
+For this example, `cancelOrderUseCase` is an explicitly public server operation of the orders feature. Its database access and cancellation-rule implementation remain private.
 
-## TanStack Query: client server-state lifecycle
+The action and handler both call that operation, so they enforce the same ownership and cancellation rules. Each entry handles the response its caller needs: the action refreshes the page, while the handler returns an HTTP response.
 
-[TanStack Query](https://tanstack.com/query/latest/docs/framework/react/overview) manages asynchronous server state in the browser: request status, deduplication, retries, background refetching, and a client cache. It is not a transport and does not replace the server operation.
+This example shows the successful response. Translate validation failures, denied access, and rejected cancellations into deliberate HTTP status codes and safe response bodies. Use authentication appropriate to the API consumer; the example assumes the caller uses the application’s account session.
 
-The query function still calls HTTP or RPC:
+## Add TanStack Query for caching and background updates
+
+If an order screen needs to refetch in the background, retry failed requests, or share data with other mounted views, use [TanStack Query](https://tanstack.com/query/latest/docs/framework/react/overview). It tracks request status and cached server data in the browser.
+
+The query function still makes the HTTP or RPC call:
 
 ```tsx
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import type { OrderDetailsDTO } from '../model/order.types'
 
 async function getOrder(orderId: string) {
   const response = await fetch(`/api/orders/${orderId}`)
@@ -310,17 +337,25 @@ export function LiveOrderDetails({ orderId }: { orderId: string }) {
 }
 ```
 
-Add TanStack Query when the browser owns a meaningful data lifecycle. Do not add it merely to render server data once.
+This example assumes a `QueryClientProvider` is configured and `/api/orders/[orderId]` returns `OrderDetailsDTO`. The type assertion describes the expected response to TypeScript; use a runtime schema when the response also needs validation.
 
-The [TanStack Query advanced server-rendering guide](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr) documents prefetching, dehydration, and Server Component integration. Those techniques are useful when one query should be server-prefetched and then continue living in the client cache. They also introduce coordination between server rendering and client cache ownership. Start with the direct Server Component path; adopt hydration when the ongoing browser behavior pays for it.
+Start with a Server Component query when the page only needs data for rendering. Add TanStack Query when you need its caching and request behavior while the screen stays open.
 
-TanStack Query mutations can call a Server Action, Route Handler, or RPC procedure. Choose from the consumer and contract requirements, then let TanStack Query manage the browser-side mutation lifecycle.
+### Prefetch when the client needs the same data afterward
 
-## oRPC: a reusable typed application API
+An order screen may need data during server rendering and then keep it updated in the browser. TanStack Query supports prefetching on the server and hydrating the client cache with the result. Its [advanced server-rendering guide](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr) covers that setup.
 
-oRPC becomes useful when an application needs a durable end-to-end typed API surface across multiple calls or consumers. Define procedures with runtime input/output contracts, expose them through a Route Handler, and call them through the generated client.
+Use this when the browser will continue using the query after the initial render. Decide which UI reads from the client cache and which reads from Server Components, so a client refetch does not leave two versions of the same information on screen.
 
-For TanStack Query, the official [oRPC integration](https://orpc.dev/docs/integrations/tanstack-query) builds query and mutation options from that typed client:
+TanStack Query mutations can call a Server Action, Route Handler, or RPC procedure. After a successful mutation, update or invalidate the affected client queries so mounted views can show the new data. [TanStack Query mutation invalidation guide](https://tanstack.com/query/latest/docs/framework/react/guides/invalidations-from-mutations)
+
+## Add oRPC when callers need a shared typed API
+
+Several interactive views may call the same order operations. You then need to keep request inputs, response types, and error handling consistent across those calls.
+
+Use oRPC when maintaining that shared API justifies defining procedures and their contracts. Keep the procedures with the feature, expose them through an HTTP adapter, and call them through a typed client.
+
+The official [oRPC TanStack Query integration](https://orpc.dev/docs/integrations/tanstack-query) builds query and mutation options from that client:
 
 ```tsx
 'use client'
@@ -341,39 +376,26 @@ export function LiveOrderDetails({ orderId }: { orderId: string }) {
 }
 ```
 
-Keep procedure ownership with the feature:
+Here, `orpc` exposes the query utilities created from the typed client. The application still needs its client and server transport setup.
+
+Keep order-specific procedures and contracts in the orders feature:
 
 ```text
 features/orders/server/order.rpc.ts   # order procedures and contracts
-platform/rpc/client.ts                # browser/client wiring
+platform/rpc/client.ts                # client transport setup
 app/api/rpc/route.ts                  # Next.js HTTP adapter
 ```
 
-oRPC adds a contract layer, transport wiring, and another abstraction for the team to understand. It earns that cost when the typed API is reused, when client interaction is substantial, or when procedure-level middleware and error contracts make the boundary clearer. A single Server Component query does not need RPC to remain well designed.
+oRPC adds procedure definitions, contracts, and transport configuration to maintain. That cost can pay off when several callers reuse the API or when shared middleware and typed errors remove repeated work. A page that calls one server query directly can keep that simpler path.
 
-## Decision matrix
+## Choose the default that matches the caller
 
-| Operation | Execution | Consumer | Default boundary | Add when needed |
-| --- | --- | --- | --- | --- |
-| Read required for initial render | Server | Server Component | Direct feature query | Suspense for streaming; cache policy when requirements are known |
-| Read passed into local interaction | Server → browser | One Client Component | Serializable prop | Promise + `use` when streaming has a designed fallback |
-| Read after browser interaction | Browser → server | First-party UI | Route Handler + `fetch` | TanStack Query for sustained cache/lifecycle needs |
-| Read shared across a typed interactive client | Browser → server | Several client views | oRPC procedure | TanStack Query integration for client lifecycle |
-| Mutation from a form or first-party control | Server | React UI | Server Action | Client transition or TanStack mutation for richer feedback |
-| Mutation consumed over HTTP | Server | Browser, mobile, webhook, external client | Route Handler | oRPC when a reusable typed procedure contract is valuable |
-| Pure local UI update | Browser | One interactive view | Component state | A state library only when ownership spans a wider client tree |
-
-## A compact rule set
-
-1. Read during render through a feature query in a Server Component.
-2. Do not call the application’s own Route Handler from a Server Component.
-3. Pass serializable server results into client interaction when no continuing remote lifecycle exists.
-4. Give browser-owned reads an HTTP or RPC transport.
-5. Use Server Actions for first-party UI mutations.
-6. Use Route Handlers when the consumer needs HTTP.
-7. Use TanStack Query for client cache and asynchronous lifecycle, not as a transport.
-8. Use oRPC when a reusable typed application API justifies a contract layer.
-9. Validate, authenticate, and authorize at every public server entry.
-10. Keep the operation owned by its feature regardless of delivery mechanism.
-
-The point is not to minimize the number of tools. It is to make each boundary explain why it exists.
+| Situation | Start with | Add when needed |
+| --- | --- | --- |
+| A Server Component needs data to render | Direct feature query | Suspense when part of the page can appear earlier |
+| A Client Component needs initial data for local interaction | Serializable prop from the server | A promise and `use` when streaming improves the screen |
+| Browser code needs a one-off read | `fetch` to a Route Handler or existing API | RPC when the application already uses a shared typed API |
+| Browser views need polling, background refresh, or shared cached data | TanStack Query over HTTP or RPC | Server prefetching and hydration when the initial render needs the same query |
+| A form or control in your React UI changes server data | Server Action calling a feature operation | Pending feedback, expected-error messages, and optimistic updates |
+| A mobile app, webhook, or external integration needs an operation | Route Handler calling a feature operation | oRPC when callers benefit from shared typed procedures |
+| An interaction only changes local UI state | Component state | A state library when several parts of the client need to coordinate that state |
