@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 
-const routes = ['./', './background', './concepts', './folder-structure', './data-fetching-and-mutation']
+const routes = ['./', './background', './concepts', './folder-structure', './data-fetching-and-mutation', './protected-resources', './caching']
 
 for (const route of routes) {
   test(`${route} has no detectable WCAG A or AA violations`, async ({ page }) => {

@@ -11,6 +11,8 @@ const publicFiles = [
   'docs/concepts.md',
   'docs/folder-structure.md',
   'docs/data-fetching-and-mutation.md',
+  'docs/protected-resources.md',
+  'docs/caching.md',
   'docs/.vitepress/config.ts',
 ]
 
@@ -30,6 +32,9 @@ test('public copy uses the approved identity consistently', () => {
   expect(publication).not.toMatch(/NextJS|Nextjs|Next\.JS/)
   expect(publication).not.toMatch(/\bI believe\b|\bmy preference\b|\bthe best architecture\b/i)
   expect(publication).not.toMatch(/\bTODO\b|coming soon|lorem ipsum|placeholder/i)
+
+  const guides = publicFiles.filter((path) => /^docs\/[^/]+\.md$/.test(path)).map(read).join('\n')
+  expect(guides).not.toMatch(/\b(?:in|for) RFAStack\b|\bRFAStack (?:uses|recommends|requires|reserves|organizes|applies|borrows)\b/i)
 })
 
 test('public source contains no source-notebook references', () => {
@@ -40,6 +45,8 @@ test('public source contains no source-notebook references', () => {
 test('the guide attributes its foundations and links primary framework sources', () => {
   const concepts = read('docs/concepts.md')
   const data = read('docs/data-fetching-and-mutation.md')
+  const protectedResources = read('docs/protected-resources.md')
+  const caching = read('docs/caching.md')
 
   for (const foundation of ['Screaming Architecture', 'Vertical Slice Architecture', 'Clean Architecture', 'Domain-Driven Design']) {
     expect(concepts).toContain(foundation)
@@ -47,6 +54,14 @@ test('the guide attributes its foundations and links primary framework sources',
 
   for (const source of ['nextjs.org/docs', 'react.dev', 'tanstack.com/query', 'orpc.dev/docs']) {
     expect(data).toContain(source)
+  }
+
+  for (const source of ['nextjs.org/docs', 'react.dev/reference/react/cache', 'cheatsheetseries.owasp.org', 'better-auth.com/docs']) {
+    expect(protectedResources).toContain(source)
+  }
+
+  for (const source of ['nextjs.org/docs', 'react.dev/reference/react/cache', 'tanstack.com/query']) {
+    expect(caching).toContain(source)
   }
 })
 

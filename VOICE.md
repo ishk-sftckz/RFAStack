@@ -10,18 +10,24 @@ This guide is calibrated from the approved paragraph below. Use it to write orig
 
 ## The core movement
 
-1. Begin with a problem the developer has seen.
-2. Explain how normal coding decisions create that problem.
-3. State RFAStack's position clearly.
+1. State the topic or responsibility and why it matters to the application.
+2. Explain the risk or design need that makes it worth addressing.
+3. State the recommendation clearly.
 4. Give the reader an example, default, or next decision.
 
 Use the steps each section needs. Let the whole page complete the movement.
 
-## Problem before terminology
+## Establish the concern before the example
 
-Start with what the developer can find in a codebase: a rule buried in a route, a mutation spread across six files, or server-only code imported by a client component. Introduce terms such as feature ownership after the reader can picture the problem they solve.
+Open guides by naming the concern, explaining why it matters in a full-stack Next.js application, and introducing the recommended approach. Do not default to an imagined sequence such as “You add a login redirect…” or make readers work through an order-cancellation story before learning what the page teaches.
 
-An architecture term earns its place when it helps the reader name or solve something concrete.
+For example:
+
+> Protecting resources is a core responsibility when building a full-stack Next.js application. You must control who can access private data and who can perform operations that change it.
+
+Follow that opening with the approach, such as multiple layers of protection, then use code examples to explain how it works. Keep the reason specific: private data and server operations need access controls. Avoid unsupported claims such as “security is more important than ever” or generic phrases such as “in today’s digital world.”
+
+Use concrete code situations where they help explain the mechanism: a rule buried in a route, a mutation spread across several files, or server-only code imported by a client component. An architecture term earns its place when it helps the reader name or solve the concern.
 
 ## State the opinion early
 
@@ -50,6 +56,25 @@ Examples should involve real RFAStack decisions: routes, features, reads, mutati
 ## Talk to the reader
 
 Use “you.” It speaks to an individual developer and still includes someone working on a team. Use “your team” only when the sentence is specifically about coordination between people.
+
+Give the instruction directly. Avoid recurring introductions such as “RFAStack uses,” “In RFAStack,” “RFAStack recommends,” or “For RFAStack.” The reader is already in the guide; repeating the project name makes the advice sound like an outside description.
+
+Choose wording that matches the strength of the advice:
+
+- Use “Use…” or “Keep…” for a clear instruction.
+- Use “You should…” for advice addressed to the reader.
+- Use “We recommend…” when stating an opinion with tradeoffs. “We” represents the guide’s recommendations, not an invented team history.
+- Use “Must…” or “You must…” when a requirement is necessary, such as enforcing authorization. Do not turn every preference into a requirement.
+
+For example:
+
+| Avoid | Write |
+| --- | --- |
+| RFAStack uses four directories at the top of `src`. | Use four directories at the top of `src`. |
+| In RFAStack, data protection belongs in feature server modules. | Keep data protection in the feature’s server modules. |
+| RFAStack recommends Proxy for authenticated areas. | We recommend Proxy for early redirects around authenticated areas. |
+
+Vary direct instructions and explanations naturally. Do not replace every project-name introduction with “We recommend.” Keep the project name where it identifies the project, such as the title, approved introduction, attribution, or licensing text.
 
 Contractions are welcome. Occasional questions are useful when a developer would genuinely ask them. RFAStack sounds like a developer sharing a tested default. Institutional language works against that voice.
 
@@ -94,7 +119,7 @@ Open with recognizable pain. Make one point per section, use one concrete exampl
 
 ### Guide
 
-Start from a code situation, explain the mechanism, give the rule, and cover the tradeoff. Prefer a worked example over another paragraph of architecture vocabulary.
+Start with the responsibility and its relevance, then introduce the recommended approach. Explain the mechanism with a worked example and cover the tradeoff. A code scenario can support the explanation without becoming the introduction.
 
 ### Cards and chapter links
 
@@ -103,7 +128,7 @@ Make each item useful on its own. Vary their syntax naturally. A row of equally 
 ## Writing workflow
 
 1. Write the decision or opinion in one plain sentence.
-2. Find the codebase problem that makes the decision necessary.
+2. Identify the application concern that makes the decision necessary and state it directly in the opening.
 3. Draft a heading that carries the problem, claim, question, or practical promise.
 4. Explain the mechanism with a concrete example.
 5. Add the boundary when the recommendation changes by context.
@@ -112,8 +137,9 @@ Make each item useful on its own. Vary their syntax naturally. A row of equally 
 
 ## Final check
 
-- Does the reader encounter the problem before the architecture term?
-- Is RFAStack's opinion easy to find?
+- Does the introduction name the concern, explain why it matters, and introduce the approach before a detailed example?
+- Is the recommendation easy to find, and does its wording distinguish advice from requirements?
+- Does guide prose address the reader directly without repeated “RFAStack uses” or “In RFAStack” framing?
 - Can the reader picture the problem in a Next.js codebase?
 - Does the copy say what becomes easier without making a broad marketing promise?
 - Does the heading carry a useful point?

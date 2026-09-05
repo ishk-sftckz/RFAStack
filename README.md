@@ -4,7 +4,7 @@
 
 A Next.js project is easy to navigate while it is small. Then one product change starts crossing routes, components, hooks, services, schemas, and API handlers scattered across the repository.
 
-RFAStack keeps the code for a business capability together. An `orders` feature owns its UI, rules, reads, mutations, and server code. `src/app` stays focused on the Next.js boundary. Integrations live in `src/platform`; code that is genuinely generic lives in `src/shared`.
+Keep the code for a business capability together. An `orders` feature owns its UI, rules, reads, mutations, and server code. `src/app` stays focused on the Next.js boundary. Integrations live in `src/platform`; code that is genuinely generic lives in `src/shared`.
 
 [Read the docs →](https://ishk-sftckz.github.io/RFAStack/background)
 

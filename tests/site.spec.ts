@@ -6,6 +6,8 @@ const publicRoutes = [
   { path: './concepts', heading: 'Concepts' },
   { path: './folder-structure', heading: 'Folder Structure' },
   { path: './data-fetching-and-mutation', heading: 'Data Fetching & Mutation' },
+  { path: './protected-resources', heading: 'Protected Resources' },
+  { path: './caching', heading: 'Caching' },
 ] as const
 
 test('every public route renders its document', async ({ page }) => {
@@ -61,7 +63,9 @@ test('homepage presents RFAStack as a full-stack architecture model', async ({ p
   const readingPathLinks = [
     ['Background & Motivation', 'background'],
     ['Architecture Foundations', 'concepts'],
-    ['Async Data Management', 'data-fetching-and-mutation'],
+    ['Data Fetching & Mutation', 'data-fetching-and-mutation'],
+    ['Protected Resources', 'protected-resources'],
+    ['Caching', 'caching'],
   ] as const
 
   const readingPath = page.getByLabel('RFAStack reading path')
@@ -311,9 +315,26 @@ test('chapter navigation follows the intended reading order', async ({ page }) =
     'href',
     '/RFAStack/concepts',
   )
-  await expect(page.getByRole('link', { name: /Next chapter Async Data Management/ })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: /Next chapter Data Fetching & Mutation/ })).toHaveAttribute(
     'href',
     '/RFAStack/data-fetching-and-mutation',
+  )
+
+  await page.goto('./data-fetching-and-mutation')
+  await page.getByRole('link', { name: /Next chapter Protected Resources/ }).click()
+  await expect(page).toHaveURL(/\/RFAStack\/protected-resources$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Protected Resources' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Previous chapter Data Fetching & Mutation/ })).toHaveAttribute(
+    'href',
+    '/RFAStack/data-fetching-and-mutation',
+  )
+
+  await page.getByRole('link', { name: /Next chapter Caching/ }).click()
+  await expect(page).toHaveURL(/\/RFAStack\/caching$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Caching' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Previous chapter Protected Resources/ })).toHaveAttribute(
+    'href',
+    '/RFAStack/protected-resources',
   )
 })
 
@@ -365,7 +386,7 @@ test('guide prose uses Geist while headings retain the editorial display face', 
   await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('font-family', /Newsreader Variable/)
 })
 
-test('sidebar separates introduction, architecture foundations, and async data management', async ({ page }, testInfo) => {
+test('sidebar exposes the guide sections, protected resources, and caching', async ({ page }, testInfo) => {
   await page.goto('./background')
 
   if (testInfo.project.name === 'mobile-chromium') {
@@ -375,22 +396,27 @@ test('sidebar separates introduction, architecture foundations, and async data m
   const sidebar = page.getByLabel('Sidebar Navigation')
   const introduction = sidebar.getByRole('link', { name: 'Introduction', exact: true })
   const foundations = sidebar.getByRole('link', { name: 'Architecture Foundations', exact: true })
-  const asyncData = sidebar.getByRole('link', { name: 'Async Data Management', exact: true })
   const background = sidebar.getByRole('link', { name: 'Background & Motivation' })
   const concepts = sidebar.getByRole('link', { name: 'Concepts', exact: true })
   const folderStructure = sidebar.getByRole('link', { name: 'Folder Structure' })
-  const dataFetching = sidebar.getByRole('link', { name: 'Data Fetching & Mutation' })
+  const dataFetching = sidebar.getByRole('link', { name: 'Data Fetching & Mutation', exact: true })
+  const protectedResources = sidebar.getByRole('link', { name: 'Protected Resources', exact: true })
+  const caching = sidebar.getByRole('link', { name: 'Caching', exact: true })
 
   await expect(introduction).toBeVisible()
   await expect(introduction).toHaveAttribute('href', '/RFAStack/background')
   await expect(foundations).toBeVisible()
   await expect(foundations).toHaveAttribute('href', '/RFAStack/concepts')
-  await expect(asyncData).toBeVisible()
-  await expect(asyncData).toHaveAttribute('href', '/RFAStack/data-fetching-and-mutation')
   await expect(background).toBeVisible()
   await expect(concepts).toBeVisible()
   await expect(folderStructure).toBeVisible()
   await expect(dataFetching).toBeVisible()
+  await expect(dataFetching).toHaveCount(1)
+  await expect(dataFetching).toHaveAttribute('href', '/RFAStack/data-fetching-and-mutation')
+  await expect(protectedResources).toBeVisible()
+  await expect(protectedResources).toHaveAttribute('href', '/RFAStack/protected-resources')
+  await expect(caching).toBeVisible()
+  await expect(caching).toHaveAttribute('href', '/RFAStack/caching')
 
   await introduction.locator('..').getByRole('button', { name: 'toggle section' }).click()
   await expect(background).toBeHidden()
@@ -400,8 +426,8 @@ test('sidebar separates introduction, architecture foundations, and async data m
   await expect(concepts).toBeHidden()
   await expect(folderStructure).toBeHidden()
 
-  await asyncData.locator('..').getByRole('button', { name: 'toggle section' }).click()
-  await expect(dataFetching).toBeHidden()
+  await expect(dataFetching).toBeVisible()
+  await expect(dataFetching.locator('..').getByRole('button', { name: 'toggle section' })).toHaveCount(0)
 })
 
 test('unknown routes render the custom 404 page', async ({ page }) => {

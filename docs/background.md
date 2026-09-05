@@ -21,7 +21,7 @@ Next.js cannot answer those questions without knowing your application. You need
 
 When an application is small, you usually choose the shortest path that gets the feature working. A page reads from the database because it needs data. A mutation stays inside a Server Action because only one form uses it. A helper goes into `utils` because it does not have an obvious home.
 
-None of those choices has to be wrong.
+Next.js permits those arrangements. Give each responsibility a consistent home from the first feature.
 
 The problem begins when each feature answers the same questions differently. One page reads from the database directly while another calls an internal HTTP endpoint. One mutation keeps its rules in the feature while another puts them inside a route or component. Validation happens wherever the current implementation needs it.
 
@@ -39,22 +39,22 @@ Code reviews start debating personal preferences because the existing code gives
 
 The application may still run correctly, but ordinary changes require more investigation than they should. That uncertainty becomes technical debt: slower development, repeated mistakes, and the stress of never being sure what a change might break.
 
-## RFAStack gives those decisions a default
+## Give recurring decisions a default
 
-RFAStack is an opinionated reference for engineering full-stack Next.js applications. It provides a starting point for the decisions the framework leaves to you.
+Use the recommendations in this guide as a starting point for the decisions the framework leaves to you.
 
-Code should have a clear owner. Dependencies should follow a direction you can explain. Reads and mutations should take paths that match their callers and runtime. Framework boundaries should exist because the application needs them, not because an API happens to be available.
+Code should have a clear owner. Dependencies should follow a direction you can explain. Reads and mutations should take paths that match their callers and runtime. Routes and actions adapt requests and responses; the feature’s server operations own business work. Apply those boundaries when you introduce the operation.
 
 Folder structure is part of that architecture, but the same reasoning must continue beyond folders. It should also guide how data reaches a feature, where an operation runs, and where rules such as authorization or cache invalidation belong.
 
-For RFAStack, a scalable application is one that can gain features and contributors without making every change harder to trace. The defaults in this guide are meant to keep that reasoning visible in the codebase.
+A scalable application should be able to gain features and contributors without making every change harder to trace. The defaults in this guide are meant to keep that reasoning visible in the codebase.
 
-## Add structure when the application asks for it
+## Apply the rules from the first feature
 
-A small prototype or a short-lived page may only need a direct query and a nearby mutation. Adding boundaries before they solve a real problem makes the code harder to navigate.
+Follow feature ownership, file placement, and dependency rules from the start. A read-only feature can begin with a component and a server query. A feature that implements cancellation needs a business operation to enforce its rules, even if only one form calls it.
 
-More structure becomes useful when features share behavior, operations have several callers, or data crosses runtime and trust boundaries. Different requirements can lead to different paths, but each path should have a reason you can point to.
+Create the modules required by those responsibilities. Add a repository abstraction when persistence needs to be shared or substituted, and a separate DTO mapper when mapping needs its own module. The query or use case can access the database and select safe result fields before either abstraction exists.
 
-When you add a read, change a mutation, or protect a resource, you should know where the implementation begins, which feature owns the behavior, and which other code it can affect.
+The feature’s size does not change where its business rules belong or which modules callers may import. When you add a read, change a mutation, or protect a resource, the same rules tell you where the implementation begins and which other code it can affect.
 
 Next: [see the architectural foundations behind ownership and dependency direction](./concepts).

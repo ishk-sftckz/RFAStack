@@ -88,12 +88,16 @@ export default withMermaid(
               ],
             },
             {
-              text: 'Async Data Management',
+              text: 'Data Fetching & Mutation',
               link: '/data-fetching-and-mutation',
-              collapsed: false,
-              items: [
-                { text: 'Data Fetching & Mutation', link: '/data-fetching-and-mutation' },
-              ],
+            },
+            {
+              text: 'Protected Resources',
+              link: '/protected-resources',
+            },
+            {
+              text: 'Caching',
+              link: '/caching',
             },
           ],
         },

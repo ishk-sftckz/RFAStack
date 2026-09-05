@@ -1,6 +1,6 @@
 # Contributing to RFAStack
 
-RFAStack welcomes corrections and proposals that make the architecture more precise, useful, and honest about its tradeoffs.
+We welcome corrections and proposals that make the architecture more precise, useful, and honest about its tradeoffs.
 
 ## Before opening a pull request
 
