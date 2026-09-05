@@ -29,7 +29,7 @@ Playwright builds and serves the documentation through `playwright.config.ts`; d
 - Preserve the `/RFAStack/` GitHub Pages base path in configuration, assets, internal links, and browser tests.
 - When adding or renaming a guide page, update the sidebar, homepage reading path, and Playwright route coverage together.
 - Keep the approved tagline exact: “An Opinionated React Fullstack Architecture for Next.js Applications.”
-- Public-facing copy: read and follow `VOICE.md` before editing the landing page or guide prose.
+- Public-facing copy and content: read and follow `VOICE.md`, then use the `copy-editing` and `no-ai-slop` skills before finalizing it.
 - Follow `CONTRIBUTING.md` terminology and cite primary sources for claims about framework behavior.
 - Preserve the MIT boundary for source code and CC BY 4.0 boundary for prose, examples, diagrams, and visual assets.
 - Put publication-copy checks in `tests/publication.spec.ts`, route and interaction checks in `tests/site.spec.ts`, and WCAG checks in `tests/accessibility.spec.ts`.
