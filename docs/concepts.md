@@ -5,144 +5,145 @@ description: The architectural foundations behind RFAStack's feature ownership a
 
 # Concepts
 
-This chapter explains the architectural ideas behind how RFAStack organizes a Next.js application.
+When an order’s cancellation rule changes, you should know where to start. The rule, the mutation that uses it, and the order-specific UI belong in `src/features/orders`. You can follow the behavior there without searching through unrelated routes, services, and helpers.
 
-They explain why a business capability owns its behavior, why framework and integration code stay at explicit boundaries, and why dependencies have a declared direction. They are foundations for application structure, not a catalog of every concern RFAStack addresses.
+RFAStack organizes business behavior by feature. Next.js entry points handle routing and framework conventions. Platform code connects the application to databases and outside services. Each part has a responsibility, and its imports should follow that responsibility.
 
-## Four foundations for application structure
+## Keep business behavior together as the application grows
 
-### Screaming Architecture: reveal the business
+### Screaming Architecture: make the business visible
 
-Robert C. Martin’s [Screaming Architecture](https://blog.cleancoder.com/uncle-bob/2011/09/30/Screaming-Architecture.html) asks what a repository communicates at first glance. Does its top-level structure reveal a business domain, or only the frameworks and technical categories used to build it?
+Open a repository organized around `components`, `services`, and `utils`, and you still need to inspect the files to discover what the application does.
 
-RFAStack applies that test through `src/features`:
+Robert C. Martin’s [Screaming Architecture](https://blog.cleancoder.com/uncle-bob/2011/09/30/Screaming-Architecture.html) asks whether the structure reveals the system’s use cases. RFAStack applies that idea inside `src/features`:
 
 ```text
-features/
+src/features/
   billing/
   identity/
   orders/
   reporting/
 ```
 
-The directory names expose product capabilities. A reader can begin with what the system does before learning how a route or ORM delivers it.
+These names give you a starting point. For an order change, open `orders`. For a billing change, open `billing`.
 
-Next.js remains visible in `src/app` as an explicit framework boundary. The repository presents stable business capabilities first and keeps delivery mechanics at the edge.
+Next.js conventions remain in `src/app`. Business capabilities have their own place alongside that framework structure.
 
-### Vertical Slice Architecture: keep a change together
+### Vertical Slice Architecture: keep the parts of a change nearby
 
-[Vertical Slice Architecture](https://www.jimmybogard.com/vertical-slice-architecture/) is associated with Jimmy Bogard’s work on organizing code around use cases instead of horizontal technical layers. Its history also traces through earlier feature-folder and command/query ideas, documented by the [Vertical Slice Architecture project](https://verticalslicearchitecture.com/learn/cookbook/history.html).
+Changing order cancellation can involve a form, input validation, a business rule, and a server operation. Keep those parts with the orders feature so you can trace the change without moving between application-wide technical folders.
 
-RFAStack treats a feature as a vertical full-stack slice. An `orders` capability may own:
+Jimmy Bogard’s [Vertical Slice Architecture](https://www.jimmybogard.com/vertical-slice-architecture/) groups concerns around individual use cases across the stack. RFAStack borrows that approach at the feature level: an `orders` feature contains several related operations and the order-specific code they use.
 
-- order-specific UI;
+A feature may own:
+
+- UI;
 - schemas and types;
 - pure business rules;
 - read and mutation interfaces;
 - server-only use cases;
-- its repository contract or implementation when that complexity is warranted.
+- repository code when persistence needs its own module.
 
-A slice can contain only the layers its behavior needs while still owning that behavior end to end.
+Start with the parts the feature needs. A component and a query can be enough. Add more structure when you need to separate behavior that has become difficult to follow or test.
 
-### Clean Architecture: control dependency direction
+### Clean Architecture: keep business rules independent of integrations
 
-[Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) separates policy from volatile delivery and infrastructure details. RFAStack borrows the dependency principle without reproducing the concentric-circle template folder for folder.
+The rule that decides whether an order can be cancelled should work without Next.js or a database connection.
 
-The business rule should not need to import Next.js to decide whether an order can be cancelled. Database configuration should not decide that policy. A route or form action can depend on the feature operation, while the pure rule remains framework-free.
+[Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) describes a dependency rule that keeps business policy independent of framework and infrastructure details. RFAStack applies that separation to pure feature rules while allowing feature server code to use platform integrations directly.
+
+For a straightforward read, a feature query can call the database client. Keep any pure calculations or business rules in modules that can run without that client.
+
+When an operation needs persistence that you can substitute or test independently, introduce a repository contract. The feature owns both the contract and the adapter that implements it.
+
+The arrows below show source-code dependencies for that optional arrangement:
 
 ```mermaid
 flowchart TD
-  App[src/app adapters] --> Public[Feature public interface]
-  Public --> Rule[Feature rules and use cases]
-  Rule --> Port[Feature integration contract]
-  Port --> Platform[Platform implementation]
-  App -. allowed .-> Shared[Shared primitives]
-  Rule -. allowed .-> Shared
+  App[src/app adapter] --> Entry[Feature public interface]
+  Entry --> UseCase[Feature use case]
+  Entry --> Adapter[Feature repository adapter]
+  UseCase --> Rule[Feature business rules]
+  UseCase --> Contract[Feature repository contract]
+  Adapter --> Contract
+  Adapter --> Platform[src/platform/database]
 ```
 
-Dependency direction should clarify a real boundary without adding empty layers. A direct feature query can be enough. Introduce a port and adapter when the business operation needs isolation, substitution, or independent testing. A box in a diagram is not a reason to create one.
+The public interface connects the use case to the repository adapter. The use case depends on the contract, and the adapter uses the platform database client to implement it. Platform code remains independent of the feature.
 
-### Domain-Driven Design: name and protect capabilities
+Introduce this separation when it solves a specific testing or integration problem. A direct feature query remains a valid starting point.
 
-Eric Evans’ [Domain-Driven Design reference](https://www.domainlanguage.com/ddd/reference/) provides language for modeling a domain, separating bounded contexts, and aligning code with business concepts.
+### Domain-Driven Design: give business concepts a clear owner
 
-RFAStack uses selected DDD habits:
+A shared model can gradually collect rules from several features. Once every feature can change it, you have to understand all its callers before changing one business rule.
+
+Keep rules with the feature that owns their meaning. Eric Evans’ [Domain-Driven Design reference](https://www.domainlanguage.com/ddd/reference/) describes how domain language and bounded contexts help define those relationships.
+
+RFAStack uses selected DDD practices:
 
 - name features in the language of the product;
-- keep rules near the capability that owns them;
-- make cross-feature coordination explicit;
-- avoid a universal model that every part of the application mutates;
-- distinguish domain behavior from technical integration.
+- keep rules near the feature that owns them;
+- make relationships between features explicit;
+- separate models when their business meanings differ;
+- keep domain behavior separate from technical integration.
 
-It does not require tactical DDD patterns everywhere. An entity, aggregate, repository, or domain service should exist because it clarifies real behavior. A read-only dashboard card does not need an aggregate root to qualify as architecture.
+Add an entity, aggregate, repository, or domain service when it clarifies behavior you need to model. A read-only dashboard card does not need an aggregate root to qualify as architecture.
 
-## How these concepts shape RFAStack
+## Use seven rules to place code and review imports
 
-Each foundation answers a different architectural question:
-
-| Foundation | Question it answers | RFAStack mechanism |
-| --- | --- | --- |
-| Screaming Architecture | What does this system do? | Top-level feature names reveal business capabilities. |
-| Vertical Slice Architecture | What changes together? | UI, rules, reads, mutations, and server work live with the feature. |
-| Clean Architecture | Which direction may dependencies point? | Framework and integration details depend on feature contracts and behavior. |
-| Domain-Driven Design | Who owns this concept? | Product language defines boundaries and cross-feature relationships. |
-
-Together, these rules determine where code belongs and which modules may depend on it.
-
-## Seven principles for structure and dependency
-
-| Principle | What it requires |
+| Principle | What to do |
 | --- | --- |
-| 1. Organize business behavior by feature | A business capability is the primary unit of ownership. Technical categories can exist inside the feature when they improve navigation. |
-| 2. Keep framework entries thin | Pages, layouts, Route Handlers, and Server Actions adapt framework inputs and outputs, then delegate business policy to the owning feature. |
-| 3. Separate integration from decision | Platform modules connect to databases, queues, email providers, and observability services. Features decide when and why those integrations are used. |
-| 4. Share deliberately | Shared code must be generic in both name and behavior. Repeated feature code can remain repeated until a stable common concept emerges. |
-| 5. Expose small feature interfaces | Other parts of the application import only the operations and components a feature intentionally exposes, keeping its internal layout private. |
-| 6. Make server and client ownership visible | Server-only code sits behind an obvious boundary and imports `server-only` when appropriate. Client components use `'use client'` at the smallest useful interactive boundary. |
-| 7. Add layers for observed complexity | A feature can begin with a component and a query, then add a model, use case, repository contract, or adapter when its behavior requires them. |
+| 1. Organize business behavior by feature | Keep related UI, rules, reads, mutations, and server work together. Add technical subfolders inside the feature when they improve navigation. |
+| 2. Keep framework entries thin | Let pages, layouts, Route Handlers, and Server Actions adapt inputs and outputs. Delegate business rules to the owning feature. |
+| 3. Separate integration from decisions | Put database connections, email clients, and similar integrations in `platform`. Decide when and why to use them inside the feature. |
+| 4. Share deliberately | Move code into `shared` when its behavior is generic across features. Allow duplication while the common behavior is still unclear. |
+| 5. Expose small feature interfaces | Give callers explicit operations and components to import. Keep implementation details behind those interfaces. |
+| 6. Make runtime boundaries visible | Mark server-only implementation with `import 'server-only'`. Place `'use client'` at the smallest useful interactive boundary. |
+| 7. Add layers for observed complexity | Start with the files you need. Add a model, use case, repository contract, or adapter when you can explain the problem it solves. |
 
-A small public interface lets callers use a feature without learning its internal layout:
+A public interface gives callers a stable import while the implementation changes:
 
 ```ts
-// preferred: the feature chooses its public surface
+// Import the feature's public query.
 import { getOrderDetails } from '@/features/orders/order.queries'
 
-// avoid: another module couples itself to implementation layout
+// Avoid reaching into its private implementation.
 import { getOrderDetails } from '@/features/orders/server/internal/query-builder'
 ```
 
-## Cross-feature coordination
+Next.js documents how [`'use client'` and `server-only` establish and protect runtime boundaries](https://nextjs.org/docs/app/getting-started/server-and-client-components). Folder names help you recognize those boundaries; the directives and imports express them to the framework.
 
-Business capabilities interact through explicit relationships.
+## Start cross-feature work with a direct public call
 
-When `checkout` needs a price from `catalog`, choose an explicit relationship:
+When `checkout` needs a price from `catalog`, call a public query exposed by `catalog`. Keep the pricing rule in `catalog`, and let checkout use the result.
 
-- import a small public query exposed by `catalog`;
-- pass data from an orchestrating entry or application operation;
-- publish an event when temporal decoupling is real;
-- extract a genuinely shared domain concept only when both capabilities own the same stable meaning.
+If a workflow coordinates several features, give that workflow an owner. A checkout operation can coordinate inventory and orders while each feature retains its own business rules. The [folder structure guide](./folder-structure) shows where that operation belongs.
 
-Avoid deep cross-feature imports. They make private structure part of an accidental public API and turn a local refactor into a repository-wide event.
+Use an event when the receiving feature can process the work later and the workflow allows it to fail independently. An operation that needs a price before continuing still needs a way to obtain that price before proceeding.
 
-## The architecture test
+Extract a shared domain concept only when the participating features use it with the same meaning. Similar names alone are not enough.
 
-A structure is doing useful work when it can answer these questions without guesswork:
+Avoid importing another feature’s private files. Once callers depend on those paths, moving an internal module requires changing code outside its owner.
 
-1. Which feature owns this behavior?
-2. Which module is allowed to call it?
-3. Where does the framework stop and application behavior begin?
+## Check whether a change has a clear owner
+
+Pick a behavior in your application and answer these questions from the code:
+
+1. Which feature owns it?
+2. Which modules are allowed to call it?
+3. Where does the framework entry delegate to the feature?
 4. Which code is server-only?
-5. Which integration detail can change without rewriting the rule?
-6. What is intentionally public to another feature?
+5. Which integration can change without rewriting the business rule?
+6. Which operations and components are public to another feature?
 
-If the answers come only from team memory, the boundaries are conceptual but not yet encoded.
+If you need someone’s memory to answer, document the decision and make the relevant files or imports reflect it.
 
-## When this structure fits and when it does not
+## Add these boundaries when changes need them
 
-RFAStack is useful when an application has multiple business capabilities, full-stack changes, a mix of server and client execution, and enough contributors that discoverability matters.
+RFAStack fits applications with several business capabilities, changes that span server and client code, and contributors who need to understand one another’s work.
 
-A short-lived campaign page, narrow prototype, or small read-only site can keep a more direct structure. Add RFAStack’s additional boundaries when repeated full-stack changes or coordination costs justify them.
+A short-lived campaign page, narrow prototype, or small read-only site can keep a more direct structure. Add boundaries when repeated changes make ownership or dependencies difficult to trace.
 
-The tradeoff is ongoing discipline. Teams must review dependency direction, resist vague shared folders, and move code when ownership becomes clearer. Without that discipline, four boundaries become four more junk drawers.
+You will still need to review imports, question code placed in shared folders, and move files when their ownership becomes clearer. The folder structure gives you rules to enforce; maintaining those rules remains part of the work.
 
 Next: [map these concepts onto a concrete Next.js folder structure](./folder-structure).

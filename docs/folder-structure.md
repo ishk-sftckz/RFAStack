@@ -5,25 +5,25 @@ description: A concrete Next.js structure for feature-owned full-stack behavior.
 
 # Folder Structure
 
-The folder tree should make ownership legible. Routes belong to the framework, business behavior belongs to features, integrations belong to the platform boundary, and only deliberately generic code belongs in shared.
+An order rule, a database client, and a route-specific header have different reasons to change. Give each one a home that reflects its responsibility.
 
-The shape is compact at the top level:
+RFAStack uses four directories at the top of `src`:
 
 ```text
 src/
-  app/          # Next.js entry adapters and route composition
-  features/     # Business capabilities as vertical full-stack slices
-  platform/     # App-local infrastructure and vendor integration
-  shared/       # Generic application primitives
+  app/          # Next.js routes and page composition
+  features/     # Business capabilities across server and client
+  platform/     # Database connections and external integrations
+  shared/       # Code with generic behavior across features
 ```
 
-This is a dependency model expressed through folders. Copying the names without enforcing their responsibilities produces four new junk drawers.
+Review imports as well as file placement. Copying the names without enforcing their responsibilities produces four new junk drawers.
 
-## The four responsibility boundaries
+## Give each directory a responsibility
 
-### `src/app`: receive, adapt, compose
+### `src/app`: handle routes and compose pages
 
-`app` owns the URL tree and Next.js lifecycle files. Keep the framework conventions obvious:
+Keep the URL tree and Next.js lifecycle files in `app`:
 
 ```text
 src/app/
@@ -53,21 +53,34 @@ src/app/
       route.ts
 ```
 
-The [Next.js project-structure reference](https://nextjs.org/docs/app/getting-started/project-structure) defines the routing conventions. RFAStack adds an ownership rule: route files adapt those conventions to feature interfaces.
+The [Next.js project-structure reference](https://nextjs.org/docs/app/getting-started/project-structure) defines the routing conventions. RFAStack adds an ownership rule: route files use feature interfaces to assemble the application.
 
-Good work for `app` includes:
+Use `app` to:
 
-- mapping a URL parameter into a feature query;
-- composing several feature views into a page;
-- defining metadata, layouts, loading UI, and error boundaries;
-- adapting an HTTP request in a Route Handler;
-- keeping UI that exists only to assemble one route in `_components`.
+- pass a URL parameter to a feature query;
+- compose several feature views into a page;
+- define metadata, layouts, loading UI, and error boundaries;
+- adapt an HTTP request in a Route Handler;
+- keep UI used only to assemble one route in `_components`.
 
-Business policy does not become route code merely because the request entered through a route.
+Keep the order-cancellation rule in the orders feature, even when only one route calls it.
 
-### `src/features`: own a business capability
+### `src/features`: keep a business capability together
 
-A feature contains the code that changes when its capability changes. It can span server and client while remaining one ownership boundary.
+A feature contains the code that changes when its business behavior changes. It can include server and client code.
+
+A small feature can start with a component and a query:
+
+```text
+src/features/announcements/
+  ui/
+    AnnouncementBanner.tsx
+  announcement.queries.ts
+```
+
+Add folders as the feature grows. You might need `model` for schemas and pure rules, or `server` for query implementations and use cases.
+
+An orders feature with those responsibilities could look like this:
 
 ```text
 src/features/orders/
@@ -82,6 +95,7 @@ src/features/orders/
     order.types.ts
     order-status.ts
     calculate-order-total.ts
+    can-cancel-order.ts
   order.queries.ts
   order.mutations.ts
   server/
@@ -93,20 +107,11 @@ src/features/orders/
     order.repository.ts
 ```
 
-That is a mature example, not a minimum template. A small feature can start here:
+Each file represents work this feature needs to do. Create repository or RPC files when the feature needs those responsibilities.
 
-```text
-src/features/announcements/
-  ui/
-    AnnouncementBanner.tsx
-  announcement.queries.ts
-```
+### `src/platform`: connect to databases and outside services
 
-Add `model`, `server`, or repository files when behavior justifies them. An empty directory communicates nothing.
-
-### `src/platform`: integrate without deciding policy
-
-Platform code owns app-local integration with the environment:
+Keep integration setup and clients in `platform`:
 
 ```text
 src/platform/
@@ -122,13 +127,15 @@ src/platform/
     object-storage.ts
 ```
 
-This boundary may know how to open a transaction, send a message, or record a span. It should not decide whether an order may be cancelled or which customer qualifies for a refund.
+Platform modules can open a transaction, send a message, or record a span. The orders feature decides whether an order may be cancelled and which customer qualifies for a refund.
 
-Feature server code imports platform capabilities. Platform code does not import a feature to discover what to do.
+Feature server code imports the platform modules it needs. Platform code must not import features.
 
-### `src/shared`: generic by behavior, not by hope
+When a feature needs a repository contract, keep the contract and its adapter inside that feature. The adapter imports the platform database client. This keeps feature-specific persistence code with its owner.
 
-Shared code has no business owner because its meaning is genuinely generic across the application:
+### `src/shared`: share code with generic behavior
+
+Use `shared` for code whose behavior is independent of a particular business feature:
 
 ```text
 src/shared/
@@ -143,40 +150,43 @@ src/shared/
     assert-unreachable.ts
 ```
 
-`Money` may look generic while encoding order-specific rounding. `StatusBadge` may look reusable while knowing every status in fulfillment. Names do not prove generality; behavior does.
+`Money` may look generic while encoding order-specific rounding. `StatusBadge` may look reusable while knowing every status in fulfillment.
 
 Use two checks before moving code into shared:
 
-1. Can the module be described without naming a feature?
-2. Can it evolve without negotiating with one feature’s business rules?
+1. Can you describe the module without naming a feature?
+2. Can you change it without changing or negotiating one feature’s business rules?
 
-If either answer is no, keep it with the feature. Duplication is reversible. A shared dependency with the wrong abstraction is not.
+If either answer is no, keep it with the feature. Allow some duplication while the common behavior is unclear. Once several features depend on a shared abstraction, changing it requires checking all those callers.
 
-## Dependency direction
+## Keep imports within the allowed boundaries
 
-The allowed imports form a small graph:
+The arrows show allowed dependencies between the four directories:
 
 ```mermaid
 flowchart LR
   App[src/app] --> Features[src/features]
+  App --> Platform[src/platform]
   App --> Shared[src/shared]
-  Features --> Platform[src/platform]
+  Features --> Platform
   Features --> Shared
-  App --> Platform
+  Platform --> Shared
 ```
 
 | From | May depend on | Must not depend on |
 | --- | --- | --- |
-| `app` | feature public interfaces, platform bootstrap, shared primitives | feature internals reached by convenience |
-| `features` | its own internals, explicit interfaces of another feature, platform, shared | `app`, deep internals of another feature |
-| `platform` | external packages, app configuration, shared primitives | business policy, `app`, features |
-| `shared` | other generic shared primitives | `app`, features, business-specific platform behavior |
+| `app` | Feature public interfaces, platform setup, shared primitives | Private feature implementation |
+| `features` | Its own implementation, another feature’s explicit public interface, platform, shared | `app`, another feature’s private implementation |
+| `platform` | External packages, application configuration, shared primitives | Business policy, `app`, features |
+| `shared` | Other generic shared primitives | `app`, features, business-specific platform behavior |
 
-`app` may use platform code for framework-level concerns such as observability setup or a health endpoint. Business operations should reach integrations through their owning feature.
+`app` may use platform code for framework concerns such as observability setup or a health endpoint. Keep business operations inside their owning feature, including the calls those operations make to integrations.
 
-## A feature’s public surface
+These permissions apply alongside runtime boundaries. An allowed directory dependency does not make a server-only module safe to import into browser code.
 
-A feature interface should be obvious and smaller than its implementation. RFAStack uses named top-level files for server operations and explicit UI paths:
+## Expose the operations and components callers need
+
+Use named files for public queries and mutations, and explicit paths for public UI components:
 
 ```ts
 import { getOrderDetails } from '@/features/orders/order.queries'
@@ -184,14 +194,14 @@ import { cancelOrder } from '@/features/orders/order.mutations'
 import { OrderDetails } from '@/features/orders/ui/OrderDetails/OrderDetails'
 ```
 
-Avoid a single root barrel that re-exports server and client modules together. A client import can accidentally pull a server dependency toward the browser boundary, and the barrel makes that path harder to inspect.
+Avoid a single root barrel that re-exports server and client modules together. That makes it harder to follow which imports reach server-only implementation.
 
 ```ts
-// Avoid a mixed environment surface.
+// Avoid combining public UI, mutations, and private repository code.
 import { OrderDetails, cancelOrder, orderRepository } from '@/features/orders'
 ```
 
-The public file can delegate to a deeper implementation while protecting it from unrelated callers:
+The public query file can delegate to an implementation inside `server`:
 
 ```ts
 // src/features/orders/order.queries.ts
@@ -201,7 +211,9 @@ import { getOrderDetailsQuery } from './server/get-order-details.query'
 export const getOrderDetails = getOrderDetailsQuery
 ```
 
-The route imports the contract it needs:
+Callers continue importing `order.queries.ts` if you move or reorganize the query implementation.
+
+The route uses that public interface:
 
 ```tsx
 // src/app/(authenticated)/orders/[orderId]/page.tsx
@@ -220,19 +232,21 @@ export default async function OrderPage({
 }
 ```
 
-The page understands routing and rendering. The feature understands what an order detail read means.
+The page reads the route parameter and renders the result. Keep the query and its order-specific behavior in the feature.
 
-## The `orders` slice, file by file
+## Place each part of the orders feature
 
-### `ui/`
+### Keep presentation and interaction in `ui/`
 
-Feature-specific presentation and interaction live here. A component can be a Server Component or a Client Component; placement expresses ownership, not runtime.
+Feature-specific components live here. A component can be a Server Component or a Client Component; the folder identifies which feature owns it.
 
-Keep `'use client'` at the smallest useful interactive boundary. An order page can remain server-rendered while `CancelOrderButton.tsx` owns the browser interaction.
+Place `'use client'` at the smallest useful interactive boundary. The order page can remain a Server Component while `CancelOrderButton.tsx` handles the browser interaction.
 
-### `model/`
+The [Next.js Server and Client Components guide](https://nextjs.org/docs/app/getting-started/server-and-client-components) explains how these boundaries affect the module graph.
 
-Pure concepts belong here: runtime schemas, TypeScript types, state transitions, value calculations, and domain vocabulary. Prefer modules that can run without Next.js, a database, or the network.
+### Put pure rules and types in `model/`
+
+Keep runtime schemas, TypeScript types, state transitions, and calculations here. These modules should work without Next.js, a database, or a network connection.
 
 ```ts
 // src/features/orders/model/can-cancel-order.ts
@@ -243,106 +257,108 @@ export function canCancelOrder(status: OrderStatus) {
 }
 ```
 
-### `order.queries.ts` and `order.mutations.ts`
+You can test this rule with an order status as its only input.
 
-These are intentional entry surfaces. Queries expose reads used by server renderers or other authorized server callers. Mutations expose state changes, often as Server Actions for first-party UI.
+### Expose reads and changes through named public files
 
-Their names encode operation semantics. A caller does not need to know which repository, ORM, or transport sits behind them.
+`order.queries.ts` exposes reads for server rendering and other server callers. `order.mutations.ts` exposes state changes, often as Server Actions for your application’s UI.
 
-### `server/`
+The names tell you whether an operation reads or changes data. Callers use those operations without importing the repository or transport implementation behind them.
 
-This folder makes the runtime boundary hard to miss. It can contain use cases, query implementations, DTO shaping, RPC contracts, and repository code. Add `import 'server-only'` to modules that must never cross into a client bundle.
+### Keep server implementation in `server/`
 
-A feature-distributed data-access layer is still a data-access layer. It keeps access near the capability instead of placing every query in a global DAL folder.
+Use this folder for use cases, query implementations, data transfer objects (DTOs), RPC contracts, and repository code.
 
-## Component ownership rules
+Add `import 'server-only'` to implementation modules that must stay out of a client bundle. Next.js reports a build error when a Client Component imports a module marked this way. [Next.js documentation](https://nextjs.org/docs/app/getting-started/server-and-client-components#preventing-environment-poisoning).
 
-Use the narrowest truthful owner:
+Keep data-access code near the feature that uses it. You can apply consistent data-access rules across the application while keeping each feature’s queries in its own directory.
+
+## Put components with the behavior they represent
 
 | Component | Location | Reason |
 | --- | --- | --- |
 | `OrderStatusBadge` | `features/orders/ui` | Knows order statuses and their meaning. |
 | `DashboardHeader` | `app/(authenticated)/dashboard/_components` | Exists only to compose that route. |
-| `Button` | `shared/ui` | Generic interaction primitive with no product policy. |
-| `CheckoutSummary` | `features/checkout/ui` | Represents a business capability even if shown on one route today. |
+| `Button` | `shared/ui` | Provides generic interaction with no product policy. |
+| `CheckoutSummary` | `features/checkout/ui` | Represents checkout behavior, even if one route displays it today. |
 
-A route-local component may graduate into a feature when its behavior gains a durable business identity. A feature component may move to shared only after its API and semantics become genuinely generic.
+Move a route-local component into a feature when it begins expressing that feature’s business behavior. Move a feature component into shared when its inputs and behavior no longer depend on the feature’s rules.
 
-## Naming rules
+The number of routes using a component does not determine its owner.
 
-Names should expose ownership and runtime without requiring file inspection.
+## Name files so callers can find them
 
 - Name feature directories with product language: `orders`, `billing`, `identity`.
-- Use role suffixes where they add signal: `.query.ts`, `.use-case.ts`, `.repository.ts`, `.schema.ts`.
-- Use `server/` and `import 'server-only'` for server-owned implementation.
-- Use `'use client'` only in modules that establish a client boundary.
-- Name entry surfaces by capability: `order.queries.ts`, not `queries.ts` at repository root.
-- Avoid `helpers`, `common`, `misc`, and `utils` for modules that carry business meaning.
-- Avoid repeating the feature name in every nested file when the directory already supplies the context.
+- Use role suffixes when they distinguish responsibilities: `.query.ts`, `.use-case.ts`, `.repository.ts`, `.schema.ts`.
+- Keep public operation files with their feature: `order.queries.ts` and `order.mutations.ts`.
+- Use `server/` to make server implementation easy to find, and `import 'server-only'` to enforce its runtime boundary.
+- Put `'use client'` in modules that establish a client boundary.
+- Give business logic a descriptive name instead of putting it in `helpers`, `common`, `misc`, or `utils`.
 
-Consistency matters more than finding a suffix for every file. The naming system should shorten discovery, not simulate a framework within the framework.
+Use the same naming conventions across features. Add a suffix when it helps you find a role or distinguish two files.
 
-## How Next.js files map to `src/app`
+## Keep framework adapters focused on their inputs and outputs
 
-Next.js special files map cleanly to RFAStack responsibilities:
+Next.js defines the framework conventions. RFAStack assigns the feature behavior those conventions call.
 
-| Next.js file | RFAStack role |
-| --- | --- |
-| `page.tsx` | Route entry that reads and composes feature UI. |
-| `layout.tsx` | Route-tree composition and persistent presentation. |
-| `loading.tsx` | Route-level pending presentation. |
-| `error.tsx` | Route-level recovery boundary. |
-| `route.ts` | HTTP adapter for an external or browser client. |
-| Server Action | Mutation adapter for first-party UI, usually exposed by a feature. |
-| `_components/` | Private route composition with no independent business owner. |
+| File or convention | Location | RFAStack responsibility |
+| --- | --- | --- |
+| `page.tsx` | `app` | Read route inputs and compose feature UI. |
+| `layout.tsx` | `app` | Compose shared presentation for part of the route tree. |
+| `loading.tsx` | `app` | Provide loading UI for a route segment. |
+| `error.tsx` | `app` | Provide an error boundary and recovery UI. |
+| `route.ts` | `app` | Adapt HTTP requests and responses. |
+| Server Action | Usually a feature’s mutation file | Adapt a UI mutation to feature behavior. |
+| `_components/` | Inside an `app` route directory | Hold components used only to assemble that route. |
 
-The [Next.js Backend for Frontend guide](https://nextjs.org/docs/app/guides/backend-for-frontend) treats Route Handlers as public HTTP endpoints and warns against adding an internal HTTP hop from Server Components. RFAStack preserves that distinction: server rendering calls the feature’s server interface directly; HTTP exists when a consumer actually needs HTTP.
+A Server Action is a function, so it can live in a feature mutation file without adding a routing file to `app`. Next.js documents its role in the [mutation guide](https://nextjs.org/docs/app/getting-started/mutating-data).
 
-## Cross-feature work
+For server rendering, call the feature query directly. The [Next.js Backend for Frontend guide](https://nextjs.org/docs/app/guides/backend-for-frontend) warns that calling the application’s own Route Handler from a Server Component adds an HTTP round trip and can fail during prerendering at build time.
 
-One user workflow can touch several capabilities. Do not hide that coordination in shared code.
+Use a Route Handler when a browser, webhook, mobile application, or other HTTP consumer needs an endpoint.
 
-For a checkout flow that reads inventory and creates an order, pick an explicit orchestrator:
+## Give a cross-feature workflow its own owner
 
-- a checkout feature owns the workflow and calls public interfaces from inventory and orders;
-- an application-level operation coordinates them when no single feature truthfully owns the process;
-- an event links them when asynchronous delivery and independent failure are required.
+A checkout flow can read inventory and create an order. Put that coordination in the checkout feature:
 
-Start with direct, typed calls. Add messaging or abstraction when the runtime behavior requires it, not for aesthetic symmetry.
+```text
+src/features/checkout/
+  checkout.mutations.ts
+  server/
+    complete-checkout.use-case.ts
+```
 
-## Placement guide
+Expose the mutation through `checkout.mutations.ts`. Keep the workflow in `complete-checkout.use-case.ts`, where it calls the public interfaces of inventory and orders.
 
-When a new file has no obvious home, ask in this order:
+Each participating feature retains its own rules. Checkout coordinates the workflow; orders still owns order behavior.
+
+When a business workflow spans several existing features, use the workflow’s name to identify its owner. Simple composition of several feature views can remain in an `app` page.
+
+Start with direct, typed calls. Add events when the receiving feature can act later and the workflow allows independent failure. Keep business coordination out of `shared`.
+
+## Choose a home for a new file
 
 | Question | Placement |
 | --- | --- |
 | Is it a Next.js route, layout, handler, or route-only composition? | `src/app` |
 | Does it express or present one business capability? | `src/features/<feature>` |
-| Does it integrate this application with an external system? | `src/platform` |
-| Is it generic across features and free of business policy? | `src/shared` |
-| Must several applications reuse it as a stable product? | A workspace package, not `src/shared` |
+| Does it coordinate a business workflow across features? | The feature that owns that workflow |
+| Does it connect the application to an external system? | `src/platform` |
+| Is its behavior generic across features and free of business policy? | `src/shared` |
+| Must several applications reuse it as a stable package? | A workspace package |
 
-When two answers seem plausible, choose the more specific owner. Moving stable generic code outward later is easier than recovering feature policy from a global abstraction.
+When two locations seem plausible, keep the code with the more specific owner until you can explain what the other callers would share.
 
-## Tradeoffs and enforcement
+## Enforce the boundaries as the codebase grows
 
-The structure improves locality, but it creates work:
+You will need to move code when you understand its ownership better. Some features will repeat similar internal roles, and some duplication will remain while you work out whether the behavior is truly shared.
 
-- feature boundaries require product understanding;
-- code moves as ownership becomes clearer;
-- a mature feature may contain repeated internal roles;
-- dependency direction needs review or lint rules;
-- cross-feature workflows must be designed explicitly;
-- developers must tolerate some duplication while an abstraction is still unstable.
+Review those decisions alongside the code:
 
-Those costs buy visible decisions. The repository can be inspected, reviewed, and tested against them.
-
-A practical enforcement path is incremental:
-
-1. document the four boundaries;
-2. use TypeScript path aliases for readable imports;
-3. expose feature interfaces intentionally;
-4. reject deep cross-feature imports in review;
-5. add dependency linting when the repository is large enough to need automation.
+1. Document the responsibilities of `app`, `features`, `platform`, and `shared`.
+2. Use TypeScript path aliases to make imports readable.
+3. Identify the operations and components each feature exposes.
+4. Reject imports into another feature’s private implementation.
+5. Add dependency linting when manual review no longer catches violations reliably.
 
 Next: [choose execution and transport boundaries for reads and mutations](./data-fetching-and-mutation).
