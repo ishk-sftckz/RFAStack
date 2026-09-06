@@ -41,25 +41,6 @@ Follow the guides in order, or start with the decision you're working on:
 
 The [three runnable applications](./examples/README.md) demonstrate native Next.js, React Query with a separate HTTP backend, and React Query with oRPC. Each has its own PostgreSQL setup, seeded login accounts, and tests.
 
-## Work on the documentation
-
-This repository contains the guides and their VitePress site. Use Bun 1.4.0 to install dependencies and start the development server:
-
-```bash
-bun install --frozen-lockfile
-bun run docs:dev
-```
-
-Edit guide content in `docs/*.md` and the site theme in `docs/.vitepress/theme/`. Follow [VOICE.md](VOICE.md) for public-facing copy.
-
-| Command | Purpose |
-| --- | --- |
-| `bun run docs:build` | Build the documentation site. |
-| `bun run docs:preview` | Preview an existing build locally. |
-| `bun run test` | Run publication, navigation, interaction, and accessibility checks. |
-
-Playwright builds and serves the site automatically for tests. To run only the route and interaction checks, use `bun run test -- tests/site.spec.ts`.
-
 ## Contributing
 
 Corrections and clearer examples are welcome. For a substantial architectural or editorial change, open an issue describing the failure mode, your proposed change, and its tradeoffs. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.

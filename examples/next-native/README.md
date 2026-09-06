@@ -1,7 +1,7 @@
 # Customer order portal
 
-Server Components read feature queries directly. Forms submit Server Actions. The tracking control
-calls `router.refresh()` when the customer asks for an update.
+Use this example for server-rendered pages and forms. Server Components call feature queries, forms
+submit Server Actions, and customers refresh tracking details with a button.
 
 ## Run the application
 
@@ -19,103 +19,53 @@ bun run dev
 
 Open [the local app](http://localhost:3101). PostgreSQL uses port 5411.
 
-### Sign in with a seeded account
-
-All demo accounts use the password `Demo-password-123!`.
+Sign in with one of these demo accounts. The password is `Demo-password-123!`.
 
 | Email                | Role     | Access          |
 | -------------------- | -------- | --------------- |
 | `alice@example.test` | Customer | Alice’s account |
 | `bob@example.test`   | Customer | Bob’s account   |
 
-The environment template contains local demonstration credentials. The seed command adds missing
-fixtures without replacing existing changes. `bun run db:reset` clears this example's application
-and authentication tables and reseeds them. Run it only against this example's database.
+The seed command adds missing fixtures and preserves your changes. To start over, use
+`bun run db:reset`; it clears and reseeds this example's application and authentication tables. Run
+it only against this example's database. Credentials in `.env.example` are for local use.
 
-The carrier estimate simulator starts with the app on port 4101. It returns a fixed three-day
-estimate through an actual HTTP request. Orders are simulated purchases; no payment is taken.
+## Place and cancel an order
 
-The order details page calls the same memoized query from two Server Components. The tracking button
-starts a route refresh and shows a pending state. The server reads the current order and updates
-both the tracking status and cancellation controls.
+Sign in as Alice, create an order, then open its details. Cancel it while it is pending and check
+that the page updates. Sign in as Bob to see a separate account's orders.
 
-## Run Next.js with Bun
+The app starts a carrier simulator on port 4101 that returns a fixed three-day estimate. Purchases
+are simulated; no payment is taken.
 
-The `dev` and `start` scripts run Next.js and the carrier simulator together with
-`bun run --parallel`. Development also watches the carrier simulator for changes.
+To follow checkout, open these files in order:
 
-The Next.js CLI runs on Bun for development, builds, and production. The package scripts use
-`bun --bun next`, following the [Bun Next.js guide](https://bun.com/guides/ecosystem/nextjs). The
-`--bun` flag selects Bun even though the CLI has a Node.js shebang.
+1. `src/features/checkout/server/checkout.actions.ts` receives the form submission.
+2. `src/features/orders/server/create-order.use-case.ts` reads prices and stores the order.
+3. `src/features/orders/server/order.queries.ts` reads the customer's orders.
 
-Next.js is pinned to 16.3.4, with App Router, TypeScript, and Cache Components enabled. See the
-[Next.js installation guide](https://nextjs.org/docs/app/getting-started/installation) for the
-framework setup.
+Cancellation rules live in `src/features/orders/server/cancel-order.use-case.ts`. Change the rule
+there, then run the checks below.
 
-| Command                | What it runs                                         |
-| ---------------------- | ---------------------------------------------------- |
-| `bun run dev`          | Development server and this example’s local services |
-| `bun run build`        | Production build with Bun                            |
-| `bun run start`        | Production server and local services after a build   |
-| `bun run format`       | Format source, configuration, and Markdown           |
-| `bun run format:check` | Check formatting without changing files              |
+## Observe cache reads
 
-## Follow feature ownership
+Server Actions invalidate affected tags after a write and refresh the route. The tracking button
+refreshes order details. The details page calls one memoized query from two Server Components.
 
-`identity`, `catalog`, `checkout`, and `orders` own the customer workflows. Start with the account
-page, follow its feature queries, then trace the checkout action into the order-creation use case.
+Build and run in production mode to observe caching:
 
-```text
-src/
-  app/       Routes, page composition, and the authentication adapter
-  features/  Feature UI, models, protected reads, and operations
-  platform/  Database or upstream clients and framework setup
-  shared/    Generic code organized by responsibility
+```bash
+bun run build
+CACHE_TRACE=1 bun run start
 ```
 
-Shared components live in `src/shared/ui`; formatting and error helpers live in `src/shared/utils`:
+The logs show underlying reads by operation and scope. Read the
+[caching guide](https://ishk-sftckz.github.io/RFAStack/caching) for cache lifetimes and invalidation
+rules.
 
-```text
-shared/
-  ui/
-    ActionForm.tsx   Generic Server Action form with pending and result feedback
-  utils/
-    currency.ts      Format an amount in cents as USD
-    errors.ts        Common error type and error-response mapping
-```
+## Run the checks
 
-Keep business schemas, types, and rules in feature models. Add shared `types`, `validation`, or
-`hooks` directories when generic code needs them. Import files directly so each dependency remains
-visible.
-
-Queries and use cases are public feature operations. Persistence tables and helpers remain private.
-Runtime schemas live in feature models. `bun run check:boundaries` checks dependency direction,
-private table imports, and client/server imports; Next.js also checks server-only boundaries during
-compilation.
-
-## Trace caching after a write
-
-Shared display caches use `stale: 30`, `revalidate: 60`, and `expire: 300`, in seconds. Authenticate
-before entering a shared cached helper, and include the account, warehouse, or company in its
-arguments. Display cache entries never authorize a mutation.
-
-Private cached content reads the session inside its scope and uses `stale: 30`. Results live in
-browser memory; the function executes on every server render. Reloading the page discards browser
-reuse.
-[Next.js private caching](https://nextjs.org/docs/app/api-reference/directives/use-cache-private)
-
-Tracking reads fresh order details on each request. `router.refresh()` rerenders the route but does
-not invalidate shared server caches.
-[Next.js route refresh](https://nextjs.org/docs/app/api-reference/functions/use-router)
-
-Server Actions call `updateTag` after committed writes, then refresh the route. Logout clears
-browser state through a full navigation.
-
-Use `CACHE_TRACE=1 bun run start` after a production build to log underlying reads. Logs contain
-operation names and scope IDs, never session cookies. Tests additionally set `CACHE_TRACE_FILE` to
-observe cache execution without adding diagnostic endpoints to the application.
-
-## Verify behavior
+With the database running, migrated, and seeded:
 
 ```bash
 bun run typecheck
@@ -126,30 +76,12 @@ bunx playwright install chromium
 bun run test
 ```
 
-Database-backed unit tests require migrations and seed data. Playwright migrates, resets the example
-database, builds the application, and starts its production services. Do not start another server
-before running it. The tests disable authentication rate limiting with the server-only `E2E_TEST=1`
-environment flag because the test suite signs in repeatedly from one loopback address.
+Playwright resets this example's database, builds the app, and starts production services. Stop your
+development or production server before running it. Tests set `E2E_TEST=1` to disable login rate
+limiting for repeated sign-ins.
 
-For a manual production run:
-
-```bash
-bun run build
-bun run start
-```
-
-## Troubleshoot local setup
-
-- **Database connection fails:** check that Docker is running and the PostgreSQL port is available.
-- **Login fails after fixture changes:** run `bun run db:reset` against this example’s database.
-- **Cache behavior differs in development:** repeat the observation with a production build.
-- **You changed the app port:** update the origin configuration and Playwright base URL too.
-
-## Read the architecture guidance
-
-See the [runnable examples guide](https://ishk-sftckz.github.io/RFAStack/examples),
-[folder structure](https://ishk-sftckz.github.io/RFAStack/folder-structure), and
-[data-fetching guidance](https://ishk-sftckz.github.io/RFAStack/data-fetching-and-mutation).
+If the database won't connect, check Docker and the PostgreSQL port. After changing the app port,
+update the origin configuration and Playwright base URL. Use `bun run format` to fix formatting.
 
 Executable source is MIT. Prose, documentation snippets, and visual material are CC BY 4.0,
 attributed to **RFAStack by Ishk**. See the repository [license boundaries](../../LICENSE.md).
