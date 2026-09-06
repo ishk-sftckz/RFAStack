@@ -7,11 +7,14 @@ import { catalogOptions } from '@/features/catalog/catalog.query-options'
 import type { Product } from '@/features/catalog/model/catalog.schema'
 import { orders } from '@/features/orders/order.client'
 import { orderListOptions } from '@/features/orders/order.query-options'
+import { QuantityInput } from '@/shared/ui/QuantityInput'
+import { Icon } from '@/shared/ui/Icon'
 import { formatCurrency } from '@/shared/utils/currency'
 
 const Draft = createContext<{
   quantities: Record<string, number>
   set: (id: string, quantity: number) => void
+  reset: () => void
 } | null>(null)
 
 function useDraft() {
@@ -31,6 +34,7 @@ function Provider({ children }: { children: ReactNode }) {
     <Draft
       value={{
         quantities,
+        reset: () => setQuantities({}),
         set: (id, quantity) => setQuantities((old) => ({ ...old, [id]: quantity })),
       }}
     >
@@ -43,17 +47,20 @@ function Item({ product }: { product: Product }) {
   const draft = useDraft()
 
   return (
-    <label>
-      {product.name} · {formatCurrency(product.price)}
-      <input
-        type="number"
-        min="0"
-        max="20"
-        aria-label={`${product.name} quantity`}
+    <div className="product-row">
+      <span className="product-icon">
+        <Icon name="bag" />
+      </span>
+      <div className="product-info">
+        <strong>{product.name}</strong>
+        <small>{formatCurrency(product.price)} / item</small>
+      </div>
+      <QuantityInput
+        name={product.name}
         value={draft.quantities[product.id] ?? 0}
-        onChange={(e) => draft.set(product.id, Number(e.target.value))}
+        onChange={(quantity) => draft.set(product.id, quantity)}
       />
-    </label>
+    </div>
   )
 }
 
@@ -65,6 +72,7 @@ function Submit({ scopeId, products }: { scopeId: string; products: Product[] })
     orders.submit.mutationOptions({
       onSuccess: async () => {
         await client.invalidateQueries({ queryKey: orderListOptions(scopeId).queryKey })
+        draft.reset()
         router.refresh()
       },
     }),
@@ -72,31 +80,39 @@ function Submit({ scopeId, products }: { scopeId: string; products: Product[] })
 
   return (
     <>
-      <p>
-        Draft total:{' '}
-        {formatCurrency(
-          products.reduce(
-            (total, product) => total + product.price * (draft.quantities[product.id] ?? 0),
-            0,
-          ),
-        )}
-      </p>
-      <button
-        disabled={mutation.isPending}
-        onClick={() =>
-          mutation.mutate({
-            items: products
-              .filter((p) => draft.quantities[p.id] > 0)
-              .map((p) => ({ productId: p.id, quantity: draft.quantities[p.id] })),
-          })
-        }
-      >
-        {mutation.isPending ? 'Submitting…' : 'Submit for approval'}
-      </button>
-      <p role="alert">{mutation.error?.message}</p>
-      <p role="status">
-        {mutation.isSuccess ? `Purchase order submitted: ${mutation.data.id}` : ''}
-      </p>
+      <div className="draft-summary">
+        <p className="total-line">
+          Draft total:{' '}
+          <strong className="price">
+            {formatCurrency(
+              products.reduce(
+                (total, product) => total + product.price * (draft.quantities[product.id] ?? 0),
+                0,
+              ),
+            )}
+          </strong>
+        </p>
+        <p className="hint">Your company approver will review this request.</p>
+        <button
+          disabled={
+            mutation.isPending ||
+            !products.some((product) => (draft.quantities[product.id] ?? 0) > 0)
+          }
+          onClick={() =>
+            mutation.mutate({
+              items: products
+                .filter((p) => draft.quantities[p.id] > 0)
+                .map((p) => ({ productId: p.id, quantity: draft.quantities[p.id] })),
+            })
+          }
+        >
+          {mutation.isPending ? 'Submitting…' : 'Submit for approval'}
+        </button>
+        <p role="alert">{mutation.error?.message}</p>
+        <p role="status">
+          {mutation.isSuccess ? `Purchase order submitted: ${mutation.data.id}` : ''}
+        </p>
+      </div>
     </>
   )
 }
@@ -119,7 +135,15 @@ export function PurchaseDraft({ scopeId }: { scopeId: string }) {
 
   return (
     <section>
-      <h2>New purchase order</h2>
+      <div className="section-heading">
+        <div>
+          <h2>New purchase order</h2>
+          <p className="hint">Choose quantities to build your request.</p>
+        </div>
+        <span className="product-icon">
+          <Icon name="bag" />
+        </span>
+      </div>
       <Provider>
         {query.data.map((product) => (
           <Item product={product} key={product.id} />

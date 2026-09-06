@@ -37,6 +37,10 @@ test('buyers submit purchase orders and approvers decide through the same API', 
   await expect(
     page.getByRole('status').filter({ hasText: 'Purchase order submitted:' }),
   ).toBeVisible()
+  await expect(
+    page.getByRole('spinbutton', { name: 'Company A notebook quantity', exact: true }),
+  ).toHaveValue('0')
+  await expect(page.getByRole('button', { name: 'Submit for approval' })).toBeDisabled()
   const id = (
     await page.getByRole('status').filter({ hasText: 'Purchase order submitted:' }).innerText()
   ).split(': ')[1]
@@ -93,4 +97,39 @@ test('the CLI lists and submits through the typed API and rejects an approver su
       env: { ...process.env, DEMO_EMAIL: 'approver-a@example.test' },
     }),
   ).rejects.toMatchObject({ code: 1 })
+})
+
+test('quantity controls keep totals valid and prevent empty orders', async ({ page }) => {
+  await login(page)
+  const quantity = page.getByRole('spinbutton', {
+    name: 'Company A notebook quantity',
+    exact: true,
+  })
+  const submit = page.getByRole('button', { name: 'Submit for approval', exact: true })
+  await expect(submit).toBeDisabled()
+  await page.getByRole('button', { name: 'Increase Company A notebook', exact: true }).click()
+  await expect(quantity).toHaveValue('1')
+  await expect(submit).toBeEnabled()
+  await quantity.fill('21')
+  await expect(quantity).toHaveValue('20')
+  await expect(
+    page.getByRole('button', { name: 'Increase Company A notebook', exact: true }),
+  ).toBeDisabled()
+  await quantity.fill('1')
+  await page.getByRole('button', { name: 'Decrease Company A notebook', exact: true }).click()
+  await expect(quantity).toHaveValue('0')
+  await expect(submit).toBeDisabled()
+  await expect(page.locator('.total-line')).toContainText('$0.00')
+})
+
+test('purchase orders can be filtered and inspected before a decision', async ({ page }) => {
+  await login(page, 'approver-b')
+  await page.getByLabel('Order status', { exact: true }).selectOption('rejected')
+  await expect(page.getByText('No orders with this status.')).toBeVisible()
+  await page.getByRole('button', { name: 'Show all orders' }).click()
+  const order = page
+    .getByRole('listitem')
+    .filter({ has: page.getByText('purchase-b', { exact: true }) })
+  await order.locator('summary').click()
+  await expect(order.getByRole('listitem')).toContainText('Company b notebook')
 })

@@ -48,19 +48,51 @@ async function Account() {
 
   return (
     <>
-      <p>Signed in as {identity.name}</p>
-      <p>
-        Company: {identity.scopeId} · Role: {identity.role}
-      </p>
-      <SignOut />
+      <div className="identity-bar">
+        <div className="identity-info">
+          <span className="avatar" aria-hidden="true">
+            {identity.name.slice(0, 1)}
+          </span>
+          <div>
+            <p>Signed in as {identity.name}</p>
+            <p className="hint">
+              Company: {identity.scopeId} · Role: {identity.role}
+            </p>
+          </div>
+        </div>
+        <div>
+          <SignOut />
+        </div>
+      </div>
+      <div className="stats" aria-label="Purchase overview">
+        <div className="stat">
+          <span>Purchase orders</span>
+          <strong>{orders.length}</strong>
+        </div>
+        <div className="stat accent">
+          <span>Awaiting approval</span>
+          <strong>{orders.filter((order) => order.status === 'submitted').length}</strong>
+        </div>
+        <div className="stat">
+          <span>Approved orders</span>
+          <strong>{orders.filter((order) => order.status === 'approved').length}</strong>
+        </div>
+      </div>
       <HydrationBoundary state={dehydrate(client)}>
-        {identity.role === 'buyer' && <PurchaseDraft scopeId={identity.scopeId} />}
-        <PurchaseOrders identity={identity} />
+        <div className={identity.role === 'buyer' ? 'grid' : undefined}>
+          {identity.role === 'buyer' && <PurchaseDraft scopeId={identity.scopeId} />}
+          <PurchaseOrders identity={identity} />
+        </div>
       </HydrationBoundary>
-      <Preferences preference={identity.preference} />
-      <Suspense fallback={<p>Loading suggestions…</p>}>
-        <Recommendations />
-      </Suspense>
+      <div className="grid">
+        <section>
+          <h2>Delivery preferences</h2>
+          <Preferences preference={identity.preference} />
+        </section>
+        <Suspense fallback={<p>Loading suggestions…</p>}>
+          <Recommendations />
+        </Suspense>
+      </div>
     </>
   )
 }
@@ -68,7 +100,11 @@ async function Account() {
 export default function Page() {
   return (
     <>
-      <h1>Company workspace</h1>
+      <div className="page-heading">
+        <p className="eyebrow">Your workspace</p>
+        <h1>Company workspace</h1>
+        <p>Manage purchase requests and company orders.</p>
+      </div>
       <Suspense fallback={<p>Loading workspace…</p>}>
         <Account />
       </Suspense>

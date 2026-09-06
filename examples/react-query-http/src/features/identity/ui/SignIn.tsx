@@ -35,7 +35,7 @@ export function SignIn() {
   }
 
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} aria-busy={pending}>
       <label>
         Email
         <input name="email" type="email" autoComplete="username" required />
@@ -57,6 +57,7 @@ export function SignOut() {
   return (
     <>
       <button
+        className="button-secondary"
         onClick={async () => {
           try {
             const result = await authClient.signOut()

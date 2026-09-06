@@ -98,3 +98,18 @@ test('supervisors update prices and preferences, and logout isolates cached data
   await page.getByLabel('Status filter').selectOption('delivered')
   await expect(page.getByText('No shipments match this filter.')).toBeVisible()
 })
+
+test('shipment search combines with status filters and can be cleared', async ({ page }) => {
+  await login(page, 'south')
+  await page.getByLabel('Search shipments', { exact: true }).fill('SHIPMENT-SOUTH')
+  await expect(page.getByRole('button', { name: 'shipment-south', exact: true })).toBeVisible()
+  await page.getByLabel('Search shipments', { exact: true }).fill('missing shipment')
+  await expect(page.getByText('No shipments match your search.')).toBeVisible()
+  await page.getByRole('button', { name: 'Clear filters' }).click()
+  await expect(page.getByLabel('Search shipments', { exact: true })).toHaveValue('')
+  await expect(page.getByLabel('Status filter')).toHaveValue('all')
+  await page.getByRole('button', { name: 'shipment-south', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Selected shipment' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close details' }).click()
+  await expect(page.getByRole('heading', { name: 'Selected shipment' })).toHaveCount(0)
+})

@@ -45,18 +45,33 @@ async function Account() {
 
   return (
     <>
-      <p>Signed in as {identity.name}</p>
-      <p>Warehouse: {identity.scopeId}</p>
-      <SignOut />
-      <p>
+      <div className="identity-bar">
+        <div className="identity-info">
+          <span className="avatar" aria-hidden="true">
+            {identity.name.slice(0, 1)}
+          </span>
+          <div>
+            <p>Signed in as {identity.name}</p>
+            <p className="hint">
+              Warehouse: {identity.scopeId} · {identity.role}
+            </p>
+          </div>
+        </div>
+        <div>
+          <SignOut />
+        </div>
+      </div>
+      <p className="hint">
         Summary: {summary.total} shipments; {summary.dispatched} dispatched.
       </p>
-      <Suspense fallback={<p>Loading preferences…</p>}>
-        <Preferences />
-      </Suspense>
       <HydrationBoundary state={dehydrate(client)}>
         <Dashboard identity={identity} />
       </HydrationBoundary>
+      <div className="hint">
+        <Suspense fallback={<p>Loading preferences…</p>}>
+          <Preferences />
+        </Suspense>
+      </div>
     </>
   )
 }
@@ -64,7 +79,11 @@ async function Account() {
 export default function Page() {
   return (
     <>
-      <h1>Warehouse operations</h1>
+      <div className="page-heading">
+        <p className="eyebrow">Your workspace</p>
+        <h1>Warehouse operations</h1>
+        <p>Pack, dispatch, and follow shipments for your warehouse.</p>
+      </div>
       <Suspense fallback={<p>Loading dashboard…</p>}>
         <Account />
       </Suspense>

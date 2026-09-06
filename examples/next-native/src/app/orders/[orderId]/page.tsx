@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Suspense } from 'react'
 import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
@@ -33,24 +34,37 @@ async function Details({ params }: { params: Promise<{ orderId: string }> }) {
 
   return (
     <>
-      <h2>{order.id}</h2>
-      <OrderTotal id={order.id} />
-      <ul>
-        {order.items.map((item, index) => (
-          <li key={index}>
-            {item.name} × {item.quantity} · {formatCurrency(item.price)}
-          </li>
-        ))}
-      </ul>
-      <Tracking status={order.status} />
-      {canCancel(order.status) && (
-        <ActionForm action={cancelAction} label="Cancel order">
-          <input type="hidden" name="orderId" value={order.id} />
-        </ActionForm>
-      )}
-      <Suspense fallback={<p>Checking delivery estimate…</p>}>
-        <DeliveryEstimate estimate={estimate} />
-      </Suspense>
+      <section>
+        <div className="section-heading">
+          <h2 className="record-id">{order.id}</h2>
+          <span className="badge" data-status={order.status}>
+            {order.status}
+          </span>
+        </div>
+        <OrderTotal id={order.id} />
+        <ul className="record-list">
+          {order.items.map((item, index) => (
+            <li className="record" key={index}>
+              {item.name} × {item.quantity} · {formatCurrency(item.price)}
+            </li>
+          ))}
+        </ul>
+      </section>
+      <div className="grid">
+        <Tracking status={order.status} />
+        <section>
+          <h2>Manage delivery</h2>
+          <p className="hint">Pending orders can be cancelled before they ship.</p>
+          {canCancel(order.status) && (
+            <ActionForm action={cancelAction} label="Cancel order" buttonClassName="button-danger">
+              <input type="hidden" name="orderId" value={order.id} />
+            </ActionForm>
+          )}
+          <Suspense fallback={<p>Checking delivery estimate…</p>}>
+            <DeliveryEstimate estimate={estimate} />
+          </Suspense>
+        </section>
+      </div>
     </>
   )
 }
@@ -58,7 +72,14 @@ async function Details({ params }: { params: Promise<{ orderId: string }> }) {
 export default function Page({ params }: { params: Promise<{ orderId: string }> }) {
   return (
     <>
-      <h1>Order details</h1>
+      <Link className="back-link" href="/account">
+        ← Back to your account
+      </Link>
+      <div className="page-heading">
+        <p className="eyebrow">Your purchase</p>
+        <h1>Order details</h1>
+        <p>Review your items and check delivery progress.</p>
+      </div>
       <Suspense fallback={<p>Loading order…</p>}>
         <Details params={params} />
       </Suspense>

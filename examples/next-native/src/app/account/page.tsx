@@ -39,16 +39,43 @@ async function Account() {
 
   return (
     <>
-      <p>Signed in as {identity.name}</p>
-      <SignOut />
+      <div className="identity-bar">
+        <div className="identity-info">
+          <span className="avatar" aria-hidden="true">
+            {identity.name.slice(0, 1)}
+          </span>
+          <div>
+            <p>Signed in as {identity.name}</p>
+          </div>
+        </div>
+        <div>
+          <SignOut />
+        </div>
+      </div>
+      <div className="stats" aria-label="Order overview">
+        <div className="stat">
+          <span>Total orders</span>
+          <strong>{orders.length}</strong>
+        </div>
+        <div className="stat accent">
+          <span>Pending orders</span>
+          <strong>{orders.filter((order) => order.status === 'pending').length}</strong>
+        </div>
+        <div className="stat">
+          <span>Shipped orders</span>
+          <strong>{orders.filter((order) => order.status === 'shipped').length}</strong>
+        </div>
+      </div>
       <div className="grid">
         <OrderDraft products={products} />
         <OrderList orders={orders} />
       </div>
-      <Preferences preference={identity.preference} />
-      <Suspense fallback={<p>Loading recommendations…</p>}>
-        <Recommendations />
-      </Suspense>
+      <div className="grid">
+        <Preferences preference={identity.preference} />
+        <Suspense fallback={<p>Loading recommendations…</p>}>
+          <Recommendations />
+        </Suspense>
+      </div>
     </>
   )
 }
@@ -56,7 +83,11 @@ async function Account() {
 export default function Page() {
   return (
     <>
-      <h1>My account</h1>
+      <div className="page-heading">
+        <p className="eyebrow">Your workspace</p>
+        <h1>My account</h1>
+        <p>Order supplies and follow your deliveries.</p>
+      </div>
       <Suspense fallback={<p>Loading account…</p>}>
         <Account />
       </Suspense>

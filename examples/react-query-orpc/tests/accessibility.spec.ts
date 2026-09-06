@@ -5,7 +5,7 @@ test('public pages have accessible names, contrast, and landmarks', async ({ pag
   for (const path of ['/', '/sign-in']) {
     await page.goto(path)
     const result = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .analyze()
     expect(result.violations).toEqual([])
   }
@@ -22,8 +22,32 @@ test('the authenticated view remains accessible on a narrow screen', async ({ pa
   await page.getByLabel('Password', { exact: true }).fill('Demo-password-123!')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByText('Signed in as bob')).toBeVisible()
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      width,
+    )
+  }
   expect(
-    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
-      .violations,
+    (
+      await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations,
   ).toEqual([])
+})
+
+test('navigation supports a keyboard shortcut to content and narrow public pages', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('main')).toBeFocused()
+  for (const path of ['/', '/sign-in']) {
+    await page.setViewportSize({ width: 320, height: 844 })
+    await page.goto(path)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+  }
 })

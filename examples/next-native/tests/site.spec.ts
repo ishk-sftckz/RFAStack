@@ -69,3 +69,21 @@ test('refresh tracking reads current status and updates cancellation eligibility
     await pool.end()
   }
 })
+
+test('quantity controls keep totals valid and prevent empty orders', async ({ page }) => {
+  await login(page)
+  const quantity = page.getByRole('spinbutton', { name: 'Notebook quantity', exact: true })
+  const submit = page.getByRole('button', { name: 'Place order', exact: true })
+  await expect(submit).toBeDisabled()
+  await page.getByRole('button', { name: 'Increase Notebook', exact: true }).click()
+  await expect(quantity).toHaveValue('1')
+  await expect(submit).toBeEnabled()
+  await quantity.fill('21')
+  await expect(quantity).toHaveValue('20')
+  await expect(page.getByRole('button', { name: 'Increase Notebook', exact: true })).toBeDisabled()
+  await quantity.fill('1')
+  await page.getByRole('button', { name: 'Decrease Notebook', exact: true }).click()
+  await expect(quantity).toHaveValue('0')
+  await expect(submit).toBeDisabled()
+  await expect(page.locator('.total-line')).toContainText('$0.00')
+})
