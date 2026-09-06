@@ -18,7 +18,25 @@ test('every public route renders its document', async ({ page }) => {
     expect(response?.ok()).toBe(true)
     await expect(page.getByRole('heading', { level: 1, name: route.heading })).toBeVisible()
     expect(await page.title()).toContain(route.heading)
+    if (route.path === './') {
+      await expect(page.locator('.reading-time')).toHaveCount(0)
+    } else {
+      await expect(page.locator('.vp-doc h1 + .reading-time')).toHaveText(/About [1-9]\d* min read/)
+    }
   }
+})
+
+test('reading time updates when navigating between chapters', async ({ page }) => {
+  await page.goto('./background')
+  const backgroundTime = await page.locator('.reading-time').textContent()
+
+  await page.locator('.vp-doc').getByRole('link', {
+    name: 'see the architectural foundations behind ownership and dependency direction',
+  }).click()
+
+  await expect(page).toHaveURL(/\/RFAStack\/concepts$/)
+  await expect(page.locator('.reading-time')).toHaveCount(1)
+  await expect(page.locator('.reading-time')).not.toHaveText(backgroundTime!)
 })
 
 test('homepage presents RFAStack as a full-stack architecture model', async ({ page }) => {

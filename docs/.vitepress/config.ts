@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
+import { readingTime } from './reading-time'
 
 const siteUrl = 'https://ishk-sftckz.github.io/RFAStack/'
 const tagline = 'An Opinionated React Fullstack Architecture for Next.js Applications'
@@ -41,6 +42,7 @@ export default withMermaid(
       },
     },
     markdown: {
+      config: readingTime,
       lineNumbers: true,
       theme: {
         light: 'github-light-high-contrast',

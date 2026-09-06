@@ -648,6 +648,13 @@ body {
   line-height: 0.98;
 }
 
+.VPDoc .vp-doc .reading-time {
+  margin: 16px 0 24px;
+  color: var(--rfa-ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .VPDoc .vp-doc h2 {
   margin-top: 72px;
   padding-top: 22px;
