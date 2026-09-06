@@ -1,13 +1,13 @@
 ---
 title: Concepts
-description: The architectural foundations behind feature ownership and dependency direction.
+description: Architectural principles for making behavior easier to find and changes easier to reason about.
 ---
 
 # Concepts
 
-When an order’s cancellation rule changes, you should know where to start. The rule, the mutation that uses it, and the order-specific UI belong in `src/features/orders`. You can follow the behavior there without searching through unrelated routes, services, and helpers.
+An application becomes harder to change when you cannot tell where a behavior is defined or what depends on it. A small request can send you through several parts of the codebase, checking for repeated rules and trying to predict what else your edit might affect.
 
-Organize business behavior by feature. Next.js entry points handle routing and framework conventions. Platform code connects the application to databases and outside services. Each part has a responsibility, and its imports should follow that responsibility.
+Start with clear responsibilities. Keep related behavior together and decide how each part may depend on the others. The architectural concepts below explain the reasoning behind those choices, so you have a basis for deciding where code belongs before choosing a folder structure.
 
 ## Keep business behavior together as the application grows
 
