@@ -37,6 +37,10 @@ Follow the guides in order, or start with the decision you're working on:
 | [Protected Resources](https://ishk-sftckz.github.io/RFAStack/protected-resources) | Where to verify sessions, enforce resource access, and limit the data returned to callers. |
 | [Caching](https://ishk-sftckz.github.io/RFAStack/caching) | How Next.js caches interact, where cache policy belongs, and what to invalidate after a write. |
 
+## Run an example
+
+The [three runnable applications](./examples/README.md) demonstrate native Next.js, React Query with a separate HTTP backend, and React Query with oRPC. Each has its own PostgreSQL setup, seeded login accounts, and tests.
+
 ## Work on the documentation
 
 This repository contains the guides and their VitePress site. Use Bun 1.4.0 to install dependencies and start the development server:

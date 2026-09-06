@@ -1,0 +1,1 @@
+ALTER TABLE "membership" ADD COLUMN "savedFilter" text DEFAULT 'all' NOT NULL;

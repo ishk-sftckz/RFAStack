@@ -13,6 +13,11 @@ const publicFiles = [
   'docs/data-fetching-and-mutation.md',
   'docs/protected-resources.md',
   'docs/caching.md',
+  'docs/examples.md',
+  'examples/README.md',
+  'examples/next-native/README.md',
+  'examples/react-query-http/README.md',
+  'examples/react-query-orpc/README.md',
   'docs/.vitepress/config.ts',
 ]
 
@@ -69,4 +74,14 @@ test('repository includes the intended dual-license notices', () => {
   expect(read('LICENSE-CODE')).toContain('MIT License')
   expect(read('LICENSE-CONTENT')).toContain('Creative Commons Attribution 4.0 International')
   expect(read('LICENSE.md')).toContain('RFAStack by Ishk')
+})
+
+test('examples explain distinct requirements and link their runnable source', () => {
+  const guide = read('docs/examples.md')
+  for (const name of ['next-native', 'react-query-http', 'react-query-orpc']) {
+    expect(guide).toContain(`examples/${name}`)
+    expect(read(`examples/${name}/README.md`)).toContain('bun install --frozen-lockfile')
+  }
+  expect(guide).toContain('separate backend')
+  expect(guide).toContain('command-line client')
 })

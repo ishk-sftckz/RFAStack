@@ -4,7 +4,7 @@ This repository uses two licenses because executable source and authored materia
 
 ## Source code
 
-Configuration, Vue components, stylesheets, scripts, tests, and workflow files are licensed under the [MIT License](LICENSE-CODE).
+Executable application source in `examples/`, configuration, Vue components, stylesheets, scripts, tests, and workflow files are licensed under the [MIT License](LICENSE-CODE).
 
 ## Writing and visual material
 

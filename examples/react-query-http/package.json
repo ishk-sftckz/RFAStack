@@ -1,0 +1,55 @@
+{
+  "name": "rfastack-fulfillment-dashboard",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.0",
+  "scripts": {
+    "dev": "bun run --parallel dev:next dev:backend",
+    "build": "bun --bun next build",
+    "start": "bun run --parallel start:next start:backend",
+    "typecheck": "bun --bun next typegen && tsc --noEmit",
+    "check:boundaries": "bun scripts/check-boundaries.ts",
+    "db:up": "docker compose up -d --wait",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun --bun drizzle-kit migrate",
+    "db:seed": "bun scripts/seed.ts",
+    "db:reset": "bun scripts/reset.ts",
+    "test": "playwright test",
+    "test:unit": "vitest run",
+    "carrier": "bun scripts/carrier.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "dev:next": "bun --bun next dev -p 3102",
+    "start:next": "bun --bun next start -p 3102",
+    "dev:backend": "bun --watch backend/server.ts",
+    "start:backend": "bun backend/server.ts"
+  },
+  "dependencies": {
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "better-auth": "1.7.3",
+    "drizzle-orm": "0.45.2",
+    "pg": "8.16.3",
+    "zod": "4.3.6",
+    "server-only": "0.0.1",
+    "@tanstack/react-query": "5.102.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@axe-core/playwright": "4.13.0",
+    "@types/node": "22.19.15",
+    "@types/pg": "8.16.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "drizzle-kit": "0.31.9",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4",
+    "@types/bun": "1.3.10",
+    "prettier": "3.6.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}

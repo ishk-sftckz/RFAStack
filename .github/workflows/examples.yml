@@ -1,0 +1,42 @@
+name: Verify runnable examples
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    name: ${{ matrix.example }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [next-native, react-query-http, react-query-orpc]
+    defaults:
+      run:
+        working-directory: examples/${{ matrix.example }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: cp .env.example .env
+      - run: bun install --frozen-lockfile
+      - run: bun run db:up
+      - run: bun run db:migrate && bun run db:seed
+      - run: bun run typecheck && bun run check:boundaries && bun run format:check
+      - run: bun run test:unit
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.example }}-test-results
+          path: examples/${{ matrix.example }}/test-results
+      - run: docker compose down -v
+        if: always()

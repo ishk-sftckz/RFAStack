@@ -53,6 +53,22 @@ Concrete:
 
 Examples should involve real RFAStack decisions: routes, features, reads, mutations, server and browser code, databases, or outside services.
 
+## Teach through connected explanations
+
+In guide prose, explain how each recommendation follows from the code or concern being discussed. Introduce what a method does before asking the reader to choose it. When moving to another responsibility, such as from fetching data to defining a schema, explain why that responsibility comes next.
+
+For example:
+
+> A Server Component can call the feature query directly because both run on the server. Going through the application’s own Route Handler would add an HTTP request between them.
+>
+> Before writing that query, decide which fields the UI should receive. For the orders example, we’ll describe those fields with a Zod schema so the query can check its result and the UI can use the corresponding TypeScript type.
+
+The connection must carry information: a reason, consequence, dependency, or tradeoff. Adding “then,” “also,” or “next” to a series of commands leaves that explanation missing. Keep citations beside the claims they support, with enough surrounding prose to explain the relationship.
+
+Use lists for actual procedures and checklists, and tables for comparisons. Connected prose belongs where the reader needs to understand how or why an approach works.
+
+A passage passes when the reader can explain why each recommendation applies and how the next topic follows. If that requires guessing, supply the missing relationship from the example or cited source.
+
 ## Talk to the reader
 
 Use “you.” It speaks to an individual developer and still includes someone working on a team. Use “your team” only when the sentence is specifically about coordination between people.
@@ -132,7 +148,7 @@ Make each item useful on its own. Vary their syntax naturally. A row of equally 
 3. Draft a heading that carries the problem, claim, question, or practical promise.
 4. Explain the mechanism with a concrete example.
 5. Add the boundary when the recommendation changes by context.
-6. Read the section aloud and loosen any repeated sentence pattern.
+6. Review every explanatory paragraph against [connected explanations](#teach-through-connected-explanations), then read the section aloud and loosen any repeated sentence pattern.
 7. Check technical claims and terminology against `CONTRIBUTING.md` and the relevant guide.
 
 ## Final check

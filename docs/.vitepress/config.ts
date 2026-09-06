@@ -99,6 +99,7 @@ export default withMermaid(
               text: 'Caching',
               link: '/caching',
             },
+            { text: 'Runnable Examples', link: '/examples' },
           ],
         },
       ],

@@ -36,6 +36,28 @@ We recommend Proxy for authenticated application areas. It gives you one place t
 
 Keep resource-specific decisions in the feature operation. Checking order ownership in Proxy would tie the rule to URL matching and repeat it for every transport that exposes the same operation.
 
+For example, redirect visitors without a Better Auth session cookie before rendering `/orders` or its child routes:
+
+```ts
+// src/proxy.ts
+import { getSessionCookie } from 'better-auth/cookies'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export function proxy(request: NextRequest) {
+  if (!getSessionCookie(request)) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: ['/orders/:path*'],
+}
+```
+
+This example uses Better Auth's default cookie configuration. Match any custom cookie name or prefix in `getSessionCookie()` too. Cookie presence only decides this redirect: an expired or forged cookie can pass it, so the protected operation must still verify the session. [Better Auth Proxy integration](https://better-auth.com/docs/integrations/next#auth-protection)
+
 When you add a protected route, include it in the route policy. Also verify that its underlying operations reject unauthorized access independently.
 
 A static private document needs separate attention: access must be enforced where the document is served. An application query cannot protect a file that users can retrieve directly from a public URL. [OWASP guidance on static resources](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html#enforce-authorization-checks-on-static-resources)
@@ -124,7 +146,70 @@ The UI may use the same pure cancellation rule to decide whether to display a bu
 
 Keep ownership and eligibility constraints in the write where the database supports them. The [cancellation example](./folder-structure#follow-a-cancellation-from-the-form-to-the-stored-order) includes the account and the checked status in its update condition, so an order that changes concurrently is not cancelled using an outdated decision.
 
+Here is that use case with its protection checks together:
+
+```ts
+// src/features/orders/server/cancel-order.use-case.ts
+import 'server-only'
+
+import { requireAccount } from '@/features/identity/server/identity.queries'
+import { database } from '@/platform/database/client'
+import { canCancelOrder } from '../model/order-cancellation'
+import { cancelOrderInputSchema, orderStatusSchema } from '../model/order.schema'
+import type { CancelOrderInput } from '../model/order.schema'
+
+export async function cancelOrderUseCase(input: CancelOrderInput) {
+  const account = await requireAccount()
+  const { orderId } = cancelOrderInputSchema.parse(input)
+
+  const order = await database.order.findFirst({
+    where: { id: orderId, accountId: account.id },
+    select: { id: true, status: true },
+  })
+
+  if (!order) throw new Error('Order not found')
+
+  const status = orderStatusSchema.parse(order.status)
+  if (!canCancelOrder(status)) {
+    throw new Error('This order can no longer be cancelled')
+  }
+
+  const result = await database.order.updateMany({
+    where: { id: orderId, accountId: account.id, status },
+    data: { status: 'cancelled' },
+  })
+
+  if (result.count !== 1) {
+    throw new Error('The order changed before cancellation completed')
+  }
+}
+```
+
+`canCancelOrder()` accepts pending or confirmed orders, as defined in the [pure cancellation rule](./folder-structure#follow-a-cancellation-from-the-form-to-the-stored-order). An order belonging to another account produces the same missing-order result as an unknown ID. If the status changes after the read, the conditional write affects no rows and the operation fails.
+
 A Server Action, Route Handler, or RPC procedure can call this protected use case. Each adapter handles its transport: parsing submitted input, adapting failures, and refreshing the UI or returning a response.
+
+The Server Action does not accept an account ID from the form:
+
+```ts
+// src/features/orders/server/order.actions.ts
+'use server'
+
+import { refresh } from 'next/cache'
+import { cancelOrderInputSchema } from '../model/order.schema'
+import { cancelOrderUseCase } from './cancel-order.use-case'
+
+export async function cancelOrder(formData: FormData) {
+  const input = cancelOrderInputSchema.parse({
+    orderId: formData.get('orderId'),
+  })
+
+  await cancelOrderUseCase(input)
+  refresh()
+}
+```
+
+Calling this action directly still reaches the use case's session, ownership, and status checks. The example refreshes the route after success; if the read is cached, also [invalidate its affected entries](./caching#invalidate-the-affected-result-after-a-successful-write).
 
 The shared operation should report an authentication failure in a form its callers can adapt. A page may redirect to login; an API should return an appropriate error response.
 
@@ -142,17 +227,37 @@ If an operation also needs background-job or alternative-credential callers, def
 
 Better Auth can implement session verification while feature operations depend on the application’s identity helper.
 
-Given a configured Better Auth instance named `auth`, the server-side session lookup is:
+Given a configured Better Auth instance exported from `platform/auth`, the identity feature can expose a verified caller:
 
 ```ts
-import { headers } from 'next/headers'
+// src/features/identity/server/identity.queries.ts
+import 'server-only'
 
-const session = await auth.api.getSession({
-  headers: await headers(),
+import { cache } from 'react'
+import { headers } from 'next/headers'
+import { auth } from '@/platform/auth'
+
+export class AuthenticationError extends Error {
+  constructor() {
+    super('Authentication required')
+    this.name = 'AuthenticationError'
+  }
+}
+
+export const requireIdentity = cache(async () => {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  })
+
+  if (!session) throw new AuthenticationError()
+
+  return { userId: session.user.id }
 })
 ```
 
-This snippet shows the session lookup inside the identity integration. Reject a missing session before resolving the application’s account context.
+`requireAccount()` calls this helper, resolves which application account the user may act through, and rejects unauthorized account selections. That mapping depends on your account model. Keep it in identity; the order examples do not equate a Better Auth user ID with an application account ID.
+
+The helper returns only the user ID needed for that mapping. Repeated calls during a Server Component render can reuse verification through React `cache()`; new requests must establish identity again.
 
 Better Auth documents this API for Server Components and Server Actions. Its `getSessionCookie()` helper checks cookie presence only, so use that helper for optimistic redirects and validate the session before granting access to protected resources. [Better Auth Next.js integration](https://better-auth.com/docs/integrations/next)
 
@@ -160,6 +265,21 @@ The identity helper must then resolve the application’s account context. Bette
 
 Choose session caching deliberately. With Better Auth’s cookie cache enabled, a revoked session may continue to be accepted until the cached data expires. Operations that require a current check against session storage can bypass that cookie cache with `disableCookieCache`. [Better Auth session management](https://better-auth.com/docs/concepts/session-management)
 
+For a storage-backed session policy that requires this check, replace the lookup inside the identity helper with:
+
+```ts
+const session = await auth.api.getSession({
+  headers: await headers(),
+  query: { disableCookieCache: true },
+})
+```
+
 Keep that session policy in the identity integration. When an order’s access rule changes, the implementation should remain in the orders feature.
+
+## Choose caching after defining access
+
+The examples above read current data without a shared data cache. When adding one, establish the caller before accessing it and include the authorized visibility scope in its key. The [protected caching example](./caching#keep-protected-checks-outside-shared-cached-results) shows that boundary.
+
+For request-dependent UI, the caching guide also provides a [`use cache: private` example](./caching#use-private-caching-for-request-dependent-ui). It allows request APIs within the cached function and reuses the result in browser memory. You still need the protected query's access checks whenever the server executes it. [Next.js private caching](https://nextjs.org/docs/app/api-reference/directives/use-cache-private)
 
 Next: [choose cache boundaries and refresh affected data](./caching).

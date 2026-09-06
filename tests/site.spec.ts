@@ -8,6 +8,7 @@ const publicRoutes = [
   { path: './data-fetching-and-mutation', heading: 'Data Fetching & Mutation' },
   { path: './protected-resources', heading: 'Protected Resources' },
   { path: './caching', heading: 'Caching' },
+  { path: './examples', heading: 'Runnable Examples' },
 ] as const
 
 test('every public route renders its document', async ({ page }) => {
@@ -66,6 +67,7 @@ test('homepage presents RFAStack as a full-stack architecture model', async ({ p
     ['Data Fetching & Mutation', 'data-fetching-and-mutation'],
     ['Protected Resources', 'protected-resources'],
     ['Caching', 'caching'],
+    ['Runnable Examples', 'examples'],
   ] as const
 
   const readingPath = page.getByLabel('RFAStack reading path')

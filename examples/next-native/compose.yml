@@ -1,0 +1,16 @@
+services:
+  database:
+    image: postgres:17-alpine
+    ports: ['5411:5432']
+    environment:
+      POSTGRES_USER: rfa
+      POSTGRES_PASSWORD: rfa
+      POSTGRES_DB: customer_portal
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U rfa -d customer_portal']
+      interval: 2s
+      timeout: 5s
+      retries: 20
+    volumes: ['database:/var/lib/postgresql/data']
+volumes:
+  database:

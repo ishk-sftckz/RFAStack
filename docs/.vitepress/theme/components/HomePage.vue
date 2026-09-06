@@ -8,6 +8,7 @@ const chapters = [
   ['03', 'Data Fetching & Mutation', 'How to choose a path for reads and mutations across server code, browser state, and external callers.', '/data-fetching-and-mutation'],
   ['04', 'Protected Resources', 'Protect reads and mutations with session verification, resource access checks, and safe returned data.', '/protected-resources'],
   ['05', 'Caching', 'Understand what each cache reuses, where feature cache policy belongs, and how writes reach the server and browser views.', '/caching'],
+  ['06', 'Runnable Examples', 'Run a customer portal, a fulfillment dashboard, or a B2B ordering app and trace its requests through the source.', '/examples'],
 ] as const
 
 const concerns = [

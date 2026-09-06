@@ -1,0 +1,7 @@
+node_modules
+.next
+drizzle
+bun.lock
+test-results
+playwright-report
+next-env.d.ts

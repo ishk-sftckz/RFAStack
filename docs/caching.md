@@ -114,7 +114,7 @@ Ordinary `'use cache'` uses memory for runtime entries by default. Reuse across 
 
 `'use cache: remote'` uses a configured remote handler when runtime results need shared storage across instances. That adds a cache network request and storage costs, so assess whether a hit saves enough work. Its entries are still scoped by build or deployment identity. [Remote caching reference](https://nextjs.org/docs/app/api-reference/directives/use-cache-remote)
 
-`'use cache: private'` allows runtime request APIs inside the function, but stores results only in browser memory. The function runs on each server render. This is an option for request-dependent content whose client reuse is acceptable; it does not create a private server cache. [Private caching reference](https://nextjs.org/docs/app/api-reference/directives/use-cache-private)
+For request-dependent content that should only be reused in browser memory, see the [private caching example](#use-private-caching-for-request-dependent-ui) below.
 
 ## Keep protected checks outside shared cached results
 
@@ -188,6 +188,40 @@ async function Orders() {
 ```
 
 The heading can render before the account lookup and order list finish. Keep cancellation eligibility and other mutation checks on current stored data inside the [use case](./protected-resources#authorize-mutations-against-the-current-resource). A cached list supplies display data; it cannot establish whether a write is still allowed.
+
+## Use private caching for request-dependent UI
+
+`'use cache: private'` allows `headers()` and `cookies()` inside its scope. It runs on every server render; results are reused only in browser memory and disappear on reload. Enable `cacheComponents: true` as shown above. [Private caching reference](https://nextjs.org/docs/app/api-reference/directives/use-cache-private)
+
+As an alternative to the shared cached query above, use the [uncached protected `listOrders()`](./protected-resources#make-a-protected-read-establish-its-caller) inside a private component:
+
+```tsx
+// src/app/(authenticated)/orders/page.tsx
+import { Suspense } from 'react'
+import { cacheLife } from 'next/cache'
+import { listOrders } from '@/features/orders/server/order.queries'
+import { OrderList } from '@/features/orders/ui/OrderList'
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={<p>Loading orders…</p>}>
+      <PrivateOrders />
+    </Suspense>
+  )
+}
+
+async function PrivateOrders() {
+  'use cache: private'
+  cacheLife({ stale: 30 })
+
+  const orders = await listOrders()
+  return <OrderList orders={orders} />
+}
+```
+
+The query still establishes the account and scopes the read. Its identity helper may access request headers within this private scope. The illustrative 30-second stale time permits browser reuse; it does not reduce database work on a new server render.
+
+Use this when browser reuse is acceptable and the request-dependent work belongs together. Keep mutation checks on current data, and refresh affected UI after writes or account changes.
 
 ## Invalidate the affected result after a successful write
 

@@ -105,10 +105,13 @@ src/shared/
   validation/
     primitives.ts           # Reusable Zod schemas without business policy
   utils/
+    currency.ts             # Format currency values for display
     assert-unreachable.ts   # Report an unexpected exhaustive-branch value
 ```
 
-`Money` may look generic while encoding order-specific rounding. `StatusBadge` may look reusable while knowing every status in fulfillment.
+Name a utility by the work it performs. Use `utils/currency.ts` with a `formatCurrency()` export for display formatting. The runnable examples accept an amount in cents and display it as USD, matching their single-currency scope.
+
+Keep pricing, tax, and order-specific rounding rules in the owning feature's `model/`. A formatter displays a supplied amount; the feature decides what amount to charge. The same boundary applies to UI: a `StatusBadge` that knows fulfillment statuses belongs in that feature.
 
 Use two checks before moving code into shared:
 
@@ -180,7 +183,7 @@ src/features/orders/
   order.api.ts          # HTTP/RPC requests for order reads and mutations
 ```
 
-Use `order.api.ts` for ordinary request functions such as `getOrderDetails` and `cancelOrder`. They call an HTTP endpoint or RPC client, check the response, and parse returned data with Zod. The API may belong to an existing backend or to this Next.js application’s Route Handlers.
+Use `order.api.ts` for ordinary request functions such as `fetchOrderDetails` and `cancelOrder`. They call an HTTP endpoint or RPC client, check the response, and parse returned data with Zod. The API may belong to an existing backend or to this Next.js application’s Route Handlers.
 
 A component can call these functions directly. When the feature uses TanStack Query, its options factories can call the same functions. Group related reads and mutations in this file; its responsibility stays the same with or without a query library. The [API mutation example](./data-fetching-and-mutation#call-an-existing-api-for-mutations) shows both consumers.
 
@@ -449,7 +452,7 @@ A server read and a TanStack query definition have different jobs:
 | --- | --- | --- |
 | `server/order.queries.ts` | `getOrderDetails(input)` executes a server read and returns data. | A server caller needs the read. |
 | `server/order.actions.ts` | `cancelOrder(formData)` invokes a Next.js Server Action that calls a use case. | Your UI uses a Server Action for that mutation. |
-| `order.api.ts` | `getOrderDetails(input)` or `cancelOrder(input)` makes an HTTP/RPC request. | Feature-specific request functions need a module. |
+| `order.api.ts` | `fetchOrderDetails(input)` or `cancelOrder(input)` makes an HTTP/RPC request. | Feature-specific request functions need a module. |
 | `order.query-options.ts` | `orderDetailsOptions(input)` returns the query key, request function, and cache settings. | The feature uses TanStack Query. |
 | `order.mutation-options.ts` | Returns shared TanStack mutation configuration. | Sharing configuration between consumers earns a separate module. |
 
@@ -516,12 +519,31 @@ These filenames are our recommended conventions. Preserve Next.js’s own specia
 | Public server reads | `server/*.queries.ts`; functions describe the operation. | `server/order.queries.ts` exports `getOrderDetails`. |
 | Next.js Server Actions | `server/*.actions.ts`, only when using Server Actions. | `server/order.actions.ts` exports `cancelOrder`. |
 | Business mutations and workflows | `server/<operation>.use-case.ts`; export the operation directly. | `server/cancel-order.use-case.ts` exports `cancelOrderUseCase`. |
-| Browser API requests | `.api.ts` for feature-specific HTTP/RPC requests; related reads and writes may share it. | `order.api.ts` exports `getOrderDetails` and `cancelOrder`. |
+| Browser API requests | `.api.ts` for feature-specific HTTP/RPC requests; related reads and writes may share it. | `order.api.ts` exports `fetchOrderDetails` and `cancelOrder`. |
 | TanStack options | `.query-options.ts` or `.mutation-options.ts`. | `order.query-options.ts` exports `orderDetailsOptions`. |
 | RPC procedures | `server/*.rpc.ts` for feature procedures exposed to the application’s RPC router. | `server/order.rpc.ts`. |
 | Private supporting server modules | An entity or responsibility with a role suffix, inside `server/`. | `server/order.repository.ts`, `server/order.dto.ts`. |
 
 Use a suffix when it helps readers distinguish a role. Name business behavior directly instead of collecting it in feature-level `helpers`, `common`, `misc`, or `utils` files. Keep related small functions together, and split a file when a responsibility becomes difficult to find or follow.
+
+### Name reads by their result and responsibility
+
+Use `list` for a feature operation that returns a collection and `get` for one resource or an aggregate result. Use `fetch` for a request helper whose responsibility is retrieving data over HTTP or RPC. This lets a caller distinguish `getOrderDetails` in the server query module from `fetchOrderDetails` in the browser API module.
+
+| Kind of function | Convention | Example |
+| --- | --- | --- |
+| Collection read | `list` + plural noun; an empty collection is a valid result. | `listProducts`, `listOrders`, `listCurrentProducts`. |
+| Single resource or aggregate read | `get` + the result's name; document how absence is handled. | `getOrder`, `getOrderDetails`, `getAccountBalance`. |
+| HTTP/RPC read helper | `fetch` + the requested data. | `fetchProducts`, `fetchOrderDetails`, `fetchDeliveryEstimate`. |
+| Optional repository lookup | `find` + the lookup target; return `null` or `undefined` when absent. | `findOrderForAccount`. |
+| Required identity or access check | `require` + the required context; throw when the check fails. | `requireAccount`, `requireIdentity`. |
+| Mutation | A verb describing the business operation. | `createOrder`, `cancelOrder`, `savePreferences`. |
+
+These are project conventions. Google's API guidelines use [`Get` for one resource](https://google.aip.dev/131) and [`List` for a collection](https://google.aip.dev/132). Next.js also uses `getPosts` in its [data-fetching examples](https://nextjs.org/docs/app/getting-started/fetching-data#streaming-data-with-the-use-api), so `getProducts` is a valid choice in a codebase that consistently uses `get` for reads. Here, `listProducts` makes the collection explicit.
+
+“Data fetching” describes loading data. It does not require a `fetch` prefix or an HTTP call: Server Components can use an ORM or database client directly. [Next.js data fetching](https://nextjs.org/docs/app/getting-started/fetching-data)
+
+A feature query may use a database, cache, or external service internally and keep its `get` or `list` name. Keep library-defined names such as `findMany` and generated RPC methods as provided. A TanStack `queryFn` can call any function that returns a promise for data and rejects on failure; the function's name does not control that behavior. [TanStack query functions](https://tanstack.com/query/latest/docs/framework/react/guides/query-functions)
 
 ## Put components with the behavior they represent
 

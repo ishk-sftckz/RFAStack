@@ -1,0 +1,16 @@
+services:
+  database:
+    image: postgres:17-alpine
+    ports: ['5413:5432']
+    environment:
+      POSTGRES_USER: rfa
+      POSTGRES_PASSWORD: rfa
+      POSTGRES_DB: b2b_ordering
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U rfa -d b2b_ordering']
+      interval: 2s
+      timeout: 5s
+      retries: 20
+    volumes: ['database:/var/lib/postgresql/data']
+volumes:
+  database:
