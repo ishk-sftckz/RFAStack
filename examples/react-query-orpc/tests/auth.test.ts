@@ -2,11 +2,11 @@ import { afterAll, expect, test } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { hashPassword } from 'better-auth/crypto'
 import { database, pool } from '@/platform/database/client'
-import { user, account, session } from '@/features/auth/server/auth.table'
-import { authProvider } from '@/features/auth/server/auth.provider'
-import { requireSession } from '@/features/auth/server/auth.queries'
-import { requireMembership } from '@/features/membership/server/membership.queries'
-import { membership } from '@/features/membership/server/membership.table'
+import { user, account, session } from '@/features/auth/auth.table'
+import { authProvider } from '@/features/auth/auth.provider'
+import { requireSession } from '@/features/auth/auth.queries'
+import { requireMembership } from '@/features/membership/membership.queries'
+import { membership } from '@/features/membership/membership.table'
 
 afterAll(() => pool.end())
 

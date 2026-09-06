@@ -67,15 +67,15 @@ A static private document needs separate attention: access must be enforced wher
 
 A Data Access Layer, or DAL, controls access to application data. Next.js recommends that it run on the server, perform authorization checks, and return safe, minimal data transfer objects. It also demonstrates authentication inside a data operation, allowing the calling Server Action to remain thin. [Next.js DAL guidance](https://nextjs.org/docs/app/guides/data-security#data-access-layer)
 
-Keep those responsibilities in the [existing feature structure](./folder-structure#keep-feature-server-operations-in-server):
+Keep those responsibilities in the [existing feature structure](./folder-structure#keep-operation-modules-at-the-feature-root):
 
 | Location | Responsibility |
 | --- | --- |
-| `features/auth/server/` | Verify the session and return the authenticated user. |
-| `features/membership/server/` | Resolve that user’s business membership and authorized account context. |
-| `features/orders/server/order.queries.ts` | Authorize order reads and return the fields the caller may receive. |
-| `features/orders/server/cancel-order.use-case.ts` | Authorize cancellation and apply the business rules. |
-| `features/orders/server/order.repository.ts` | Encapsulate persistence when a separate repository is useful. |
+| `features/auth/auth.queries.ts` | Verify the session and return the authenticated user. |
+| `features/membership/membership.queries.ts` | Resolve that user’s business membership and authorized account context. |
+| `features/orders/order.queries.ts` | Authorize order reads and return the fields the caller may receive. |
+| `features/orders/cancel-order.use-case.ts` | Authorize cancellation and apply the business rules. |
+| `features/orders/order.repository.ts` | Encapsulate persistence when a separate repository is useful. |
 
 You do not need a global `dal/` directory to establish this boundary. Keep resource policies with their feature, and share session verification through auth and account access checks through membership.
 
@@ -88,12 +88,12 @@ Consider a query that lists orders. If it trusts a supplied account ID, every ca
 The protected operation can remove that choice from its callers:
 
 ```ts
-// src/features/orders/server/order.queries.ts
+// src/features/orders/order.queries.ts
 import 'server-only'
 
-import { requireAccount } from '@/features/membership/server/membership.queries'
+import { requireAccount } from '@/features/membership/membership.queries'
 import { database } from '@/platform/database/client'
-import { orderSummarySchema } from '../model/order.schema'
+import { orderSummarySchema } from './model/order.schema'
 
 export async function listOrders() {
   const account = await requireAccount()
@@ -126,7 +126,7 @@ The query scopes the database read to that account and selects the fields it ret
 
 ```tsx
 // src/app/(authenticated)/orders/page.tsx
-import { listOrders } from '@/features/orders/server/order.queries'
+import { listOrders } from '@/features/orders/order.queries'
 import { OrderList } from '@/features/orders/ui/OrderList'
 
 export default async function OrdersPage() {
@@ -151,14 +151,14 @@ Keep ownership and eligibility constraints in the write where the database suppo
 Here is that use case with its protection checks together:
 
 ```ts
-// src/features/orders/server/cancel-order.use-case.ts
+// src/features/orders/cancel-order.use-case.ts
 import 'server-only'
 
-import { requireAccount } from '@/features/membership/server/membership.queries'
+import { requireAccount } from '@/features/membership/membership.queries'
 import { database } from '@/platform/database/client'
-import { canCancelOrder } from '../model/order-cancellation'
-import { cancelOrderInputSchema, orderStatusSchema } from '../model/order.schema'
-import type { CancelOrderInput } from '../model/order.schema'
+import { canCancelOrder } from './model/order-cancellation'
+import { cancelOrderInputSchema, orderStatusSchema } from './model/order.schema'
+import type { CancelOrderInput } from './model/order.schema'
 
 export async function cancelOrderUseCase(input: CancelOrderInput) {
   const account = await requireAccount()
@@ -194,11 +194,11 @@ A Server Action, Route Handler, or RPC procedure can call this protected use cas
 The Server Action does not accept an account ID from the form:
 
 ```ts
-// src/features/orders/server/order.actions.ts
+// src/features/orders/order.actions.ts
 'use server'
 
 import { refresh } from 'next/cache'
-import { cancelOrderInputSchema } from '../model/order.schema'
+import { cancelOrderInputSchema } from './model/order.schema'
 import { cancelOrderUseCase } from './cancel-order.use-case'
 
 export async function cancelOrder(formData: FormData) {
@@ -229,16 +229,16 @@ If an operation also needs background-job or alternative-credential callers, def
 
 Put session verification in the auth feature. Membership calls auth's public query, then resolves membership and the account the caller may use. An authenticated user without a business membership can have a valid session while membership rejects access to the application account.
 
-Auth owns the provider tables in `server/auth.table.ts`. Its `auth.provider.ts` supplies those tables to a factory in `platform/auth/server.ts`. The factory configures Better Auth and its database adapter without importing a feature. Better Auth's Drizzle adapter accepts a supplied schema. [Drizzle adapter configuration](https://better-auth.com/docs/adapters/drizzle)
+Auth owns the provider tables in `auth.table.ts`. Its `auth.provider.ts` supplies those tables to a factory in `platform/auth/server.ts`. The factory configures Better Auth and its database adapter without importing a feature. Better Auth's Drizzle adapter accepts a supplied schema. [Drizzle adapter configuration](https://better-auth.com/docs/adapters/drizzle)
 
 The public session query returns only the fields membership needs:
 
 ```ts
-// src/features/auth/server/auth.queries.ts
+// src/features/auth/auth.queries.ts
 import 'server-only'
 import { AccessError } from '@/shared/utils/errors'
 import { authProvider } from './auth.provider'
-import { sessionSchema } from '../model/auth.schema'
+import { sessionSchema } from './model/auth.schema'
 
 export async function requireSession(requestHeaders: Headers) {
   const session = await authProvider.api.getSession({
@@ -254,7 +254,7 @@ export async function requireSession(requestHeaders: Headers) {
 
 Here, `sessionSchema` defines the public user ID and name. The membership feature's `requireMembership()` calls `requireSession()`, looks up the user's membership, and rejects callers without one. `requireAccount()` can then resolve a requested business account where the application supports account selection.
 
-Keep sign-in and sign-out UI in `features/auth/ui`. Those components use the Better Auth browser client from `platform/auth/client.ts`. The auth Route Handler mounts `authProvider.handler` directly from `server/auth.provider.ts`. Other features use the session query directly.
+Keep sign-in and sign-out UI in `features/auth/ui`. Those components use the Better Auth browser client from `platform/auth/client.ts`. The auth Route Handler mounts `authProvider.handler` directly from `auth.provider.ts`. Other features use the session query directly.
 
 Better Auth documents this API for Server Components and Server Actions. Its `getSessionCookie()` helper checks cookie presence only, so use that helper for optimistic redirects and validate the session before granting access to protected resources. [Better Auth Next.js integration](https://better-auth.com/docs/integrations/next)
 

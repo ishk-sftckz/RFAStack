@@ -1,6 +1,6 @@
 import 'server-only'
-import { orderRouter } from '@/features/orders/server/order.rpc'
-import { catalogRouter } from '@/features/catalog/server/catalog.rpc'
-import { membershipRouter } from '@/features/membership/server/membership.rpc'
+import { orderRouter } from '@/features/orders/order.rpc'
+import { catalogRouter } from '@/features/catalog/catalog.rpc'
+import { membershipRouter } from '@/features/membership/membership.rpc'
 
 export const router = { orders: orderRouter, catalog: catalogRouter, membership: membershipRouter }

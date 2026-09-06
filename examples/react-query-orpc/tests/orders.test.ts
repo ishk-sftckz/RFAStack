@@ -1,8 +1,8 @@
 import { beforeAll, afterAll, expect, test } from 'vitest'
-import { authProvider } from '@/features/auth/server/auth.provider'
+import { authProvider } from '@/features/auth/auth.provider'
 import { pool } from '@/platform/database/client'
-import { createOrder } from '@/features/orders/server/create-order.use-case'
-import { decideOrder } from '@/features/orders/server/decide-order.use-case'
+import { createOrder } from '@/features/orders/create-order.use-case'
+import { decideOrder } from '@/features/orders/decide-order.use-case'
 
 let buyer: Headers
 let approver: Headers

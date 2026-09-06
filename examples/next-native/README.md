@@ -40,12 +40,12 @@ are simulated; no payment is taken.
 
 To follow checkout, open these files in order:
 
-1. `src/features/checkout/server/checkout.actions.ts` receives the form submission.
-2. `src/features/orders/server/create-order.use-case.ts` reads prices and stores the order.
-3. `src/features/orders/server/order.queries.ts` reads the customer's orders.
+1. `src/features/checkout/checkout.actions.ts` receives the form submission.
+2. `src/features/orders/create-order.use-case.ts` reads prices and stores the order.
+3. `src/features/orders/order.queries.ts` reads the customer's orders.
 
-Cancellation rules live in `src/features/orders/server/cancel-order.use-case.ts`. Change the rule
-there, then run the checks below.
+Cancellation rules live in `src/features/orders/cancel-order.use-case.ts`. Change the rule there,
+then run the checks below.
 
 ## Observe cache reads
 

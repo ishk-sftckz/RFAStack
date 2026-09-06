@@ -11,7 +11,7 @@ Next.js shows you how to [fetch data](https://nextjs.org/docs/app/getting-starte
 
 ### Read during rendering through a Server Component
 
-A Server Component can load data while rendering the page, using `fetch`, an ORM, or a database client. In the orders feature, the component calls a query from `server/order.queries.ts`, then passes the result to the UI. [Next.js data-fetching guide](https://nextjs.org/docs/app/getting-started/fetching-data)
+A Server Component can load data while rendering the page, using `fetch`, an ORM, or a database client. In the orders feature, the component calls a query from `order.queries.ts`, then passes the result to the UI. [Next.js data-fetching guide](https://nextjs.org/docs/app/getting-started/fetching-data)
 
 Because the component and query both run on the server, the component can call that function directly. Going through the application’s own Route Handler would add an HTTP request between them. That request can also fail during build-time prerendering, when the application’s HTTP server isn’t running. [Next.js Backend for Frontend guide](https://nextjs.org/docs/app/guides/backend-for-frontend#server-components)
 
@@ -44,11 +44,11 @@ This extends the schema file from the [folder structure example](./folder-struct
 The query scopes the database read to the account and maps its records into that schema. We call it `listOrders` because it returns a collection. The [read naming conventions](./folder-structure#name-reads-by-their-result-and-responsibility) use `get` for one resource or aggregate and `fetch` for HTTP/RPC request helpers.
 
 ```ts
-// src/features/orders/server/order.queries.ts
+// src/features/orders/order.queries.ts
 import 'server-only'
-import { requireAccount } from '@/features/membership/server/membership.queries'
+import { requireAccount } from '@/features/membership/membership.queries'
 import { database } from '@/platform/database/client'
-import { orderSummarySchema } from '../model/order.schema'
+import { orderSummarySchema } from './model/order.schema'
 
 export async function listOrders() {
   const account = await requireAccount()
@@ -69,7 +69,7 @@ export async function listOrders() {
 
 ```tsx
 // src/app/(authenticated)/orders/page.tsx
-import { listOrders } from '@/features/orders/server/order.queries'
+import { listOrders } from '@/features/orders/order.queries'
 import { OrderList } from '@/features/orders/ui/OrderList'
 
 export default async function OrdersPage() {
@@ -85,11 +85,11 @@ The call goes directly from the page to the feature:
 Server Component → feature query → database or external service
 ```
 
-The page handles rendering. The feature decides which orders the account can see and which fields to return. When another route needs the same read, it imports the query directly from `server/order.queries.ts`.
+The page handles rendering. The feature decides which orders the account can see and which fields to return. When another route needs the same read, it imports the query directly from `order.queries.ts`.
 
 The result is a data transfer object, or DTO: the fields the UI needs and the caller is allowed to receive. The query selects those fields explicitly and converts the database date to an ISO string. The examples use a Prisma-style client supplied by `platform/database/client`.
 
-This query selects and maps the result itself. When several reads share that mapping or it needs a separate module for clarity, [extract a `toOrderSummary` mapper](#extract-a-dto-mapper-when-reads-share-the-conversion) into `server/order.dto.ts`. The returned fields must be safe for the caller in either arrangement. The Zod schema and inferred type stay in `model/`, where browser code can use them without importing the server mapper.
+This query selects and maps the result itself. When several reads share that mapping or it needs a separate module for clarity, [extract a `toOrderSummary` mapper](#extract-a-dto-mapper-when-reads-share-the-conversion) into `order.dto.ts`. The returned fields must be safe for the caller in either arrangement. The Zod schema and inferred type stay in `model/`, where browser code can use them without importing the server mapper.
 
 `requireAccount` is the membership feature’s public server operation for verifying the session and resolving an account the caller may use. The query calls it internally, so each caller receives the same protection. A validated ID alone does not authorize a read. The [protected-resources guide](./protected-resources) explains where those checks belong.
 
@@ -115,11 +115,11 @@ export type CancelOrderInput = z.infer<typeof cancelOrderInputSchema>
 The action uses this schema to parse the form submission before calling the use case. Cancellation’s ownership checks, eligibility rule, and update belong in that use case from the first implementation:
 
 ```ts
-// src/features/orders/server/order.actions.ts
+// src/features/orders/order.actions.ts
 'use server'
 
 import { refresh } from 'next/cache'
-import { cancelOrderInputSchema } from '../model/order.schema'
+import { cancelOrderInputSchema } from './model/order.schema'
 import { cancelOrderUseCase } from './cancel-order.use-case'
 
 export async function cancelOrder(formData: FormData) {
@@ -137,7 +137,7 @@ export async function cancelOrder(formData: FormData) {
 // src/features/orders/ui/CancelOrderForm.tsx
 import { canCancelOrder } from '../model/order-cancellation'
 import type { OrderStatus } from '../model/order.schema'
-import { cancelOrder } from '../server/order.actions'
+import { cancelOrder } from '../order.actions'
 
 export function CancelOrderForm({
   orderId,
@@ -210,7 +210,7 @@ A one-off request can use `fetch` directly. Add a query library when you need to
 
 ```ts
 // src/app/api/orders/route.ts
-import { listOrders } from '@/features/orders/server/order.queries'
+import { listOrders } from '@/features/orders/order.queries'
 
 export async function GET() {
   const orders = await listOrders()
@@ -232,7 +232,7 @@ A mobile app or external integration needs an endpoint with a defined request an
 ```ts
 // src/app/api/orders/[orderId]/cancel/route.ts
 import { cancelOrderInputSchema } from '@/features/orders/model/order.schema'
-import { cancelOrderUseCase } from '@/features/orders/server/cancel-order.use-case'
+import { cancelOrderUseCase } from '@/features/orders/cancel-order.use-case'
 
 export async function POST(
   _request: Request,
@@ -249,7 +249,7 @@ export async function POST(
 
 The action and handler both call `cancelOrderUseCase`, so they enforce the same ownership and cancellation rules. Each entry handles the response its caller needs: the action refreshes the page, while the handler returns an HTTP response.
 
-The use case is a public server operation implemented in `server/cancel-order.use-case.ts` and protected with `import 'server-only'`. It needs no forwarding file at the feature root. The folder contains public operations alongside private repositories and internal mappers; the [public-import rules](./folder-structure#expose-the-operations-and-components-callers-need) define which exports callers may use.
+The use case is a public server operation implemented in `cancel-order.use-case.ts` at the feature root and protected with `import 'server-only'`. Public operations live alongside private repositories and internal mappers; the [public-import rules](./folder-structure#expose-the-operations-and-components-callers-need) define which exports callers may use.
 
 This example shows the successful response. Translate validation failures, denied access, and rejected cancellations into deliberate HTTP status codes and safe response bodies. Use authentication appropriate to the API consumer; the example assumes the caller uses the application’s account session.
 
@@ -354,7 +354,7 @@ You can also pass a promise to a Client Component and read it with React’s [`u
 ```tsx
 // Server Component
 import { Suspense } from 'react'
-import { listOrders } from '@/features/orders/server/order.queries'
+import { listOrders } from '@/features/orders/order.queries'
 import { InteractiveOrderList } from '@/features/orders/ui/InteractiveOrderList'
 import { OrderListSkeleton } from '@/features/orders/ui/OrderListSkeleton'
 
@@ -404,7 +404,7 @@ A nested Server Component can call the feature query directly. The page does not
 When several Server Components need the same database read, export a shared query wrapped in React’s `cache()`:
 
 ```ts
-// src/features/orders/server/order.queries.ts
+// src/features/orders/order.queries.ts
 import 'server-only'
 import { cache } from 'react'
 
@@ -509,9 +509,9 @@ export type OrderReferenceInput = z.infer<typeof orderReferenceInputSchema>
 Add the detail read to the same server query module. Keep the imports and `listOrders` implementation above, and add these schema imports:
 
 ```ts
-// src/features/orders/server/order.queries.ts
-import { orderReferenceInputSchema } from '../model/order.schema'
-import type { OrderReferenceInput } from '../model/order.schema'
+// src/features/orders/order.queries.ts
+import { orderReferenceInputSchema } from './model/order.schema'
+import type { OrderReferenceInput } from './model/order.schema'
 
 export async function getOrderDetails(input: OrderReferenceInput) {
   const account = await requireAccount()
@@ -542,9 +542,9 @@ This example serves one authorized account context per request. The membership f
 A separate `order.dto.ts` file is optional. Keep a short mapping inside its query until sharing it or separating the conversion makes the code clearer. The list and detail reads above return the same fields and convert the same database date, so they can share one mapper:
 
 ```ts
-// src/features/orders/server/order.dto.ts
+// src/features/orders/order.dto.ts
 import 'server-only'
-import { orderSummarySchema, type OrderSummary } from '../model/order.schema'
+import { orderSummarySchema, type OrderSummary } from './model/order.schema'
 
 export function toOrderSummary(row: {
   id: string
@@ -566,9 +566,9 @@ The parameter describes the selected database fields, including its `Date` value
 In `order.queries.ts`, replace the direct `orderSummarySchema` import with `toOrderSummary`. The list read becomes:
 
 ```ts
-// src/features/orders/server/order.queries.ts
+// src/features/orders/order.queries.ts
 import 'server-only'
-import { requireAccount } from '@/features/membership/server/membership.queries'
+import { requireAccount } from '@/features/membership/membership.queries'
 import { database } from '@/platform/database/client'
 import { toOrderSummary } from './order.dto'
 
@@ -687,7 +687,7 @@ export function LiveOrderDetails(input: {
 
 This assumes a `QueryClientProvider` is configured. Add a custom hook when it coordinates React behavior beyond consuming the query. The options remain available to components, cache operations, and server rendering without calling a hook.
 
-`server/order.queries.ts` executes the direct server read. `order.api.ts` makes the HTTP request. `order.query-options.ts` returns configuration; creating the options does not run that request. Keep server-only imports out of the API and options modules, and leave them free of `'use client'` when Server Components need to call the options factory.
+`order.queries.ts` executes the direct server read. `order.api.ts` makes the HTTP request. `order.query-options.ts` returns configuration; creating the options does not run that request. Keep server-only imports out of the API and options modules, and leave them free of `'use client'` when Server Components need to call the options factory.
 
 ### Share mutation configuration when several consumers need it
 
@@ -710,7 +710,7 @@ export function cancelOrderOptions() {
 
 This factory and the plain React button call the same API request. With `useMutation(cancelOrderOptions())`, the component passes `{ orderId }` to `mutate` and adds an `onSuccess` handler to invalidate the affected account’s order queries. Navigation and notifications stay with that component because they depend on what its screen should do after cancellation. TanStack’s [mutation-options example](https://tanstack.com/query/latest/docs/framework/react/typescript#typing-mutation-options) shows how the factory can also supply mutation-status consumers.
 
-For a UI that uses a Server Action, `mutationFn` can instead reference the export from `server/order.actions.ts`. The action shown in this guide accepts `FormData`; that becomes the input to `mutate` for that version. Import the dedicated `'use server'` module so Next.js provides the client-callable function. [Next.js Server Functions in Client Components](https://nextjs.org/docs/app/api-reference/directives/use-server#using-server-functions-in-a-client-component)
+For a UI that uses a Server Action, `mutationFn` can instead reference the export from `order.actions.ts`. The action shown in this guide accepts `FormData`; that becomes the input to `mutate` for that version. Import the dedicated `'use server'` module so Next.js provides the client-callable function. [Next.js Server Functions in Client Components](https://nextjs.org/docs/app/api-reference/directives/use-server#using-server-functions-in-a-client-component)
 
 `order.mutation-options.ts` is optional. Server callers invoke the appropriate feature operation directly; they do not need mutation options to perform the write.
 
@@ -741,8 +741,8 @@ An order screen may need data during server rendering and then keep it updated i
 ```tsx
 // src/app/(authenticated)/orders/[orderId]/page.tsx
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
-import { requireAccount } from '@/features/membership/server/membership.queries'
-import { getOrderDetails } from '@/features/orders/server/order.queries'
+import { requireAccount } from '@/features/membership/membership.queries'
+import { getOrderDetails } from '@/features/orders/order.queries'
 import { orderDetailsOptions } from '@/features/orders/order.query-options'
 import { LiveOrderDetails } from '@/features/orders/ui/LiveOrderDetails'
 
@@ -803,11 +803,11 @@ Both procedures identify an order within an account. Reuse `orderReferenceInputS
 Define the procedures beside the server operations they call:
 
 ```ts
-// src/features/orders/server/order.rpc.ts
+// src/features/orders/order.rpc.ts
 import 'server-only'
 import { ORPCError, os } from '@orpc/server'
-import { requireAccount } from '@/features/membership/server/membership.queries'
-import { orderReferenceInputSchema, orderSummarySchema } from '../model/order.schema'
+import { requireAccount } from '@/features/membership/membership.queries'
+import { orderReferenceInputSchema, orderSummarySchema } from './model/order.schema'
 import { getOrderDetails } from './order.queries'
 import { cancelOrderUseCase } from './cancel-order.use-case'
 
@@ -849,7 +849,7 @@ The application assembles the API router from feature exports:
 ```ts
 // src/app/api/rpc/router.ts
 import 'server-only'
-import { orderRouter } from '@/features/orders/server/order.rpc'
+import { orderRouter } from '@/features/orders/order.rpc'
 
 export const router = { orders: orderRouter }
 ```
@@ -904,7 +904,7 @@ import { createORPCClient } from '@orpc/client'
 import type { RouterClient } from '@orpc/server'
 import { createTanstackQueryUtils } from '@orpc/tanstack-query'
 import { rpcLink } from '@/platform/rpc/client'
-import type { orderRouter } from './server/order.rpc'
+import type { orderRouter } from './order.rpc'
 
 export const orderClient: RouterClient<{ orders: typeof orderRouter }> =
   createORPCClient(rpcLink)
@@ -919,13 +919,13 @@ The files have these responsibilities:
 | File | Responsibility |
 | --- | --- |
 | `features/orders/model/order.schema.ts` | Shared input schemas and DTO schema |
-| `features/orders/server/order.rpc.ts` | Procedures that authenticate, validate, and call feature operations |
+| `features/orders/order.rpc.ts` | Procedures that authenticate, validate, and call feature operations |
 | `app/api/rpc/router.ts` | Assemble feature procedures into the application API |
 | `app/api/rpc/[...rest]/route.ts` | Expose the API through HTTP |
 | `platform/rpc/client.ts` | Shared browser transport |
 | `features/orders/order.client.ts` | Typed order client and TanStack Query utilities |
 
-The schema file is shared with browser code, so it must stay free of server-only dependencies. Other features running on the server can still call the public queries and use cases directly. Adding the API doesn’t make repositories or internal mappers public; those remain behind the operations described in the [folder dependency rules](./folder-structure#keep-feature-server-operations-in-server).
+The schema file is shared with browser code, so it must stay free of server-only dependencies. Other features running on the server can still call the public queries and use cases directly. Adding the API doesn’t make repositories or internal mappers public; those remain behind the operations described in the [folder dependency rules](./folder-structure#keep-operation-modules-at-the-feature-root).
 
 #### Read through generated query options
 

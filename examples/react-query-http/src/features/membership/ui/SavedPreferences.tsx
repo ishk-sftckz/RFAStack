@@ -1,4 +1,4 @@
-import { getPreferences } from '../server/membership.queries'
+import { getPreferences } from '../membership.queries'
 
 export async function SavedPreferences() {
   const saved = await getPreferences()

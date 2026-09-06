@@ -19,7 +19,7 @@ src/
 
 Review imports as well as file placement.
 
-Follow the ownership, placement, and dependency rules from the first feature. Create a directory when its responsibility exists: a feature with server operations uses `server/` immediately. Repositories and separate mappers are additional abstractions with their own conditions for use.
+Follow the ownership, placement, and dependency rules from the first feature. Put operation modules directly in the feature root, with presentation in `ui/` and schemas and pure rules in `model/`. Repositories and separate mappers are additional abstractions with their own conditions for use.
 
 ## Give each directory a responsibility
 
@@ -93,7 +93,7 @@ The implementation depends on your database and providers. Platform modules can 
 
 Feature server code imports the platform modules it needs. Platform code must not import features. Keep feature-specific database queries and repository adapters with the feature that owns them.
 
-For authentication, put the browser SDK client in `platform/auth/client.ts` and the provider factory in `platform/auth/server.ts`. The auth feature supplies its own tables to that factory and assembles the configured instance in `server/auth.provider.ts`. This lets auth own persistence without making platform import the feature. A typed client that binds membership's RPC procedures remains in `features/membership/membership.client.ts`; the common RPC transport belongs in `platform/rpc/client.ts`.
+For authentication, put the browser SDK client in `platform/auth/client.ts` and the provider factory in `platform/auth/server.ts`. The auth feature supplies its own tables to that factory and assembles the configured instance in `auth.provider.ts`. This lets auth own persistence without making platform import the feature. A typed client that binds membership's RPC procedures remains in `features/membership/membership.client.ts`; the common RPC transport belongs in `platform/rpc/client.ts`.
 
 ### `src/shared`: share code with generic behavior
 
@@ -136,11 +136,12 @@ src/features/orders/
   model/
     order.schema.ts
     order-cancellation.ts
-  server/
-    order.queries.ts
-    order.actions.ts
-    cancel-order.use-case.ts
+  order.queries.ts
+  order.actions.ts
+  cancel-order.use-case.ts
 ```
+
+Keep the query, action, and use case beside the feature’s UI and model. A Server Component in `ui/` can call `order.queries.ts` directly, and a form can submit through `order.actions.ts`. Both Server and Client Components belong in `ui/`; place `'use client'` at the interactive boundary. These directories organize responsibilities within one feature. Next.js defines the server and client module graphs through imports and directives. [Next.js component composition](https://nextjs.org/docs/app/getting-started/server-and-client-components#interleaving-server-and-client-components)
 
 | File | What belongs here | Who uses it |
 | --- | --- | --- |
@@ -148,11 +149,11 @@ src/features/orders/
 | `ui/CancelOrderForm.tsx` | The control that submits an order cancellation. | The order details view. |
 | `model/order.schema.ts` | Zod schemas and the types inferred from them. | Forms, actions, queries, and other feature modules. |
 | `model/order-cancellation.ts` | The pure rule that decides whether a supplied order status permits cancellation. | The cancellation UI and server use case. |
-| `server/order.queries.ts` | Implement and export related server reads, such as `getOrderDetails` and `listOrders`. | Server Components and server adapters. |
-| `server/order.actions.ts` | Parse a Next.js Server Action request, call the protected use case, and refresh or revalidate the UI. | Forms and controls that submit through Server Actions. |
-| `server/cancel-order.use-case.ts` | Verify the caller, check ownership and cancellation eligibility against the stored order, then perform the update. | The action, a Route Handler, or another feature’s server operation. |
+| `order.queries.ts` | Implement and export related server reads, such as `getOrderDetails` and `listOrders`. | Server Components and server adapters. |
+| `order.actions.ts` | Parse a Next.js Server Action request, call the protected use case, and refresh or revalidate the UI. | Forms and controls that submit through Server Actions. |
+| `cancel-order.use-case.ts` | Verify the caller, check ownership and cancellation eligibility against the stored order, then perform the update. | The action, a Route Handler, or another feature’s server operation. |
 
-`server/order.actions.ts` is optional. Reserve `.actions.ts` for Next.js Server Actions defined with `'use server'`. A mutation is any operation that changes data or triggers an effect; a Server Action is one way for the UI to invoke it. [Next.js mutation guide](https://nextjs.org/docs/app/getting-started/mutating-data)
+`order.actions.ts` is optional. Reserve `.actions.ts` for Next.js Server Actions defined with `'use server'`. A mutation is any operation that changes data or triggers an effect; a Server Action is one way for the UI to invoke it. [Next.js mutation guide](https://nextjs.org/docs/app/getting-started/mutating-data)
 
 When the browser calls an API directly, put the feature’s requests in [`order.api.ts`](#put-browser-api-requests-in-order-api-ts). Those requests do not need an actions file.
 
@@ -193,7 +194,7 @@ Use `order.api.ts` for ordinary request functions such as `fetchOrderDetails` an
 
 A component can call these functions directly. When the feature uses TanStack Query, its options factories can call the same functions. Group related reads and mutations in this file; its responsibility stays the same with or without a query library. The [API mutation example](./data-fetching-and-mutation#call-an-existing-api-for-mutations) shows both consumers.
 
-Add `server/order.queries.ts` when a server caller needs a direct feature read, and `server/order.actions.ts` when the UI submits through a Next.js Server Action. Put business mutations implemented by this application in server use cases. The feature needs only the files for the paths it uses.
+Add `order.queries.ts` when a server caller needs a direct feature read, and `order.actions.ts` when the UI submits through a Next.js Server Action. Put business mutations implemented by this application in server use cases. The feature needs only the files for the paths it uses.
 
 Keep `order.api.ts` safe for browser imports. A shared HTTP or RPC client’s setup belongs in `platform`; the order-specific requests belong here. Calls that require private credentials stay in the feature’s server implementation and use server-only platform clients. [Next.js server and client responsibilities](https://nextjs.org/docs/app/getting-started/server-and-client-components#when-to-use-server-and-client-components)
 
@@ -293,17 +294,19 @@ For an application with that limit, a create-order schema could use `z.array(ord
 
 Keep the status values in `orderStatusSchema`; this example has no separate need for a status constants file. A label used by one component can stay in `ui/`. Provider URLs and credentials belong with server or platform configuration.
 
-## Keep feature server operations in `server/`
+## Keep operation modules at the feature root
 
-Put a feature’s server queries, Server Actions, use cases, and supporting server modules in `server/` from the first server operation. This directory identifies where the code runs. It contains both public operations and private implementation.
+Put queries, Server Actions, use cases, and supporting modules directly in the feature root. Use filenames such as `order.queries.ts`, `order.actions.ts`, and `cancel-order.use-case.ts` to identify their responsibilities. Browser request functions and query options live alongside them when the feature needs those paths.
+
+Sharing a directory does not make every module safe to import in the browser or public to other features. Keep runtime protection in the modules and import only the operations intended for each caller. As a feature grows, group a concern when its files become difficult to follow; keep the same runtime and public-import rules within that group.
 
 Expose queries and use cases as the feature’s public server operations. Routes and other features may import those functions directly. Keep repositories, internal DTO mappers, and helpers private to the feature. The [public-interface example](#expose-the-operations-and-components-callers-need) shows the allowed imports.
 
-When using RPC, expose the procedure exports from `server/order.rpc.ts` for the application's router to mount. Cross-feature business calls still use public queries and use cases.
+When using RPC, expose the procedure exports from `order.rpc.ts` for the application's router to mount. Cross-feature business calls still use public queries and use cases.
 
-Mount a provider's HTTP API directly in its application entry point. The auth Route Handler imports the configured instance from `server/auth.provider.ts` and exports its `handler` as `GET` and `POST`. The separate backend mounts that handler in `backend/server.ts`. Keep provider imports limited to these auth entry points; other features call `auth.queries.ts` for session verification. The HTTP frontend forwards auth requests through `platform/auth/server.ts`.
+Mount a provider's HTTP API directly in its application entry point. The auth Route Handler imports the configured instance from `auth.provider.ts` and exports its `handler` as `GET` and `POST`. The separate backend mounts that handler in `backend/server.ts`. Keep provider imports limited to these auth entry points; other features call `auth.queries.ts` for session verification. The HTTP frontend forwards auth requests through `platform/auth/server.ts`.
 
-Mark ordinary server modules with `import 'server-only'`, including public queries and use cases. Next.js uses that marker to reject accidental Client Component imports; the folder name alone does not enforce it. A Server Action module uses `'use server'` so the UI can invoke its exports through Next.js. [Next.js runtime boundaries](https://nextjs.org/docs/app/getting-started/server-and-client-components#preventing-environment-poisoning), [Server Functions](https://nextjs.org/docs/app/api-reference/directives/use-server)
+Mark ordinary server modules with `import 'server-only'`, including public queries and use cases. Next.js uses that marker to reject accidental Client Component imports. A Server Action module uses `'use server'` so the UI can invoke its exports through Next.js. Keep browser API and query-option modules free of server-only dependencies. [Next.js runtime boundaries](https://nextjs.org/docs/app/getting-started/server-and-client-components#preventing-environment-poisoning), [Server Functions](https://nextjs.org/docs/app/api-reference/directives/use-server)
 
 A query retrieves data. A use case owns a business mutation or workflow, which may include reads, writes, and calls to other features. Cancellation already needs a use case because it checks ownership, applies eligibility rules, and coordinates an update. Keep that work in the use case even when the function is short. Actions and Route Handlers parse inputs, invoke the operation, and adapt the response. Public protected operations verify the caller through the membership feature and enforce resource access internally; follow the [protected-resources guide](./protected-resources#put-data-protection-in-the-feature-s-server-operations) for that boundary.
 
@@ -319,7 +322,7 @@ A query retrieves data. A use case owns a business mutation or workflow, which m
 
 Related functions can share a file. `order.queries.ts` can contain several reads, and `order.repository.ts` can contain both reads and writes. Split by responsibility when the code needs it; there is no one-function-per-file rule.
 
-Always select the fields a caller may receive. A query can select and map those fields directly. Keep browser-consumed DTO schemas and types in `model/`; put a separate server mapper in `server/order.dto.ts` when the mapping meets the condition above. Safe result data is required even when there is no mapper file.
+Always select the fields a caller may receive. A query can select and map those fields directly. Keep browser-consumed DTO schemas and types in `model/`; put a separate server mapper in `order.dto.ts` when the mapping meets the condition above. Safe result data is required even when there is no mapper file.
 
 The runnable order examples reuse `toOrderDto()` for list and detail results, so their mapper lives in `order.dto.ts`. It selects public fields and converts the stored date to an ISO string. Adding a column to the table does not automatically add it to the response.
 
@@ -333,7 +336,7 @@ This example uses a Next.js Server Action. The form uses the shared cancellation
 // src/features/orders/ui/CancelOrderForm.tsx
 import { canCancelOrder } from '../model/order-cancellation'
 import type { OrderStatus } from '../model/order.schema'
-import { cancelOrder } from '../server/order.actions'
+import { cancelOrder } from '../order.actions'
 
 export function CancelOrderForm({
   orderId,
@@ -356,11 +359,11 @@ export function CancelOrderForm({
 The action parses the input with Zod and calls the protected use case:
 
 ```ts
-// src/features/orders/server/order.actions.ts
+// src/features/orders/order.actions.ts
 'use server'
 
 import { refresh } from 'next/cache'
-import { cancelOrderInputSchema } from '../model/order.schema'
+import { cancelOrderInputSchema } from './model/order.schema'
 import { cancelOrderUseCase } from './cancel-order.use-case'
 
 export async function cancelOrder(formData: FormData) {
@@ -376,13 +379,13 @@ export async function cancelOrder(formData: FormData) {
 The form supplies only the order ID. The use case obtains the account through `requireAccount`, the membership feature’s public operation for verifying the session and resolving an account the caller may use. It validates its own input, loads the order within that account, and applies the pure rule:
 
 ```ts
-// src/features/orders/server/cancel-order.use-case.ts
+// src/features/orders/cancel-order.use-case.ts
 import 'server-only'
-import { requireAccount } from '@/features/membership/server/membership.queries'
+import { requireAccount } from '@/features/membership/membership.queries'
 import { database } from '@/platform/database/client'
-import { canCancelOrder } from '../model/order-cancellation'
-import { cancelOrderInputSchema, orderStatusSchema } from '../model/order.schema'
-import type { CancelOrderInput } from '../model/order.schema'
+import { canCancelOrder } from './model/order-cancellation'
+import { cancelOrderInputSchema, orderStatusSchema } from './model/order.schema'
+import type { CancelOrderInput } from './model/order.schema'
 
 export async function cancelOrderUseCase(input: CancelOrderInput) {
   const account = await requireAccount()
@@ -423,20 +426,20 @@ A public feature interface consists of the operations and components intended fo
 Import server reads and use cases directly from their implementing modules. Use the action module when invoking a Next.js Server Action, and the UI module when composing a view:
 
 ```ts
-import { getOrderDetails } from '@/features/orders/server/order.queries'
-import { cancelOrderUseCase } from '@/features/orders/server/cancel-order.use-case'
-import { cancelOrder } from '@/features/orders/server/order.actions'
+import { getOrderDetails } from '@/features/orders/order.queries'
+import { cancelOrderUseCase } from '@/features/orders/cancel-order.use-case'
+import { cancelOrder } from '@/features/orders/order.actions'
 import { OrderDetails } from '@/features/orders/ui/OrderDetails'
 ```
 
-Implement the feature’s server reads in `server/order.queries.ts`. Keep related reads together and export the operations callers need. A public operation lives in the file that implements it; no forwarding file at the feature root is required. The [data-fetching guide](./data-fetching-and-mutation#read-during-rendering-through-a-server-component) shows a query that calls the database and returns a DTO.
+Implement the feature’s server reads in `order.queries.ts`. Keep related reads together and export the operations callers need directly from that module. The [data-fetching guide](./data-fetching-and-mutation#read-during-rendering-through-a-server-component) shows a query that calls the database and returns a DTO.
 
 The route obtains its inputs and calls that public query:
 
 ```tsx
 // src/app/(authenticated)/orders/[orderId]/page.tsx
-import { requireAccount } from '@/features/membership/server/membership.queries'
-import { getOrderDetails } from '@/features/orders/server/order.queries'
+import { requireAccount } from '@/features/membership/membership.queries'
+import { getOrderDetails } from '@/features/orders/order.queries'
 import { OrderDetails } from '@/features/orders/ui/OrderDetails'
 
 export default async function OrderPage({
@@ -460,8 +463,8 @@ A server read and a TanStack query definition have different jobs:
 
 | File | What calling its export does | When to create it |
 | --- | --- | --- |
-| `server/order.queries.ts` | `getOrderDetails(input)` executes a server read and returns data. | A server caller needs the read. |
-| `server/order.actions.ts` | `cancelOrder(formData)` invokes a Next.js Server Action that calls a use case. | Your UI uses a Server Action for that mutation. |
+| `order.queries.ts` | `getOrderDetails(input)` executes a server read and returns data. | A server caller needs the read. |
+| `order.actions.ts` | `cancelOrder(formData)` invokes a Next.js Server Action that calls a use case. | Your UI uses a Server Action for that mutation. |
 | `order.api.ts` | `fetchOrderDetails(input)` or `cancelOrder(input)` makes an HTTP/RPC request. | Feature-specific request functions need a module. |
 | `order.query-options.ts` | `orderDetailsOptions(input)` returns the query key, request function, and cache settings. | The feature uses TanStack Query. |
 | `order.mutation-options.ts` | Returns shared TanStack mutation configuration. | Sharing configuration between consumers earns a separate module. |
@@ -501,10 +504,10 @@ These permissions apply alongside runtime boundaries. Next.js reports a build er
 
 ```ts
 // ✅ Use the feature’s public server read from server code.
-import { getOrderDetails } from '@/features/orders/server/order.queries'
+import { getOrderDetails } from '@/features/orders/order.queries'
 
 // ❌ Reaching into private persistence couples callers to its implementation.
-import { orderRepository } from '@/features/orders/server/order.repository'
+import { orderRepository } from '@/features/orders/order.repository'
 ```
 
 Keep server reads, actions, and UI imports explicit. A single root barrel that mixes them with private persistence makes their runtime and ownership boundaries harder to follow:
@@ -528,13 +531,13 @@ These filenames are our recommended conventions. Preserve Next.js’s own specia
 | Schema | `.schema.ts` for Zod schemas; inferred types may stay here. | `order.schema.ts` exports `cancelOrderInputSchema`. |
 | Types | `.types.ts` when separate TypeScript definitions need a module. | `order.types.ts` exports `OrderTotals`. |
 | Constants | `.constants.ts` for related constants shared by multiple files; uppercase names for fixed values. | `order.constants.ts` exports `MAX_ORDER_LINES`. |
-| Public server reads | `server/*.queries.ts`; functions describe the operation. | `server/order.queries.ts` exports `getOrderDetails`. |
-| Next.js Server Actions | `server/*.actions.ts`, only when using Server Actions. | `server/order.actions.ts` exports `cancelOrder`. |
-| Business mutations and workflows | `server/<operation>.use-case.ts`; export the operation directly. | `server/cancel-order.use-case.ts` exports `cancelOrderUseCase`. |
+| Public server reads | `*.queries.ts`; functions describe the operation. | `order.queries.ts` exports `getOrderDetails`. |
+| Next.js Server Actions | `*.actions.ts`, only when using Server Actions. | `order.actions.ts` exports `cancelOrder`. |
+| Business mutations and workflows | `<operation>.use-case.ts`; export the operation directly. | `cancel-order.use-case.ts` exports `cancelOrderUseCase`. |
 | Browser API requests | `.api.ts` for feature-specific HTTP/RPC requests; related reads and writes may share it. | `order.api.ts` exports `fetchOrderDetails` and `cancelOrder`. |
 | TanStack options | `.query-options.ts` or `.mutation-options.ts`. | `order.query-options.ts` exports `orderDetailsOptions`. |
-| RPC procedures | `server/*.rpc.ts` for feature procedures exposed to the application's RPC router. | `server/order.rpc.ts`. |
-| Private supporting server modules | An entity or responsibility with a role suffix, inside `server/`. | `server/order.repository.ts`, `server/order.dto.ts`. |
+| RPC procedures | `*.rpc.ts` for feature procedures exposed to the application's RPC router. | `order.rpc.ts`. |
+| Private supporting server modules | An entity or responsibility with a role suffix, at the feature root. | `order.repository.ts`, `order.dto.ts`. |
 
 Use a suffix when it helps readers distinguish a role. Name business behavior directly instead of collecting it in feature-level `helpers`, `common`, `misc`, or `utils` files. Keep related small functions together, and split a file when a responsibility becomes difficult to find or follow.
 
@@ -576,12 +579,11 @@ A checkout flow can read inventory and create an order. Put that coordination in
 
 ```text
 src/features/checkout/
-  server/
-    checkout.actions.ts                # Handle a Next.js Server Action submission
-    complete-checkout.use-case.ts       # Coordinate inventory and orders
+  checkout.actions.ts                # Handle a Next.js Server Action submission
+  complete-checkout.use-case.ts       # Coordinate inventory and orders
 ```
 
-Expose the UI mutation through `server/checkout.actions.ts`. Keep the workflow in `server/complete-checkout.use-case.ts`, where it calls public server operations exposed by inventory and orders. Each participating feature retains its own rules. Checkout coordinates the workflow; orders still owns order behavior.
+Expose the UI mutation through `checkout.actions.ts`. Keep the workflow in `complete-checkout.use-case.ts`, where it calls public server operations exposed by inventory and orders. Each participating feature retains its own rules. Checkout coordinates the workflow; orders still owns order behavior.
 
 A Route Handler or another feature calls the public use case directly. The [API mutation example](./data-fetching-and-mutation#use-route-handlers-for-mutations-consumed-through-an-api) shows that import. A use case must remain independent of an action’s refresh or form-handling behavior.
 
@@ -594,11 +596,11 @@ Simple composition of several feature views can remain in an `app` page. Start c
 | Is it a Next.js route, layout, handler, or route-only composition? | `src/app` |
 | Does it express or present one business capability? | `src/features/<feature>` |
 | Does it define feature data or compute a rule from supplied values? | That feature’s `model/` |
-| Is it a public server read? | The feature’s `server/*.queries.ts` file |
-| Is it a Next.js Server Action? | The feature’s `server/*.actions.ts` file |
-| Does it implement a business mutation or workflow? | A use case in the feature’s `server/` |
+| Is it a public server read? | The feature’s `*.queries.ts` file |
+| Is it a Next.js Server Action? | The feature’s `*.actions.ts` file |
+| Does it implement a business mutation or workflow? | A `<operation>.use-case.ts` module at the feature root |
 | Does it make a feature-specific HTTP/RPC request from browser code? | The feature’s `.api.ts` file |
-| Is it supporting server implementation? | That feature’s `server/`, private to the feature |
+| Is it supporting server implementation? | A module at the feature root, private to the feature |
 | Does it configure TanStack Query for the feature? | A feature options file, when needed |
 | Does it coordinate a business workflow across features? | The feature that owns that workflow |
 | Does it configure an integration client or connection shared across the application? | `src/platform` |

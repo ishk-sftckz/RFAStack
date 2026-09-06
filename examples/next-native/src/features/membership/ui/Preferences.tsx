@@ -1,5 +1,5 @@
 import { ActionForm } from '@/shared/ui/ActionForm'
-import { preferencesAction } from '../server/membership.actions'
+import { preferencesAction } from '../membership.actions'
 
 export function Preferences({ preference }: { preference: string }) {
   return (

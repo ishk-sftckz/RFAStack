@@ -1,4 +1,4 @@
-import { getRecommendations } from '../server/catalog.queries'
+import { getRecommendations } from '../catalog.queries'
 
 export async function Recommendations() {
   const data = await getRecommendations()

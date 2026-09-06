@@ -2,13 +2,9 @@ import { Suspense } from 'react'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { QueryClient, HydrationBoundary, dehydrate } from '@tanstack/react-query'
-import { requireMembership } from '@/features/membership/server/membership.queries'
+import { requireMembership } from '@/features/membership/membership.queries'
 import { SignOut } from '@/features/auth/ui/SignOut'
-import {
-  listShipments,
-  listProducts,
-  getSummary,
-} from '@/features/fulfillment/server/fulfillment.queries'
+import { listShipments, listProducts, getSummary } from '@/features/fulfillment/fulfillment.queries'
 import { shipmentsOptions, productsOptions } from '@/features/fulfillment/fulfillment.query-options'
 import { Dashboard } from '@/features/fulfillment/ui/Dashboard'
 import { AccessError } from '@/shared/utils/errors'

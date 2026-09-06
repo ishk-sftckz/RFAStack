@@ -4,8 +4,14 @@ import { resolve, relative, dirname } from 'node:path'
 
 const errors: string[] = []
 
-for (const file of new Bun.Glob('{src,backend}/**/*.{ts,tsx}').scanSync('.')) {
-  const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true)
+const modules = new Map(
+  [...new Bun.Glob('{src,backend}/**/*.{ts,tsx}').scanSync('.')].map((file) => [
+    file,
+    ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true),
+  ]),
+)
+
+for (const [file, source] of modules) {
   const from = file.split('/')
   const client = source.statements.some(
     (statement) =>
@@ -50,18 +56,41 @@ for (const file of new Bun.Glob('{src,backend}/**/*.{ts,tsx}').scanSync('.')) {
     const publicServerOperation =
       /\.(queries|actions|use-case)(\.[cm]?tsx?)?$/.test(target) ||
       (mountsTransport && /\.rpc(\.[cm]?tsx?)?$/.test(target)) ||
-      (mountsAuth && /\/features\/auth\/server\/auth\.provider(\.[cm]?tsx?)?$/.test(target))
-    const privateServerModule = to[3] === 'server' && !publicServerOperation
+      (mountsAuth && /\/features\/auth\/auth\.provider(\.[cm]?tsx?)?$/.test(target))
+    const publicFeatureModule =
+      publicServerOperation ||
+      ['ui', 'model'].includes(to[3]) ||
+      /\.(api|client|query-options|mutation-options)(\.[cm]?tsx?)?$/.test(target)
 
     if (
       foreignFeature &&
       !schemaReference &&
-      (privateServerModule || /\.(table|repository|dto)(\.|$)/.test(target))
+      (!publicFeatureModule || /\.(table|repository|dto)(\.|$)/.test(target))
     ) {
       errors.push(`${file}: private feature dependency ${specifier}`)
     }
 
-    if (client && /\/server\//.test(target) && !/\.actions$/.test(target) && !typeOnly) {
+    const targetSource = [
+      target,
+      `${target}.ts`,
+      `${target}.tsx`,
+      `${target}/index.ts`,
+      `${target}/index.tsx`,
+    ]
+      .map((path) => modules.get(path))
+      .find((module) => module !== undefined)
+    const markedServerOnly = targetSource?.statements.some(
+      (statement) =>
+        ts.isImportDeclaration(statement) &&
+        ts.isStringLiteral(statement.moduleSpecifier) &&
+        statement.moduleSpecifier.text === 'server-only',
+    )
+    const serverImplementation =
+      /\.(queries|use-case|rpc|table|repository|dto|provider)(\.[cm]?tsx?)?$/.test(target) ||
+      /\/server(\.[cm]?tsx?)?$/.test(target) ||
+      markedServerOnly
+
+    if (client && serverImplementation && !typeOnly) {
       errors.push(`${file}: client imports server implementation ${specifier}`)
     }
   }

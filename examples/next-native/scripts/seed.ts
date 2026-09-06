@@ -1,10 +1,10 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { hashPassword } from 'better-auth/crypto'
-import { user, account } from '../src/features/auth/server/auth.table'
-import { membership } from '../src/features/membership/server/membership.table'
-import { product } from '../src/features/catalog/server/catalog.table'
-import { order } from '../src/features/orders/server/order.table'
+import { user, account } from '../src/features/auth/auth.table'
+import { membership } from '../src/features/membership/membership.table'
+import { product } from '../src/features/catalog/catalog.table'
+import { order } from '../src/features/orders/order.table'
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const db = drizzle(pool)

@@ -1,7 +1,7 @@
 import type { Product } from '@/features/catalog/model/catalog.schema'
 import { formatCurrency } from '@/shared/utils/currency'
 import { ActionForm } from '@/shared/ui/ActionForm'
-import { checkoutAction } from '../../server/checkout.actions'
+import { checkoutAction } from '../../checkout.actions'
 
 export function CheckoutSummary({
   products,

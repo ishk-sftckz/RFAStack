@@ -1,10 +1,10 @@
 import { beforeAll, afterAll, expect, test } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { authProvider } from '@/features/auth/server/auth.provider'
+import { authProvider } from '@/features/auth/auth.provider'
 import { database, pool } from '@/platform/database/client'
-import { order } from '@/features/orders/server/order.table'
-import { cancelOrder } from '@/features/orders/server/cancel-order.use-case'
-import { createOrder } from '@/features/orders/server/create-order.use-case'
+import { order } from '@/features/orders/order.table'
+import { cancelOrder } from '@/features/orders/cancel-order.use-case'
+import { createOrder } from '@/features/orders/create-order.use-case'
 
 let alice: Headers
 let bob: Headers

@@ -1,4 +1,4 @@
-import { getOrder } from '@/features/orders/server/order.queries'
+import { getOrder } from '@/features/orders/order.queries'
 import { formatCurrency } from '@/shared/utils/currency'
 
 export async function OrderTotal({ id }: { id: string }) {

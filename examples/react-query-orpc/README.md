@@ -49,9 +49,9 @@ DEMO_EMAIL=bob@example.test COMPANY_ID=company-b bun run client
 The CLI signs in as Alice by default and signs out when done. Set `DEMO_EMAIL`, `DEMO_PASSWORD`, and
 `COMPANY_ID` to use another account.
 
-To follow an approval, open `src/features/orders/server/order.rpc.ts`, then
-`src/features/orders/server/decide-order.use-case.ts`. The use case checks company membership,
-approver permissions, and order status. Both clients use these checks.
+To follow an approval, open `src/features/orders/order.rpc.ts`, then
+`src/features/orders/decide-order.use-case.ts`. The use case checks company membership, approver
+permissions, and order status. Both clients use these checks.
 
 ## Observe cache reads
 

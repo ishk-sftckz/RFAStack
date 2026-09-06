@@ -1,12 +1,12 @@
 import { beforeAll, afterAll, expect, test } from 'vitest'
-import { authProvider } from '../backend/features/auth/server/auth.provider'
+import { authProvider } from '../backend/features/auth/auth.provider'
 import { pool, database } from '../backend/platform/database/client'
-import { shipment } from '../backend/features/fulfillment/server/fulfillment.table'
+import { shipment } from '../backend/features/fulfillment/fulfillment.table'
 import {
   transitionShipment,
   updatePrice,
-} from '../backend/features/fulfillment/server/fulfillment.use-case'
-import { receiveCarrierEvent } from '../backend/features/fulfillment/server/carrier.use-case'
+} from '../backend/features/fulfillment/fulfillment.use-case'
+import { receiveCarrierEvent } from '../backend/features/fulfillment/carrier.use-case'
 
 let north: Headers
 let south: Headers

@@ -1,9 +1,6 @@
 import { revalidateTag } from 'next/cache'
-import {
-  listShipments,
-  listCurrentProducts,
-} from '@/features/fulfillment/server/fulfillment.queries'
-import { transitionShipment, updatePrice } from '@/features/fulfillment/server/fulfillment.use-case'
+import { listShipments, listCurrentProducts } from '@/features/fulfillment/fulfillment.queries'
+import { transitionShipment, updatePrice } from '@/features/fulfillment/fulfillment.use-case'
 import { AccessError, failure } from '@/shared/utils/errors'
 
 async function handle(request: Request, context: { params: Promise<{ resource: string }> }) {

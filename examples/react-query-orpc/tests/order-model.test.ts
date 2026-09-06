@@ -10,7 +10,7 @@ test('purchase orders reject a customer-portal workflow state', () => {
 })
 
 test('order DTOs convert dates and omit account scope and private fields', async () => {
-  const { toOrderDto } = await import('@/features/orders/server/order.dto')
+  const { toOrderDto } = await import('@/features/orders/order.dto')
   const row = {
     id: 'order-test',
     scopeId: 'private-scope',

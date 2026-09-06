@@ -1,5 +1,5 @@
 import { revalidateTag } from 'next/cache'
-import { savePreferences } from '@/features/membership/server/preferences.use-case'
+import { savePreferences } from '@/features/membership/preferences.use-case'
 import { AccessError, failure } from '@/shared/utils/errors'
 
 export async function POST(request: Request) {

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Icon } from '@/shared/ui/Icon'
-import { listProducts } from '../server/catalog.queries'
+import { listProducts } from '../catalog.queries'
 import { formatCurrency } from '@/shared/utils/currency'
 
 export async function Catalog() {

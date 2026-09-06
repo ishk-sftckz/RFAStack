@@ -40,7 +40,7 @@ The React Server Component payload, or RSC payload, describes the server-rendere
 When several Server Components need the same order, they can call one shared memoized query:
 
 ```ts
-// src/features/orders/server/order.queries.ts
+// src/features/orders/order.queries.ts
 import { cache } from 'react'
 
 export const getOrderDetailsForRender = cache(
@@ -125,13 +125,13 @@ A cache hit skips the body of the cached function. If authorization only happens
 For an order list whose display can tolerate briefly outdated data, the protected query can resolve the account and call a private cached helper:
 
 ```ts
-// src/features/orders/server/order.queries.ts
+// src/features/orders/order.queries.ts
 import 'server-only'
 
 import { cacheLife, cacheTag } from 'next/cache'
-import { requireAccount } from '@/features/membership/server/membership.queries'
+import { requireAccount } from '@/features/membership/membership.queries'
 import { database } from '@/platform/database/client'
-import { orderSummarySchema } from '../model/order.schema'
+import { orderSummarySchema } from './model/order.schema'
 
 export async function listOrders() {
   const account = await requireAccount()
@@ -169,7 +169,7 @@ Render the protected read under a boundary that can wait for the account:
 ```tsx
 // src/app/(authenticated)/orders/page.tsx
 import { Suspense } from 'react'
-import { listOrders } from '@/features/orders/server/order.queries'
+import { listOrders } from '@/features/orders/order.queries'
 import { OrderList } from '@/features/orders/ui/OrderList'
 
 export default function OrdersPage() {
@@ -201,7 +201,7 @@ As an alternative to the shared cached query above, use the [uncached protected 
 // src/app/(authenticated)/orders/page.tsx
 import { Suspense } from 'react'
 import { cacheLife } from 'next/cache'
-import { listOrders } from '@/features/orders/server/order.queries'
+import { listOrders } from '@/features/orders/order.queries'
 import { OrderList } from '@/features/orders/ui/OrderList'
 
 export default function OrdersPage() {
@@ -244,12 +244,12 @@ Path invalidation applies to that route's output and data dependencies. A tag na
 For the cached order list above, extend the existing Server Action after the use case succeeds:
 
 ```ts
-// src/features/orders/server/order.actions.ts
+// src/features/orders/order.actions.ts
 'use server'
 
 import { refresh, updateTag } from 'next/cache'
-import { requireAccount } from '@/features/membership/server/membership.queries'
-import { cancelOrderInputSchema } from '../model/order.schema'
+import { requireAccount } from '@/features/membership/membership.queries'
+import { cancelOrderInputSchema } from './model/order.schema'
 import { cancelOrderUseCase } from './cancel-order.use-case'
 
 export async function cancelOrder(formData: FormData) {

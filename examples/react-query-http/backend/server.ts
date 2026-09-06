@@ -1,14 +1,14 @@
-import { authProvider } from './features/auth/server/auth.provider'
-import { requireMembership } from './features/membership/server/membership.queries'
-import { savePreferences } from './features/membership/server/preferences.use-case'
+import { authProvider } from './features/auth/auth.provider'
+import { requireMembership } from './features/membership/membership.queries'
+import { savePreferences } from './features/membership/preferences.use-case'
 import {
   listShipments,
   listProducts,
   getWarehouseSummary,
-} from './features/fulfillment/server/fulfillment.queries'
-import { transitionShipment, updatePrice } from './features/fulfillment/server/fulfillment.use-case'
-import { receiveCarrierEvent } from './features/fulfillment/server/carrier.use-case'
-import { deliverInvalidations } from './features/fulfillment/server/deliver-invalidations.use-case'
+} from './features/fulfillment/fulfillment.queries'
+import { transitionShipment, updatePrice } from './features/fulfillment/fulfillment.use-case'
+import { receiveCarrierEvent } from './features/fulfillment/carrier.use-case'
+import { deliverInvalidations } from './features/fulfillment/deliver-invalidations.use-case'
 import { validSignature } from './platform/integration/signature'
 import { failure, AccessError } from './shared/utils/errors'
 
