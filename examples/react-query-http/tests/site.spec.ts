@@ -92,6 +92,7 @@ test('supervisors update prices and preferences, and logout isolates cached data
   await page.reload()
   await expect(page.getByLabel('Status filter')).toHaveValue('dispatched')
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await expect(page).toHaveURL(/sign-in/)
   await login(page, 'south')
   await expect(page.getByText('Saved delivery preference: standard')).toBeVisible()
   await expect(page.getByRole('button', { name: 'shipment-north', exact: true })).toHaveCount(0)
