@@ -4,22 +4,23 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { shipmentsOptions, productsOptions } from '../fulfillment.query-options'
-import { transitionShipment, updatePrice, updatePreferences } from '../fulfillment.api'
-import type { Identity } from '@/features/identity/model/identity.schema'
+import { transitionShipment, updatePrice } from '../fulfillment.api'
+import { Preferences } from '@/features/membership/ui/Preferences'
+import type { Membership } from '@/features/membership/model/membership.schema'
 import { formatCurrency } from '@/shared/utils/currency'
 
-export function Dashboard({ identity }: { identity: Identity }) {
-  const query = useQuery(shipmentsOptions(identity.scopeId))
+export function Dashboard({ membership }: { membership: Membership }) {
+  const query = useQuery(shipmentsOptions(membership.scopeId))
   const products = useQuery(productsOptions())
   const client = useQueryClient()
   const router = useRouter()
-  const [filter, setFilter] = useState<string>(identity.savedFilter)
+  const [filter, setFilter] = useState<string>(membership.savedFilter)
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
 
   async function refresh() {
     await Promise.all([
-      client.invalidateQueries({ queryKey: ['shipments', identity.scopeId] }),
+      client.invalidateQueries({ queryKey: ['shipments', membership.scopeId] }),
       client.invalidateQueries({ queryKey: ['products'] }),
     ])
     router.refresh()
@@ -27,7 +28,6 @@ export function Dashboard({ identity }: { identity: Identity }) {
 
   const transition = useMutation({ mutationFn: transitionShipment, onSuccess: refresh })
   const price = useMutation({ mutationFn: updatePrice, onSuccess: refresh })
-  const preferences = useMutation({ mutationFn: updatePreferences, onSuccess: refresh })
 
   if (query.isPending) {
     return <p>Loading queue…</p>
@@ -190,7 +190,7 @@ export function Dashboard({ identity }: { identity: Identity }) {
         <section>
           <h2>Products</h2>
           <p className="hint">
-            {identity.role === 'supervisor'
+            {membership.role === 'supervisor'
               ? 'Review prices and save changes for each product.'
               : 'Current product prices for reference.'}
           </p>
@@ -209,7 +209,7 @@ export function Dashboard({ identity }: { identity: Identity }) {
               <p>
                 {product.name}: {formatCurrency(product.price)}
               </p>
-              {identity.role === 'supervisor' && (
+              {membership.role === 'supervisor' && (
                 <form
                   className="inline-form"
                   onSubmit={(e) => {
@@ -238,38 +238,7 @@ export function Dashboard({ identity }: { identity: Identity }) {
           <p role="alert">{price.error?.message}</p>
           <p role="status">{price.isSuccess ? 'Price updated.' : ''}</p>
         </section>
-        <section>
-          <h2>Workspace preferences</h2>
-          <p className="hint">Set delivery speed and the filter used when you return.</p>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              preferences.mutate({
-                preference: String(new FormData(e.currentTarget).get('preference')),
-                savedFilter: String(new FormData(e.currentTarget).get('savedFilter')),
-              })
-            }}
-          >
-            <label>
-              Delivery speed
-              <select name="preference" defaultValue={identity.preference}>
-                <option value="standard">Standard</option>
-                <option value="express">Express</option>
-              </select>
-            </label>
-            <label>
-              Default queue status
-              <select name="savedFilter" defaultValue={identity.savedFilter}>
-                {['all', 'queued', 'packed', 'dispatched', 'delivered'].map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
-              </select>
-            </label>
-            <button disabled={preferences.isPending}>Save preferences</button>
-          </form>
-          <p role="alert">{preferences.error?.message}</p>
-          <p role="status">{preferences.isSuccess ? 'Preferences saved.' : ''}</p>
-        </section>
+        <Preferences membership={membership} />
       </div>
     </>
   )

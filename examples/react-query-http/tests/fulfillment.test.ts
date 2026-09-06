@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, expect, test } from 'vitest'
-import { auth } from '../backend/features/identity/server/auth'
+import { authProvider } from '../backend/features/auth/server/auth.provider'
 import { pool, database } from '../backend/platform/database/client'
 import { shipment } from '../backend/features/fulfillment/server/fulfillment.table'
 import {
@@ -12,7 +12,7 @@ let north: Headers
 let south: Headers
 
 async function login(name: string) {
-  const response = await auth.api.signInEmail({
+  const response = await authProvider.api.signInEmail({
     body: { email: `${name}@example.test`, password: 'Demo-password-123!' },
     asResponse: true,
   })

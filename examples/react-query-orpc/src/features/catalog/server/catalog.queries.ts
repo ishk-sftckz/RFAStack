@@ -4,14 +4,14 @@ import { headers } from 'next/headers'
 import { asc, eq } from 'drizzle-orm'
 import { database } from '@/platform/database/client'
 import { traceRead } from '@/platform/observability/trace'
-import { requireIdentity } from '@/features/identity/server/identity.queries'
+import { requireMembership } from '@/features/membership/server/membership.queries'
 import { product } from './catalog.table'
 import { productSchema } from '../model/catalog.schema'
 
 export async function listProducts(requestHeaders: Headers) {
-  const identity = await requireIdentity(requestHeaders)
+  const membership = await requireMembership(requestHeaders)
 
-  return listCachedProducts(identity.scopeId)
+  return listCachedProducts(membership.scopeId)
 }
 
 async function listCachedProducts(scopeId: string) {
@@ -33,30 +33,30 @@ async function listCachedProducts(scopeId: string) {
 }
 
 export async function listCurrentProducts(requestHeaders: Headers) {
-  const identity = await requireIdentity(requestHeaders)
+  const membership = await requireMembership(requestHeaders)
 
   return productSchema
     .array()
-    .parse(await database.select().from(product).where(eq(product.scopeId, identity.scopeId)))
+    .parse(await database.select().from(product).where(eq(product.scopeId, membership.scopeId)))
 }
 
 export async function getRecommendations() {
   'use cache: private'
 
   cacheLife({ stale: 30 })
-  const identity = await requireIdentity(await headers())
-  cacheTag(`preferences:${identity.userId}`)
-  traceRead('suggested-reorders', identity.scopeId)
+  const membership = await requireMembership(await headers())
+  cacheTag(`preferences:${membership.userId}`)
+  traceRead('suggested-reorders', membership.scopeId)
 
   return {
-    preference: identity.preference,
+    preference: membership.preference,
     products: productSchema
       .array()
       .parse(
         await database
           .select()
           .from(product)
-          .where(eq(product.scopeId, identity.scopeId))
+          .where(eq(product.scopeId, membership.scopeId))
           .orderBy(asc(product.id))
           .limit(2),
       ),

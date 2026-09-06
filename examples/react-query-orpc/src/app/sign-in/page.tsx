@@ -1,4 +1,4 @@
-import { SignIn } from '@/features/identity/ui/SignIn'
+import { SignIn } from '@/features/auth/ui/SignIn'
 export default function Page() {
   return (
     <div className="auth-layout">

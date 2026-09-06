@@ -5,18 +5,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { orders } from '../order.client'
 import { orderListOptions } from '../order.query-options'
-import type { Identity } from '@/features/identity/model/identity.schema'
+import type { Membership } from '@/features/membership/model/membership.schema'
 import { formatCurrency } from '@/shared/utils/currency'
 
-export function PurchaseOrders({ identity }: { identity: Identity }) {
+export function PurchaseOrders({ membership }: { membership: Membership }) {
   const [filter, setFilter] = useState('all')
-  const query = useQuery(orderListOptions(identity.scopeId))
+  const query = useQuery(orderListOptions(membership.scopeId))
   const client = useQueryClient()
   const router = useRouter()
   const decide = useMutation(
     orders.decide.mutationOptions({
       onSuccess: async () => {
-        await client.invalidateQueries({ queryKey: orderListOptions(identity.scopeId).queryKey })
+        await client.invalidateQueries({ queryKey: orderListOptions(membership.scopeId).queryKey })
         router.refresh()
       },
     }),
@@ -41,7 +41,7 @@ export function PurchaseOrders({ identity }: { identity: Identity }) {
         <div>
           <h2>Purchase orders</h2>
           <p className="hint">
-            {identity.role === 'approver'
+            {membership.role === 'approver'
               ? 'Review the items before making a decision.'
               : 'Follow your requests from submission to decision.'}
           </p>
@@ -98,7 +98,7 @@ export function PurchaseOrders({ identity }: { identity: Identity }) {
                   ))}
                 </ul>
               </details>
-              {identity.role === 'approver' && order.status === 'submitted' && (
+              {membership.role === 'approver' && order.status === 'submitted' && (
                 <div className="actions">
                   <button
                     disabled={decide.isPending}

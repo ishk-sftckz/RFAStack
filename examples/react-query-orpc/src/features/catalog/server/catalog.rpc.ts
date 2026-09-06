@@ -1,6 +1,6 @@
 import 'server-only'
 import { procedure } from '@/platform/rpc/procedure'
-import { requireIdentity } from '@/features/identity/server/identity.queries'
+import { requireMembership } from '@/features/membership/server/membership.queries'
 import { AccessError } from '@/shared/utils/errors'
 import { z } from 'zod'
 import { listProducts } from './catalog.queries'
@@ -11,9 +11,9 @@ export const catalogRouter = {
     .input(z.object({ scopeId: z.string() }))
     .output(productSchema.array())
     .handler(async ({ input, context }) => {
-      const identity = await requireIdentity(context.headers)
+      const membership = await requireMembership(context.headers)
 
-      if (input.scopeId !== identity.scopeId) {
+      if (input.scopeId !== membership.scopeId) {
         throw new AccessError(403, 'Company access denied.')
       }
 

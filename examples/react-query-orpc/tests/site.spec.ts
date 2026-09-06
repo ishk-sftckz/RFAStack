@@ -45,6 +45,7 @@ test('buyers submit purchase orders and approvers decide through the same API', 
     await page.getByRole('status').filter({ hasText: 'Purchase order submitted:' }).innerText()
   ).split(': ')[1]
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await expect(page).toHaveURL(/sign-in/)
   await login(page, 'approver-a')
   await page.getByRole('button', { name: `Approve ${id}`, exact: true }).click()
   await expect(page.getByRole('listitem').filter({ hasText: id })).toContainText('approved')
@@ -77,6 +78,7 @@ test('typed clients enforce company scope, role, and input contracts', async ({ 
 test('logout and company changes discard browser data', async ({ page }) => {
   await login(page)
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await expect(page).toHaveURL(/sign-in/)
   await login(page, 'bob')
   await expect(page.getByText('purchase-a', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Company A notebook', { exact: true })).toHaveCount(0)

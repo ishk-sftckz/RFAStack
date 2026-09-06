@@ -1,19 +1,19 @@
 import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import { database } from '@backend/platform/database/client'
-import { requireIdentity } from '@backend/features/identity/server/identity.queries'
+import { requireMembership } from '@backend/features/membership/server/membership.queries'
 import { AccessError } from '@backend/shared/utils/errors'
 import { shipment, product, outbox } from './fulfillment.table'
 import { transitionSchema, priceSchema } from '../model/fulfillment.schema'
 
 export async function transitionShipment(input: unknown, requestHeaders: Headers) {
-  const identity = await requireIdentity(requestHeaders)
+  const membership = await requireMembership(requestHeaders)
   const parsed = transitionSchema.parse(input)
   await database.transaction(async (tx) => {
     const [exists] = await tx
       .select()
       .from(shipment)
-      .where(and(eq(shipment.id, parsed.id), eq(shipment.warehouseId, identity.scopeId)))
+      .where(and(eq(shipment.id, parsed.id), eq(shipment.warehouseId, membership.scopeId)))
 
     if (!exists) {
       throw new AccessError(404, 'Shipment not found.')
@@ -25,7 +25,7 @@ export async function transitionShipment(input: unknown, requestHeaders: Headers
       .where(
         and(
           eq(shipment.id, parsed.id),
-          eq(shipment.warehouseId, identity.scopeId),
+          eq(shipment.warehouseId, membership.scopeId),
           eq(shipment.status, parsed.status === 'packed' ? 'queued' : 'packed'),
         ),
       )
@@ -37,16 +37,16 @@ export async function transitionShipment(input: unknown, requestHeaders: Headers
 
     await tx
       .insert(outbox)
-      .values({ id: randomUUID(), tag: `warehouse:${identity.scopeId}`, immediate: 1 })
+      .values({ id: randomUUID(), tag: `warehouse:${membership.scopeId}`, immediate: 1 })
   })
 
-  return { tag: `warehouse:${identity.scopeId}` }
+  return { tag: `warehouse:${membership.scopeId}` }
 }
 
 export async function updatePrice(input: unknown, requestHeaders: Headers) {
-  const identity = await requireIdentity(requestHeaders)
+  const membership = await requireMembership(requestHeaders)
 
-  if (identity.role !== 'supervisor') {
+  if (membership.role !== 'supervisor') {
     throw new AccessError(403, 'Supervisor access required.')
   }
 

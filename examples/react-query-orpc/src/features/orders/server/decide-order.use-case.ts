@@ -1,15 +1,15 @@
 import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import { database } from '@/platform/database/client'
-import { requireIdentity } from '@/features/identity/server/identity.queries'
+import { requireMembership } from '@/features/membership/server/membership.queries'
 import { AccessError } from '@/shared/utils/errors'
 import { order } from './order.table'
 import { decisionSchema } from '../model/approval.schema'
 
 export async function decideOrder(input: unknown, requestHeaders: Headers) {
-  const identity = await requireIdentity(requestHeaders)
+  const membership = await requireMembership(requestHeaders)
 
-  if (identity.role !== 'approver') {
+  if (membership.role !== 'approver') {
     throw new AccessError(403, 'Approver access required.')
   }
 
@@ -17,7 +17,7 @@ export async function decideOrder(input: unknown, requestHeaders: Headers) {
   const [current] = await database
     .select()
     .from(order)
-    .where(and(eq(order.id, parsed.orderId), eq(order.scopeId, identity.scopeId)))
+    .where(and(eq(order.id, parsed.orderId), eq(order.scopeId, membership.scopeId)))
 
   if (!current) {
     throw new AccessError(404, 'Purchase order not found.')
@@ -29,7 +29,7 @@ export async function decideOrder(input: unknown, requestHeaders: Headers) {
     .where(
       and(
         eq(order.id, parsed.orderId),
-        eq(order.scopeId, identity.scopeId),
+        eq(order.scopeId, membership.scopeId),
         eq(order.status, 'submitted'),
       ),
     )
@@ -39,5 +39,5 @@ export async function decideOrder(input: unknown, requestHeaders: Headers) {
     throw new AccessError(409, 'This purchase order has already been decided.')
   }
 
-  return { id: parsed.orderId, scopeId: identity.scopeId }
+  return { id: parsed.orderId, scopeId: membership.scopeId }
 }

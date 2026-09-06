@@ -7,7 +7,7 @@ description: Where to verify sessions, enforce resource access, and return safe 
 
 Protecting resources is a core responsibility when building a full-stack Next.js application. You must control who can access private data and who can perform operations that change it. Those access controls need to be part of the application’s architecture from the start.
 
-Use multiple layers of protection to secure those resources. We recommend Proxy for early route checks and login redirects, a shared identity helper for session verification, and a Data Access Layer (DAL) for enforcing access to data and operations. Each layer has a responsibility, and together they protect the different paths through the application.
+Use multiple layers of protection to secure those resources. We recommend Proxy for early route checks and login redirects, an auth query for session verification, and a Data Access Layer (DAL) for enforcing access to data and operations. Each layer has a responsibility, and together they protect the different paths through the application.
 
 Enforce authentication and authorization inside the feature operations that read or change protected resources. A page-level check does not protect its Server Actions, which can receive requests independently of the page. [Next.js data security](https://nextjs.org/docs/app/guides/data-security#authentication-and-authorization)
 
@@ -20,7 +20,8 @@ For an order cancellation, several decisions happen along the way:
 | Layer | Responsibility |
 | --- | --- |
 | Proxy | Redirect visitors who do not meet the initial session check. |
-| Identity feature | Validate the session and establish the account the caller may act through. |
+| Auth feature | Verify the session and identify the authenticated user. |
+| Membership feature | Establish the account and role the caller may act through. |
 | Orders feature | Verify access to the requested order and enforce cancellation rules. |
 | UI | Show the available controls and explain the result. |
 
@@ -70,12 +71,13 @@ Keep those responsibilities in the [existing feature structure](./folder-structu
 
 | Location | Responsibility |
 | --- | --- |
-| `features/identity/server/` | Verify identity and resolve the caller’s authorized account context. |
+| `features/auth/server/` | Verify the session and return the authenticated user. |
+| `features/membership/server/` | Resolve that user’s business membership and authorized account context. |
 | `features/orders/server/order.queries.ts` | Authorize order reads and return the fields the caller may receive. |
 | `features/orders/server/cancel-order.use-case.ts` | Authorize cancellation and apply the business rules. |
 | `features/orders/server/order.repository.ts` | Encapsulate persistence when a separate repository is useful. |
 
-You do not need a global `dal/` directory to establish this boundary. Keep resource policies with their feature, and share identity verification through the identity feature.
+You do not need a global `dal/` directory to establish this boundary. Keep resource policies with their feature, and share session verification through auth and account access checks through membership.
 
 For operations called on behalf of the current signed-in user, obtain the account inside the public protected query or use case. When another page imports that operation, its protection comes with it.
 
@@ -89,7 +91,7 @@ The protected operation can remove that choice from its callers:
 // src/features/orders/server/order.queries.ts
 import 'server-only'
 
-import { requireAccount } from '@/features/identity/server/identity.queries'
+import { requireAccount } from '@/features/membership/server/membership.queries'
 import { database } from '@/platform/database/client'
 import { orderSummarySchema } from '../model/order.schema'
 
@@ -152,7 +154,7 @@ Here is that use case with its protection checks together:
 // src/features/orders/server/cancel-order.use-case.ts
 import 'server-only'
 
-import { requireAccount } from '@/features/identity/server/identity.queries'
+import { requireAccount } from '@/features/membership/server/membership.queries'
 import { database } from '@/platform/database/client'
 import { canCancelOrder } from '../model/order-cancellation'
 import { cancelOrderInputSchema, orderStatusSchema } from '../model/order.schema'
@@ -215,7 +217,7 @@ The shared operation should report an authentication failure in a form its calle
 
 ## Reuse verification without relying on a layout
 
-Calling the same identity helper from several protected operations keeps the authentication rule in one place. The maintenance problem starts when each operation implements its own version of session verification.
+Calling the same membership query from protected operations reuses account access checks and auth’s session verification. The maintenance problem starts when each operation implements its own version of session verification.
 
 During Server Component rendering, React `cache()` can share repeated verification work. Its cache is reset across server requests, and callers outside React’s cache context do not receive the same memoization behavior. [React cache](https://react.dev/reference/react/cache)
 
@@ -223,58 +225,44 @@ Layout checks serve a different purpose. Layouts do not re-render on every navig
 
 If an operation also needs background-job or alternative-credential callers, define an explicit trusted actor context for that implementation. Each entry point must establish the actor and its permissions. Keep the business rules independent of browser cookies.
 
-## Keep Better Auth behind the identity boundary
+## Keep Better Auth behind the auth boundary {#keep-better-auth-behind-the-identity-boundary}
 
-Better Auth can implement session verification while feature operations depend on the application’s identity helper.
+Put session verification in the auth feature. Membership calls auth's public query, then resolves membership and the account the caller may use. An authenticated user without a business membership can have a valid session while membership rejects access to the application account.
 
-Given a configured Better Auth instance exported from `platform/auth`, the identity feature can expose a verified caller:
+Auth owns the provider tables in `server/auth.table.ts`. Its `auth.provider.ts` supplies those tables to a factory in `platform/auth/server.ts`. The factory configures Better Auth and its database adapter without importing a feature. Better Auth's Drizzle adapter accepts a supplied schema. [Drizzle adapter configuration](https://better-auth.com/docs/adapters/drizzle)
+
+The public session query returns only the fields membership needs:
 
 ```ts
-// src/features/identity/server/identity.queries.ts
+// src/features/auth/server/auth.queries.ts
 import 'server-only'
+import { AccessError } from '@/shared/utils/errors'
+import { authProvider } from './auth.provider'
+import { sessionSchema } from '../model/auth.schema'
 
-import { cache } from 'react'
-import { headers } from 'next/headers'
-import { auth } from '@/platform/auth'
-
-export class AuthenticationError extends Error {
-  constructor() {
-    super('Authentication required')
-    this.name = 'AuthenticationError'
-  }
-}
-
-export const requireIdentity = cache(async () => {
-  const session = await auth.api.getSession({
-    headers: await headers(),
+export async function requireSession(requestHeaders: Headers) {
+  const session = await authProvider.api.getSession({
+    headers: requestHeaders,
+    query: { disableCookieCache: true },
   })
 
-  if (!session) throw new AuthenticationError()
+  if (!session) throw new AccessError(401, 'Please sign in.')
 
-  return { userId: session.user.id }
-})
+  return sessionSchema.parse({ userId: session.user.id, name: session.user.name })
+}
 ```
 
-`requireAccount()` calls this helper, resolves which application account the user may act through, and rejects unauthorized account selections. That mapping depends on your account model. Keep it in identity; the order examples do not equate a Better Auth user ID with an application account ID.
+Here, `sessionSchema` defines the public user ID and name. The membership feature's `requireMembership()` calls `requireSession()`, looks up the user's membership, and rejects callers without one. `requireAccount()` can then resolve a requested business account where the application supports account selection.
 
-The helper returns only the user ID needed for that mapping. Repeated calls during a Server Component render can reuse verification through React `cache()`; new requests must establish identity again.
+Keep sign-in and sign-out UI in `features/auth/ui`. Those components use the Better Auth browser client from `platform/auth/client.ts`. The auth Route Handler mounts `authProvider.handler` directly from `server/auth.provider.ts`. Other features use the session query directly.
 
 Better Auth documents this API for Server Components and Server Actions. Its `getSessionCookie()` helper checks cookie presence only, so use that helper for optimistic redirects and validate the session before granting access to protected resources. [Better Auth Next.js integration](https://better-auth.com/docs/integrations/next)
 
-The identity helper must then resolve the application’s account context. Better Auth’s `Account` record represents a linked authentication method; it does not automatically represent your application’s customer account or tenant. [Better Auth database schema](https://better-auth.com/docs/concepts/database#account)
+The membership helper must then resolve the application’s account context. Better Auth’s `Account` record represents a linked authentication method; it does not automatically represent your application’s customer account or tenant. [Better Auth database schema](https://better-auth.com/docs/concepts/database#account)
 
 Choose session caching deliberately. With Better Auth’s cookie cache enabled, a revoked session may continue to be accepted until the cached data expires. Operations that require a current check against session storage can bypass that cookie cache with `disableCookieCache`. [Better Auth session management](https://better-auth.com/docs/concepts/session-management)
 
-For a storage-backed session policy that requires this check, replace the lookup inside the identity helper with:
-
-```ts
-const session = await auth.api.getSession({
-  headers: await headers(),
-  query: { disableCookieCache: true },
-})
-```
-
-Keep that session policy in the identity integration. When an order’s access rule changes, the implementation should remain in the orders feature.
+The session query above disables cookie-cache reuse so it checks session storage. Keep that policy in auth. Membership owns membership checks, and orders owns access to order data.
 
 ## Choose caching after defining access
 

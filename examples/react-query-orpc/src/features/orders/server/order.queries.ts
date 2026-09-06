@@ -3,18 +3,16 @@ import { cacheLife, cacheTag } from 'next/cache'
 import { and, desc, eq } from 'drizzle-orm'
 import { database } from '@/platform/database/client'
 import { traceRead } from '@/platform/observability/trace'
-import { requireIdentity } from '@/features/identity/server/identity.queries'
+import { requireMembership } from '@/features/membership/server/membership.queries'
 import { AccessError } from '@/shared/utils/errors'
 import { order } from './order.table'
-import { orderInputSchema, orderSchema } from '../model/order.schema'
-
-const dto = (row: typeof order.$inferSelect) =>
-  orderSchema.parse({ ...row, createdAt: row.createdAt.toISOString() })
+import { orderInputSchema } from '../model/order.schema'
+import { toOrderDto } from './order.dto'
 
 export async function listOrders(requestHeaders: Headers) {
-  const identity = await requireIdentity(requestHeaders)
+  const membership = await requireMembership(requestHeaders)
 
-  return listCachedOrders(identity.scopeId)
+  return listCachedOrders(membership.scopeId)
 }
 
 async function listCachedOrders(scopeId: string) {
@@ -30,21 +28,21 @@ async function listCachedOrders(scopeId: string) {
       .from(order)
       .where(eq(order.scopeId, scopeId))
       .orderBy(desc(order.createdAt))
-  ).map(dto)
+  ).map(toOrderDto)
 }
 
 export async function getOrder(input: unknown, requestHeaders: Headers) {
-  const identity = await requireIdentity(requestHeaders)
+  const membership = await requireMembership(requestHeaders)
   const { orderId } = orderInputSchema.parse(input)
-  traceRead('order-detail', identity.scopeId)
+  traceRead('order-detail', membership.scopeId)
   const [row] = await database
     .select()
     .from(order)
-    .where(and(eq(order.id, orderId), eq(order.scopeId, identity.scopeId)))
+    .where(and(eq(order.id, orderId), eq(order.scopeId, membership.scopeId)))
 
   if (!row) {
     throw new AccessError(404, 'Order not found.')
   }
 
-  return dto(row)
+  return toOrderDto(row)
 }

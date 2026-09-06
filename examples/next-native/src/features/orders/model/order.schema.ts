@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+export const orderStatusSchema = z.enum(['pending', 'shipped', 'cancelled'])
+
+export type OrderStatus = z.infer<typeof orderStatusSchema>
+
 export const orderInputSchema = z.object({ orderId: z.string().min(1).max(100) })
 
 export const itemSchema = z.object({
@@ -11,14 +15,10 @@ export const itemSchema = z.object({
 
 export const orderSchema = z.object({
   id: z.string(),
-  status: z.string(),
+  status: orderStatusSchema,
   total: z.number().int(),
   items: itemSchema.array(),
   createdAt: z.string(),
 })
 
 export type Order = z.infer<typeof orderSchema>
-
-export function canCancel(status: string) {
-  return status === 'pending'
-}

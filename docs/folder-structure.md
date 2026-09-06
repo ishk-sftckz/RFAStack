@@ -65,7 +65,9 @@ Keep the order-cancellation rule in the orders feature, even when only one route
 
 ### `src/features`: keep a business capability together
 
-A feature contains the code that changes when its business behavior changes. It can include server and client code. Use product names such as `orders`, `billing`, and `identity` so you know where to start a change.
+A feature contains the code that changes when its business behavior changes. It can include server and client code. Use product names such as `orders`, `billing`, and `membership` so you know where to start a change.
+
+Keep authentication in `auth`: sign-in UI, session verification, and authentication tables. Keep account membership, roles, account-scope resolution, and membership preferences in `membership`, which calls auth's public session query. Add `user` when personal profiles and user-level settings need their own operations, and `account` when business account details and lifecycle need theirs. A linked login account in Better Auth is part of authentication; it does not represent a business account.
 
 A read-only feature can begin with a component and a server query. For a business mutation, put the operation in a use case and let its action or HTTP adapter handle the request and response. The orders example below shows the files for those responsibilities.
 
@@ -90,6 +92,8 @@ src/platform/
 The implementation depends on your database and providers. Platform modules can open a transaction, send a message, or record a metric. The orders feature decides whether an order may be cancelled and which customer qualifies for a refund.
 
 Feature server code imports the platform modules it needs. Platform code must not import features. Keep feature-specific database queries and repository adapters with the feature that owns them.
+
+For authentication, put the browser SDK client in `platform/auth/client.ts` and the provider factory in `platform/auth/server.ts`. The auth feature supplies its own tables to that factory and assembles the configured instance in `server/auth.provider.ts`. This lets auth own persistence without making platform import the feature. A typed client that binds membership's RPC procedures remains in `features/membership/membership.client.ts`; the common RPC transport belongs in `platform/rpc/client.ts`.
 
 ### `src/shared`: share code with generic behavior
 
@@ -168,6 +172,8 @@ ui/OrderDetails/
   OrderItems.tsx      # Render this view’s order lines
   useOrderDetails.ts  # Coordinate React interaction state, if needed
 ```
+
+The runnable checkout forms use the same arrangement: `ui/CheckoutForm/` contains `CheckoutForm.tsx`, `CheckoutItem.tsx`, and `CheckoutSummary.tsx`. The form owns draft quantities and passes values and callbacks to its children. Use context when deeper consumers need it; immediate children can receive props. Component names describe their behavior and match their filenames. They do not have to repeat the feature directory's name.
 
 ### Put browser API requests in `order.api.ts`
 
@@ -293,11 +299,13 @@ Put a feature’s server queries, Server Actions, use cases, and supporting serv
 
 Expose queries and use cases as the feature’s public server operations. Routes and other features may import those functions directly. Keep repositories, internal DTO mappers, and helpers private to the feature. The [public-interface example](#expose-the-operations-and-components-callers-need) shows the allowed imports.
 
-When using RPC, expose the procedure exports from `server/order.rpc.ts` for the application’s router to mount. Cross-feature business calls still use public queries and use cases.
+When using RPC, expose the procedure exports from `server/order.rpc.ts` for the application's router to mount. Cross-feature business calls still use public queries and use cases.
+
+Mount a provider's HTTP API directly in its application entry point. The auth Route Handler imports the configured instance from `server/auth.provider.ts` and exports its `handler` as `GET` and `POST`. The separate backend mounts that handler in `backend/server.ts`. Keep provider imports limited to these auth entry points; other features call `auth.queries.ts` for session verification. The HTTP frontend forwards auth requests through `platform/auth/server.ts`.
 
 Mark ordinary server modules with `import 'server-only'`, including public queries and use cases. Next.js uses that marker to reject accidental Client Component imports; the folder name alone does not enforce it. A Server Action module uses `'use server'` so the UI can invoke its exports through Next.js. [Next.js runtime boundaries](https://nextjs.org/docs/app/getting-started/server-and-client-components#preventing-environment-poisoning), [Server Functions](https://nextjs.org/docs/app/api-reference/directives/use-server)
 
-A query retrieves data. A use case owns a business mutation or workflow, which may include reads, writes, and calls to other features. Cancellation already needs a use case because it checks ownership, applies eligibility rules, and coordinates an update. Keep that work in the use case even when the function is short. Actions and Route Handlers parse inputs, invoke the operation, and adapt the response. Public protected operations verify the caller through the identity feature and enforce resource access internally; follow the [protected-resources guide](./protected-resources#put-data-protection-in-the-feature-s-server-operations) for that boundary.
+A query retrieves data. A use case owns a business mutation or workflow, which may include reads, writes, and calls to other features. Cancellation already needs a use case because it checks ownership, applies eligibility rules, and coordinates an update. Keep that work in the use case even when the function is short. Actions and Route Handlers parse inputs, invoke the operation, and adapt the response. Public protected operations verify the caller through the membership feature and enforce resource access internally; follow the [protected-resources guide](./protected-resources#put-data-protection-in-the-feature-s-server-operations) for that boundary.
 
 | Server file | Responsibility | When to create it |
 | --- | --- | --- |
@@ -312,6 +320,8 @@ A query retrieves data. A use case owns a business mutation or workflow, which m
 Related functions can share a file. `order.queries.ts` can contain several reads, and `order.repository.ts` can contain both reads and writes. Split by responsibility when the code needs it; there is no one-function-per-file rule.
 
 Always select the fields a caller may receive. A query can select and map those fields directly. Keep browser-consumed DTO schemas and types in `model/`; put a separate server mapper in `server/order.dto.ts` when the mapping meets the condition above. Safe result data is required even when there is no mapper file.
+
+The runnable order examples reuse `toOrderDto()` for list and detail results, so their mapper lives in `order.dto.ts`. It selects public fields and converts the stored date to an ISO string. Adding a column to the table does not automatically add it to the response.
 
 A repository uses the platform database client. Keep business decisions in the model or use case. If you need a replaceable repository, the feature owns both its contract and the adapter implementing it. The [concepts guide](./concepts#clean-architecture-keep-business-rules-independent-of-integrations) explains that optional separation.
 
@@ -363,12 +373,12 @@ export async function cancelOrder(formData: FormData) {
 }
 ```
 
-The form supplies only the order ID. The use case obtains the account through `requireAccount`, the identity feature’s public operation for verifying the session and resolving an account the caller may use. It validates its own input, loads the order within that account, and applies the pure rule:
+The form supplies only the order ID. The use case obtains the account through `requireAccount`, the membership feature’s public operation for verifying the session and resolving an account the caller may use. It validates its own input, loads the order within that account, and applies the pure rule:
 
 ```ts
 // src/features/orders/server/cancel-order.use-case.ts
 import 'server-only'
-import { requireAccount } from '@/features/identity/server/identity.queries'
+import { requireAccount } from '@/features/membership/server/membership.queries'
 import { database } from '@/platform/database/client'
 import { canCancelOrder } from '../model/order-cancellation'
 import { cancelOrderInputSchema, orderStatusSchema } from '../model/order.schema'
@@ -425,7 +435,7 @@ The route obtains its inputs and calls that public query:
 
 ```tsx
 // src/app/(authenticated)/orders/[orderId]/page.tsx
-import { requireAccount } from '@/features/identity/server/identity.queries'
+import { requireAccount } from '@/features/membership/server/membership.queries'
 import { getOrderDetails } from '@/features/orders/server/order.queries'
 import { OrderDetails } from '@/features/orders/ui/OrderDetails'
 
@@ -483,6 +493,8 @@ flowchart LR
 | `platform` | External packages, application configuration, shared primitives | Business policy, `app`, features |
 | `shared` | Other generic shared primitives | `app`, features, business-specific platform behavior |
 
+Table declarations may reference another feature's table columns to define a foreign key. For example, membership's table references auth's user ID, preserving the database constraint between them. Keep these imports inside table declarations and use them only for schema relationships. Queries, use cases, routes, and UI still use public feature operations to access another feature's data. The example boundary checks allow column references inside `.references()` declarations and reject queries or re-exports through those imports.
+
 `app` may use platform code for framework concerns such as observability setup or a health endpoint. Keep business operations inside their owning feature, including the calls those operations make to integrations.
 
 These permissions apply alongside runtime boundaries. Next.js reports a build error when a Client Component imports a module marked with `import 'server-only'`. A dedicated `'use server'` file exposes Server Functions through the framework; use it for actions, while keeping query-option factories in ordinary modules. [Next.js runtime boundaries](https://nextjs.org/docs/app/getting-started/server-and-client-components#preventing-environment-poisoning), [Server Functions](https://nextjs.org/docs/app/api-reference/directives/use-server)
@@ -508,7 +520,7 @@ These filenames are our recommended conventions. Preserve Next.js’s own specia
 
 | Kind | Convention | Example |
 | --- | --- | --- |
-| Feature directory | Product capability, usually plural for a collection of entities. | `orders/`; `identity/` for the capability. |
+| Feature directory | Product capability, usually plural for a collection of entities. | `orders/`; `membership/` for the capability. |
 | Feature file prefix | Singular entity name when the file describes that entity. | `order.schema.ts` inside `orders/`. |
 | Component | PascalCase matching its exported component. | `OrderDetails.tsx` exports `OrderDetails`. |
 | React hook | `use` followed by a descriptive camelCase name. | `useOrderDetails.ts`. |
@@ -521,7 +533,7 @@ These filenames are our recommended conventions. Preserve Next.js’s own specia
 | Business mutations and workflows | `server/<operation>.use-case.ts`; export the operation directly. | `server/cancel-order.use-case.ts` exports `cancelOrderUseCase`. |
 | Browser API requests | `.api.ts` for feature-specific HTTP/RPC requests; related reads and writes may share it. | `order.api.ts` exports `fetchOrderDetails` and `cancelOrder`. |
 | TanStack options | `.query-options.ts` or `.mutation-options.ts`. | `order.query-options.ts` exports `orderDetailsOptions`. |
-| RPC procedures | `server/*.rpc.ts` for feature procedures exposed to the application’s RPC router. | `server/order.rpc.ts`. |
+| RPC procedures | `server/*.rpc.ts` for feature procedures exposed to the application's RPC router. | `server/order.rpc.ts`. |
 | Private supporting server modules | An entity or responsibility with a role suffix, inside `server/`. | `server/order.repository.ts`, `server/order.dto.ts`. |
 
 Use a suffix when it helps readers distinguish a role. Name business behavior directly instead of collecting it in feature-level `helpers`, `common`, `misc`, or `utils` files. Keep related small functions together, and split a file when a responsibility becomes difficult to find or follow.
@@ -536,7 +548,7 @@ Use `list` for a feature operation that returns a collection and `get` for one r
 | Single resource or aggregate read | `get` + the result's name; document how absence is handled. | `getOrder`, `getOrderDetails`, `getAccountBalance`. |
 | HTTP/RPC read helper | `fetch` + the requested data. | `fetchProducts`, `fetchOrderDetails`, `fetchDeliveryEstimate`. |
 | Optional repository lookup | `find` + the lookup target; return `null` or `undefined` when absent. | `findOrderForAccount`. |
-| Required identity or access check | `require` + the required context; throw when the check fails. | `requireAccount`, `requireIdentity`. |
+| Required membership or access check | `require` + the required context; throw when the check fails. | `requireAccount`, `requireMembership`. |
 | Mutation | A verb describing the business operation. | `createOrder`, `cancelOrder`, `savePreferences`. |
 
 These are project conventions. Google's API guidelines use [`Get` for one resource](https://google.aip.dev/131) and [`List` for a collection](https://google.aip.dev/132). Next.js also uses `getPosts` in its [data-fetching examples](https://nextjs.org/docs/app/getting-started/fetching-data#streaming-data-with-the-use-api), so `getProducts` is a valid choice in a codebase that consistently uses `get` for reads. Here, `listProducts` makes the collection explicit.

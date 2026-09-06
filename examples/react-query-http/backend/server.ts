@@ -1,6 +1,6 @@
-import { auth } from './features/identity/server/auth'
-import { requireIdentity } from './features/identity/server/identity.queries'
-import { savePreferences } from './features/identity/server/preferences.use-case'
+import { authProvider } from './features/auth/server/auth.provider'
+import { requireMembership } from './features/membership/server/membership.queries'
+import { savePreferences } from './features/membership/server/preferences.use-case'
 import {
   listShipments,
   listProducts,
@@ -8,7 +8,7 @@ import {
 } from './features/fulfillment/server/fulfillment.queries'
 import { transitionShipment, updatePrice } from './features/fulfillment/server/fulfillment.use-case'
 import { receiveCarrierEvent } from './features/fulfillment/server/carrier.use-case'
-import { deliverInvalidations } from './features/fulfillment/server/invalidation'
+import { deliverInvalidations } from './features/fulfillment/server/deliver-invalidations.use-case'
 import { validSignature } from './platform/integration/signature'
 import { failure, AccessError } from './shared/utils/errors'
 
@@ -20,7 +20,7 @@ Bun.serve({
 
     try {
       if (path.startsWith('/api/auth/')) {
-        return auth.handler(request)
+        return authProvider.handler(request)
       }
 
       if (path === '/health') {
@@ -59,8 +59,8 @@ Bun.serve({
 
       let data: unknown
 
-      if (path === '/identity' && request.method === 'GET') {
-        data = await requireIdentity(request.headers)
+      if (path === '/membership' && request.method === 'GET') {
+        data = await requireMembership(request.headers)
       } else if (path === '/shipments' && request.method === 'GET') {
         data = await listShipments(request.headers)
       } else if (path === '/products' && request.method === 'GET') {
@@ -70,8 +70,8 @@ Bun.serve({
       } else if (path === '/products' && request.method === 'POST') {
         data = await updatePrice(await request.json(), request.headers)
       } else if (path === '/preferences' && request.method === 'POST') {
-        const identity = await savePreferences(await request.json(), request.headers)
-        data = { tag: `preferences:${identity.userId}` }
+        const membership = await savePreferences(await request.json(), request.headers)
+        data = { tag: `preferences:${membership.userId}` }
       } else {
         throw new AccessError(404, 'Endpoint not found.')
       }

@@ -113,3 +113,42 @@ test('shipment search combines with status filters and can be cleared', async ({
   await page.getByRole('button', { name: 'Close details' }).click()
   await expect(page.getByRole('heading', { name: 'Selected shipment' })).toHaveCount(0)
 })
+
+test('membership owns the protected preferences endpoint', async ({ page, request }) => {
+  const input = { preference: 'express', savedFilter: 'packed' }
+  const origin = { Origin: 'http://localhost:3102' }
+  expect(
+    (await request.post('/api/membership/preferences', { headers: origin, data: input })).status(),
+  ).toBe(401)
+  await login(page, 'north')
+  expect(
+    (
+      await page.request.post('/api/fulfillment/preferences', { headers: origin, data: input })
+    ).status(),
+  ).toBe(404)
+  expect(
+    (
+      await page.request.post('/api/membership/preferences', {
+        headers: { Origin: 'https://untrusted.example' },
+        data: input,
+      })
+    ).status(),
+  ).toBe(403)
+  expect(
+    (
+      await page.request.post('/api/membership/preferences', {
+        headers: origin,
+        data: { preference: 'invalid', savedFilter: 'packed' },
+      })
+    ).status(),
+  ).toBe(400)
+  const saved = await page.request.post('/api/membership/preferences', {
+    headers: origin,
+    data: input,
+  })
+  expect(saved.ok()).toBeTruthy()
+  expect(await saved.json()).toEqual({ saved: true })
+  await page.reload()
+  await expect(page.getByText('Saved delivery preference: express')).toBeVisible()
+  await expect(page.getByLabel('Status filter')).toHaveValue('packed')
+})

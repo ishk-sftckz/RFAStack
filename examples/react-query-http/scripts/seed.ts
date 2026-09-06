@@ -1,7 +1,8 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { hashPassword } from 'better-auth/crypto'
-import { user, account, membership } from '../backend/features/identity/server/identity.table'
+import { user, account } from '../backend/features/auth/server/auth.table'
+import { membership } from '../backend/features/membership/server/membership.table'
 import { shipment, product } from '../backend/features/fulfillment/server/fulfillment.table'
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })

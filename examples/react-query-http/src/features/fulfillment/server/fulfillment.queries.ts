@@ -1,15 +1,20 @@
 import 'server-only'
 import { cacheLife, cacheTag } from 'next/cache'
-import { headers } from 'next/headers'
 import { backend } from '@/platform/http/backend'
-import { requireIdentity } from '@/features/identity/server/identity.queries'
+import { requireMembership } from '@/features/membership/server/membership.queries'
 import { traceRead } from '@/platform/observability/trace'
 import { shipmentSchema, productSchema, summarySchema } from '../model/fulfillment.schema'
 
 export async function listShipments(requestHeaders: Headers) {
-  await requireIdentity(requestHeaders)
+  await requireMembership(requestHeaders)
 
   return shipmentSchema.array().parse(await backend('/shipments', requestHeaders))
+}
+
+export async function listCurrentProducts(requestHeaders: Headers) {
+  await requireMembership(requestHeaders)
+
+  return productSchema.array().parse(await backend('/products', requestHeaders))
 }
 
 export async function listProducts() {
@@ -23,9 +28,9 @@ export async function listProducts() {
 }
 
 export async function getSummary(requestHeaders: Headers) {
-  const identity = await requireIdentity(requestHeaders)
+  const membership = await requireMembership(requestHeaders)
 
-  return getCachedSummary(identity.scopeId)
+  return getCachedSummary(membership.scopeId)
 }
 
 async function getCachedSummary(scopeId: string) {
@@ -40,15 +45,4 @@ async function getCachedSummary(scopeId: string) {
       headers: { Authorization: `Bearer ${process.env.INTEGRATION_SECRET}` },
     }),
   )
-}
-
-export async function getOperatorPreferences() {
-  'use cache: private'
-
-  cacheLife({ stale: 30 })
-  const identity = await requireIdentity(await headers())
-  cacheTag(`preferences:${identity.userId}`)
-  traceRead('operator-preferences', identity.scopeId)
-
-  return { preference: identity.preference, savedFilter: identity.savedFilter }
 }

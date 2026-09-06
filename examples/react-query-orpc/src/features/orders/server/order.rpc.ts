@@ -2,7 +2,7 @@ import 'server-only'
 import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { procedure } from '@/platform/rpc/procedure'
-import { requireIdentity } from '@/features/identity/server/identity.queries'
+import { requireMembership } from '@/features/membership/server/membership.queries'
 import { AccessError } from '@/shared/utils/errors'
 import { checkoutSchema } from '@/features/checkout/model/checkout.schema'
 import { scopeSchema, decisionSchema } from '../model/approval.schema'
@@ -16,9 +16,9 @@ export const orderRouter = {
     .input(scopeSchema)
     .output(orderSchema.array())
     .handler(async ({ input, context }) => {
-      const identity = await requireIdentity(context.headers)
+      const membership = await requireMembership(context.headers)
 
-      if (identity.scopeId !== input.scopeId) {
+      if (membership.scopeId !== input.scopeId) {
         throw new AccessError(403, 'Company access denied.')
       }
 

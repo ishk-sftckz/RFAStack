@@ -1,16 +1,16 @@
 import 'server-only'
 import { randomUUID } from 'node:crypto'
 import { database } from '@/platform/database/client'
-import { requireIdentity } from '@/features/identity/server/identity.queries'
+import { requireMembership } from '@/features/membership/server/membership.queries'
 import { listCurrentProducts } from '@/features/catalog/server/catalog.queries'
 import { AccessError } from '@/shared/utils/errors'
 import { order } from './order.table'
 import { checkoutSchema } from '@/features/checkout/model/checkout.schema'
 
 export async function createOrder(input: unknown, requestHeaders: Headers) {
-  const identity = await requireIdentity(requestHeaders)
+  const membership = await requireMembership(requestHeaders)
 
-  if (identity.role !== 'buyer') {
+  if (membership.role !== 'buyer') {
     throw new AccessError(403, 'Buyer access required.')
   }
 
@@ -29,12 +29,12 @@ export async function createOrder(input: unknown, requestHeaders: Headers) {
   await database.transaction(async (tx) => {
     await tx.insert(order).values({
       id,
-      scopeId: identity.scopeId,
+      scopeId: membership.scopeId,
       status: 'submitted',
       total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
       items,
     })
   })
 
-  return { id, scopeId: identity.scopeId }
+  return { id, scopeId: membership.scopeId }
 }

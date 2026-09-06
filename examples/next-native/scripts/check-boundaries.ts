@@ -14,8 +14,8 @@ for (const file of new Bun.Glob('{src,backend}/**/*.{ts,tsx}').scanSync('.')) {
       statement.expression.text === 'use client',
   )
 
-  function check(specifier: string, typeOnly = false) {
-    const target = specifier.startsWith('@/')
+  function check(specifier: string, typeOnly = false, schemaReference = false) {
+    const unresolved = specifier.startsWith('@/')
       ? `src/${specifier.slice(2)}`
       : specifier.startsWith('@backend/')
         ? `backend/${specifier.slice(9)}`
@@ -23,10 +23,11 @@ for (const file of new Bun.Glob('{src,backend}/**/*.{ts,tsx}').scanSync('.')) {
           ? relative(process.cwd(), resolve(dirname(file), specifier))
           : ''
 
-    if (!target) {
+    if (!unresolved) {
       return
     }
 
+    const target = relative(process.cwd(), resolve(unresolved))
     const to = target.split('/')
 
     if (from[0] !== to[0]) {
@@ -43,13 +44,68 @@ for (const file of new Bun.Glob('{src,backend}/**/*.{ts,tsx}').scanSync('.')) {
 
     const foreignFeature = to[1] === 'features' && (from[1] !== 'features' || from[2] !== to[2])
 
-    if (foreignFeature && /\.(table|repository|dto)(\.|$)/.test(target)) {
+    const mountsTransport = from[1] === 'app' || file === 'backend/server.ts'
+    const mountsAuth =
+      /^src\/app\/api\/auth\/.*route\.ts$/.test(file) || file === 'backend/server.ts'
+    const publicServerOperation =
+      /\.(queries|actions|use-case)(\.[cm]?tsx?)?$/.test(target) ||
+      (mountsTransport && /\.rpc(\.[cm]?tsx?)?$/.test(target)) ||
+      (mountsAuth && /\/features\/auth\/server\/auth\.provider(\.[cm]?tsx?)?$/.test(target))
+    const privateServerModule = to[3] === 'server' && !publicServerOperation
+
+    if (
+      foreignFeature &&
+      !schemaReference &&
+      (privateServerModule || /\.(table|repository|dto)(\.|$)/.test(target))
+    ) {
       errors.push(`${file}: private feature dependency ${specifier}`)
     }
 
     if (client && /\/server\//.test(target) && !/\.actions$/.test(target) && !typeOnly) {
       errors.push(`${file}: client imports server implementation ${specifier}`)
     }
+  }
+
+  // A table may reference a foreign column to declare an existing database relationship.
+  // It may not use that imported table to query data or re-export it.
+  function isSchemaReference(node: ts.ImportDeclaration) {
+    if (
+      !file.endsWith('.table.ts') ||
+      !ts.isStringLiteral(node.moduleSpecifier) ||
+      !/\.table(?:\.ts)?$/.test(node.moduleSpecifier.text)
+    )
+      return false
+    const bindings = node.importClause?.namedBindings
+    if (node.importClause?.name || !bindings || !ts.isNamedImports(bindings)) return false
+    const names = new Set(bindings.elements.map((element) => element.name.text))
+    let uses = 0
+    let valid = true
+    function inspect(current: ts.Node) {
+      if (ts.isImportDeclaration(current)) return
+      if (ts.isIdentifier(current) && names.has(current.text)) {
+        uses++
+        const member = current.parent
+        const callback = member.parent
+        const call = callback.parent
+        if (
+          !(
+            ts.isPropertyAccessExpression(member) &&
+            member.expression === current &&
+            ts.isArrowFunction(callback) &&
+            callback.body === member &&
+            ts.isCallExpression(call) &&
+            call.arguments[0] === callback &&
+            ts.isPropertyAccessExpression(call.expression) &&
+            call.expression.name.text === 'references'
+          )
+        ) {
+          valid = false
+        }
+      }
+      ts.forEachChild(current, inspect)
+    }
+    inspect(source)
+    return valid && uses > 0
   }
 
   function visit(node: ts.Node) {
@@ -60,7 +116,11 @@ for (const file of new Bun.Glob('{src,backend}/**/*.{ts,tsx}').scanSync('.')) {
         ts.isNamedImports(clause.namedBindings) &&
         !clause.name &&
         clause.namedBindings.elements.every((element) => element.isTypeOnly)
-      check(node.moduleSpecifier.text, Boolean(clause?.isTypeOnly || allTypes))
+      check(
+        node.moduleSpecifier.text,
+        Boolean(clause?.isTypeOnly || allTypes),
+        isSchemaReference(node),
+      )
     }
 
     if (

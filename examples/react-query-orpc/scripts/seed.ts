@@ -1,7 +1,8 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import { hashPassword } from 'better-auth/crypto'
-import { user, account, membership } from '../src/features/identity/server/identity.table'
+import { user, account } from '../src/features/auth/server/auth.table'
+import { membership } from '../src/features/membership/server/membership.table'
 import { product } from '../src/features/catalog/server/catalog.table'
 import { order } from '../src/features/orders/server/order.table'
 

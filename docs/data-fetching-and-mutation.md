@@ -46,7 +46,7 @@ The query scopes the database read to the account and maps its records into that
 ```ts
 // src/features/orders/server/order.queries.ts
 import 'server-only'
-import { requireAccount } from '@/features/identity/server/identity.queries'
+import { requireAccount } from '@/features/membership/server/membership.queries'
 import { database } from '@/platform/database/client'
 import { orderSummarySchema } from '../model/order.schema'
 
@@ -91,7 +91,7 @@ The result is a data transfer object, or DTO: the fields the UI needs and the ca
 
 This query selects and maps the result itself. When several reads share that mapping or it needs a separate module for clarity, [extract a `toOrderSummary` mapper](#extract-a-dto-mapper-when-reads-share-the-conversion) into `server/order.dto.ts`. The returned fields must be safe for the caller in either arrangement. The Zod schema and inferred type stay in `model/`, where browser code can use them without importing the server mapper.
 
-`requireAccount` is the identity feature’s public server operation for verifying the session and resolving an account the caller may use. The query calls it internally, so each caller receives the same protection. A validated ID alone does not authorize a read. The [protected-resources guide](./protected-resources) explains where those checks belong.
+`requireAccount` is the membership feature’s public server operation for verifying the session and resolving an account the caller may use. The query calls it internally, so each caller receives the same protection. A validated ID alone does not authorize a read. The [protected-resources guide](./protected-resources) explains where those checks belong.
 
 The query module is server-only, so its database credentials and implementation stay outside the client bundle. React’s [Server Components reference](https://react.dev/reference/rsc/server-components) explains this separation. If the query reads from an external service, parse that response with a Zod schema before relying on its shape.
 
@@ -535,7 +535,7 @@ export async function getOrderDetails(input: OrderReferenceInput) {
 }
 ```
 
-This example serves one authorized account context per request. The identity feature decides how that context is selected and verified. A page, HTTP handler, or RPC procedure can call this query; none can grant access by supplying a different account ID. Adapt expected failures to the response each caller needs.
+This example serves one authorized account context per request. The membership feature decides how that context is selected and verified. A page, HTTP handler, or RPC procedure can call this query; none can grant access by supplying a different account ID. Adapt expected failures to the response each caller needs.
 
 ### Extract a DTO mapper when reads share the conversion
 
@@ -568,7 +568,7 @@ In `order.queries.ts`, replace the direct `orderSummarySchema` import with `toOr
 ```ts
 // src/features/orders/server/order.queries.ts
 import 'server-only'
-import { requireAccount } from '@/features/identity/server/identity.queries'
+import { requireAccount } from '@/features/membership/server/membership.queries'
 import { database } from '@/platform/database/client'
 import { toOrderSummary } from './order.dto'
 
@@ -741,7 +741,7 @@ An order screen may need data during server rendering and then keep it updated i
 ```tsx
 // src/app/(authenticated)/orders/[orderId]/page.tsx
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
-import { requireAccount } from '@/features/identity/server/identity.queries'
+import { requireAccount } from '@/features/membership/server/membership.queries'
 import { getOrderDetails } from '@/features/orders/server/order.queries'
 import { orderDetailsOptions } from '@/features/orders/order.query-options'
 import { LiveOrderDetails } from '@/features/orders/ui/LiveOrderDetails'
@@ -806,7 +806,7 @@ Define the procedures beside the server operations they call:
 // src/features/orders/server/order.rpc.ts
 import 'server-only'
 import { ORPCError, os } from '@orpc/server'
-import { requireAccount } from '@/features/identity/server/identity.queries'
+import { requireAccount } from '@/features/membership/server/membership.queries'
 import { orderReferenceInputSchema, orderSummarySchema } from '../model/order.schema'
 import { getOrderDetails } from './order.queries'
 import { cancelOrderUseCase } from './cancel-order.use-case'

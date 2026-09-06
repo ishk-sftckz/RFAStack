@@ -1,6 +1,6 @@
 import { beforeAll, afterAll, expect, test } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { auth } from '@/features/identity/server/auth'
+import { authProvider } from '@/features/auth/server/auth.provider'
 import { database, pool } from '@/platform/database/client'
 import { order } from '@/features/orders/server/order.table'
 import { cancelOrder } from '@/features/orders/server/cancel-order.use-case'
@@ -10,7 +10,7 @@ let alice: Headers
 let bob: Headers
 
 async function sessionFor(email: string) {
-  const response = await auth.api.signInEmail({
+  const response = await authProvider.api.signInEmail({
     body: { email, password: 'Demo-password-123!' },
     asResponse: true,
   })

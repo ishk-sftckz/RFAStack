@@ -57,6 +57,8 @@ Matching `fetch` GET requests are memoized automatically during server rendering
 
 Use this mechanism when the problem is repeated work during one render. It does not need a tag to invalidate on the next request.
 
+A separate render wrapper is useful when the underlying operation also has callers that supply their own request context. When all callers run during rendering, expose one memoized query. The native example's `getOrder(orderId)` reads request headers internally, verifies membership, and retrieves the order. Both components import that same function; no forwarding export is needed.
+
 ## Understand data and route caching without Cache Components
 
 ### The Data Cache reuses opted-in server reads
@@ -127,7 +129,7 @@ For an order list whose display can tolerate briefly outdated data, the protecte
 import 'server-only'
 
 import { cacheLife, cacheTag } from 'next/cache'
-import { requireAccount } from '@/features/identity/server/identity.queries'
+import { requireAccount } from '@/features/membership/server/membership.queries'
 import { database } from '@/platform/database/client'
 import { orderSummarySchema } from '../model/order.schema'
 
@@ -160,7 +162,7 @@ This is a caching variant of the [protected order list](./protected-resources#ma
 
 Keep the helper unexported. Other features call `listOrders()` and receive its access checks. Next.js documents this pattern of resolving identity in an exported operation before passing an ID into a private cached function. Use stable IDs in keys and tags; keep session tokens and other secrets out of them. [Authentication with Cache Components](https://nextjs.org/docs/app/guides/authentication-with-cache-components#step-4-cache-session-derived-data)
 
-Ordinary `'use cache'` cannot read `cookies()` or `headers()`, including through a nested identity helper. Read request information outside its scope. Passing a verified account ID into the helper allows caching for that ID, although the dependency on the current request prevents this personalized result from being part of the shared static shell. [Runtime APIs and caching](https://nextjs.org/docs/app/getting-started/caching#passing-runtime-values-to-cached-functions)
+Ordinary `'use cache'` cannot read `cookies()` or `headers()`, including through a nested membership query. Read request information outside its scope. Passing a verified account ID into the helper allows caching for that ID, although the dependency on the current request prevents this personalized result from being part of the shared static shell. [Runtime APIs and caching](https://nextjs.org/docs/app/getting-started/caching#passing-runtime-values-to-cached-functions)
 
 Render the protected read under a boundary that can wait for the account:
 
@@ -219,7 +221,7 @@ async function PrivateOrders() {
 }
 ```
 
-The query still establishes the account and scopes the read. Its identity helper may access request headers within this private scope. The illustrative 30-second stale time permits browser reuse; it does not reduce database work on a new server render.
+The query still establishes the account and scopes the read. Its membership query may access request headers within this private scope. The illustrative 30-second stale time permits browser reuse; it does not reduce database work on a new server render.
 
 Use this when browser reuse is acceptable and the request-dependent work belongs together. Keep mutation checks on current data, and refresh affected UI after writes or account changes.
 
@@ -246,7 +248,7 @@ For the cached order list above, extend the existing Server Action after the use
 'use server'
 
 import { refresh, updateTag } from 'next/cache'
-import { requireAccount } from '@/features/identity/server/identity.queries'
+import { requireAccount } from '@/features/membership/server/membership.queries'
 import { cancelOrderInputSchema } from '../model/order.schema'
 import { cancelOrderUseCase } from './cancel-order.use-case'
 

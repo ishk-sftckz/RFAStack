@@ -20,7 +20,7 @@ Robert C. Martin’s [Screaming Architecture](https://blog.cleancoder.com/uncle-
 ```text
 src/features/
   billing/
-  identity/
+  membership/
   orders/
   reporting/
 ```
