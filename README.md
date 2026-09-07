@@ -1,4 +1,4 @@
-![RFAStack architecture guide preview](docs/public/social-preview.png)
+![RFAStack architecture guide preview](docs/public/readme-cover.png)
 
 # RFAStack
 
