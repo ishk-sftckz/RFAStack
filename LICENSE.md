@@ -8,7 +8,7 @@ Executable application source in `examples/`, configuration, Vue components, sty
 
 ## Writing and visual material
 
-Original prose, documentation examples, diagrams, the architecture map, favicon, wordmark, and social-preview artwork are licensed under [Creative Commons Attribution 4.0 International](LICENSE-CONTENT).
+Original prose, documentation examples, agent skill instructions and references, diagrams, the architecture map, favicon, wordmark, and social-preview artwork are licensed under [Creative Commons Attribution 4.0 International](LICENSE-CONTENT).
 
 Required attribution: **RFAStack by Ishk**
 

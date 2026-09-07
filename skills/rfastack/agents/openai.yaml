@@ -1,0 +1,4 @@
+interface:
+  display_name: "RFAStack"
+  short_description: "Plan and build Next.js apps with RFAStack"
+  default_prompt: "Use $rfastack to plan or implement this Next.js change using RFAStack conventions."

@@ -41,6 +41,32 @@ Follow the guides in order, or start with the decision you're working on:
 
 The [three runnable applications](./examples/README.md) demonstrate native Next.js, React Query with a separate HTTP backend, and React Query with oRPC. Each has its own PostgreSQL setup, seeded login accounts, and tests.
 
+## Use RFAStack with an agent
+
+The [RFAStack skill](./skills/rfastack/SKILL.md) guides planning, implementation, and refactoring in your Next.js application. It includes the architecture references it needs and follows your project's configuration, so you can use it without a local RFAStack checkout.
+
+Run this command from your application to install it through the [skills CLI](https://github.com/vercel-labs/skills):
+
+```bash
+bunx skills add ishk-sftckz/RFAStack --skill rfastack
+```
+
+Use `npx skills` in place of `bunx skills` if you use npm. To make the skill available across your projects, add `--global`. To select an agent directly, add `--agent codex`, `--agent claude-code`, or another supported agent name. For example:
+
+```bash
+bunx skills add ishk-sftckz/RFAStack --skill rfastack --global --agent codex
+```
+
+Once installed, ask your agent to use the RFAStack skill. In Codex:
+
+```text
+Use $rfastack to plan an order-cancellation feature in this application.
+Use $rfastack to implement the approved plan.
+Use $rfastack to refactor this feature while preserving its existing behavior.
+```
+
+For manual installation, copy the entire `skills/rfastack` folder into your agent's skills directory, including `references/`. [skills.sh lists skills automatically](https://skills.sh/docs/faq#how-do-i-get-my-skill-listed-on-the-leaderboard) from CLI installation telemetry; publishing the folder on GitHub makes it installable before it appears in the directory.
+
 ## Contributing
 
 Corrections and clearer examples are welcome. For a substantial architectural or editorial change, open an issue describing the failure mode, your proposed change, and its tradeoffs. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
