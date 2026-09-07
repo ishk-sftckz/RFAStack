@@ -2,6 +2,8 @@
 
 Use these roles when adding or moving modules. The orders filenames illustrate the convention; create only the files the feature needs.
 
+Framework entry files follow Next.js discovery rules. Place `src/proxy.ts` beside `app`, with request matching and early redirects at that boundary. Keep feature authorization in public operations. See [resource protection](resource-protection.md).
+
 | Path within `features/orders/` | Responsibility and creation condition |
 | --- | --- |
 | `ui/OrderDetails.tsx` | Feature presentation; component name matches the PascalCase filename. Both Server and Client Components belong in `ui/`. |

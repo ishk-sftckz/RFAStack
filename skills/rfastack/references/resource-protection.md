@@ -28,6 +28,8 @@ Proxy checks remain lightweight. Cookie presence can guide a redirect but cannot
 
 ## Better Auth, when selected
 
+Place `src/proxy.ts` beside `app` as a framework entry point. Keep literal matchers scoped to the pages needing early redirects, with login, auth endpoints, and framework assets reachable. API endpoints enforce access through their own transport. Proxy may import `getSessionCookie` from `better-auth/cookies` with the provider's configured cookie prefix; keep provider instances, membership queries, and resource operations out of this lightweight check. Test missing and empty cookies, ordinary and secure cookie names, and rejection of forged or expired sessions by protected operations.
+
 Put the browser provider client in `platform/auth/client.ts` and a provider factory in `platform/auth/server.ts`. The auth feature supplies its tables and assembles `auth.provider.ts`. Mount that instance in the auth HTTP entry point; other features call `auth.queries.ts`. Platform must remain free of feature imports.
 
 Distinguish Better Auth's linked login `Account` from an application's business account or tenant. Choose session-cache policy in auth; operations requiring current session storage checks can bypass cookie caching using the provider's supported API. Verify options against the installed provider version. [Better Auth database model](https://better-auth.com/docs/concepts/database#account), [session management](https://better-auth.com/docs/concepts/session-management)

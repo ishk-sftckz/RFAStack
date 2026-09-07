@@ -17,6 +17,8 @@ src/
   shared/       # Code with generic behavior across features
 ```
 
+Next.js also requires some framework entry files outside these directories. Put `src/proxy.ts` beside `src/app` for [early route redirects](./protected-resources#use-proxy-for-early-redirects). Keep its work limited to the request boundary. [Next.js Proxy convention](https://nextjs.org/docs/app/api-reference/file-conventions/proxy)
+
 Review imports as well as file placement.
 
 Follow the ownership, placement, and dependency rules from the first feature. Put operation modules directly in the feature root, with presentation in `ui/` and schemas and pure rules in `model/`. Repositories and separate mappers are additional abstractions with their own conditions for use.

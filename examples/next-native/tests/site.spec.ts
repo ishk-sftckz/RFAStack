@@ -1,6 +1,53 @@
 import { test, expect, type Page } from '@playwright/test'
 import { Pool } from 'pg'
 
+test('proxy redirects missing, empty, and unrelated cookies on protected paths', async ({
+  request,
+}) => {
+  for (const cookie of [
+    '',
+    'rfa-customer.session_token=',
+    '__Secure-rfa-customer.session_token=',
+    'better-auth.session_token=unverified',
+  ]) {
+    for (const path of ['/account', '/account/preferences', '/orders/example']) {
+      const response = await request.get(path, {
+        headers: { Cookie: cookie },
+        maxRedirects: 0,
+      })
+      expect(response.status()).toBe(307)
+      expect(new URL(response.headers().location, response.url()).href).toBe(
+        new URL('/sign-in', response.url()).href,
+      )
+    }
+  }
+})
+
+for (const cookieName of ['rfa-customer.session_token', '__Secure-rfa-customer.session_token']) {
+  test(`protected operations reject a forged ${cookieName} cookie`, async ({ page, request }) => {
+    const headers = { Cookie: `${cookieName}=forged-session` }
+    // A matched but nonexistent page reaches routing when the cookie is present.
+    const earlyResponse = await request.get('/account/proxy-probe', {
+      headers,
+      maxRedirects: 0,
+    })
+    expect(earlyResponse.status()).toBe(404)
+
+    await page.setExtraHTTPHeaders(headers)
+    await page.goto('/account')
+    await expect(page).toHaveURL(/\/sign-in$/)
+    await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
+    await expect(page.getByText('Signed in as', { exact: false })).toHaveCount(0)
+
+    const response = await request.get('/api/auth/get-session', {
+      headers,
+      maxRedirects: 0,
+    })
+    expect(response.status()).toBe(200)
+    expect(await response.json()).toBeNull()
+  })
+}
+
 async function login(page: Page, name = 'alice') {
   await page.goto('/sign-in')
   await page.getByLabel('Email', { exact: true }).fill(`${name}@example.test`)

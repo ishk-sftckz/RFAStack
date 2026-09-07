@@ -33,6 +33,8 @@ Keep those decisions with the code that owns them. The orders feature must enfor
 
 Next.js 16 renamed Middleware to Proxy. Its `matcher` configuration determines which request paths run through it. [Next.js Proxy reference](https://nextjs.org/docs/app/api-reference/file-conventions/proxy)
 
+Place `proxy.ts` beside `app` in `src`, where Next.js discovers it. Treat it as a framework entry point: it owns request matching and redirects. Importing Better Auth's cookie helper here fits that responsibility; importing `auth.provider.ts`, membership queries, or resource operations would pull feature work into this early check.
+
 We recommend Proxy for authenticated application areas. It gives you one place to direct signed-out visitors to login before rendering those routes. Next.js treats this layer as optional and recommends lightweight checks because Proxy can also run for prefetched routes. [Next.js authentication guidance](https://nextjs.org/docs/app/guides/authentication#optimistic-checks-with-proxy-optional)
 
 Keep resource-specific decisions in the feature operation. Checking order ownership in Proxy would tie the rule to URL matching and repeat it for every transport that exposes the same operation.
@@ -59,7 +61,9 @@ export const config = {
 
 This example uses Better Auth's default cookie configuration. Match any custom cookie name or prefix in `getSessionCookie()` too. Cookie presence only decides this redirect: an expired or forged cookie can pass it, so the protected operation must still verify the session. [Better Auth Proxy integration](https://better-auth.com/docs/integrations/next#auth-protection)
 
-When you add a protected route, include it in the route policy. Also verify that its underlying operations reject unauthorized access independently.
+Keep matcher paths literal so Next.js can analyze them at build time. This matcher leaves login, auth endpoints, and framework assets outside the redirect check. When you add a protected page, include its URL in the matcher; route groups such as `(authenticated)` do not add a URL segment. API endpoints should report authentication failures through their own transport.
+
+Check that missing and empty session cookies redirect, both ordinary and secure cookie names work, and forged or expired cookies still fail session verification in the protected operation. Keep login reachable when a stale cookie is present so the visitor can sign in again.
 
 A static private document needs separate attention: access must be enforced where the document is served. An application query cannot protect a file that users can retrieve directly from a public URL. [OWASP guidance on static resources](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html#enforce-authorization-checks-on-static-resources)
 
