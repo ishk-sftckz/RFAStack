@@ -43,7 +43,7 @@ The [three runnable applications](./examples/README.md) demonstrate native Next.
 
 ## Use RFAStack with an agent
 
-The [RFAStack skill](./skills/rfastack/SKILL.md) guides planning, implementation, and refactoring in your Next.js application. It includes the architecture references it needs and follows your project's configuration, so you can use it without a local RFAStack checkout.
+The [RFAStack skill](./skills/rfastack/SKILL.md) guides planning, implementation, and refactoring in your Next.js application.
 
 Run this command from your application to install it through the [skills CLI](https://github.com/vercel-labs/skills):
 
@@ -65,7 +65,7 @@ Use $rfastack to implement the approved plan.
 Use $rfastack to refactor this feature while preserving its existing behavior.
 ```
 
-For manual installation, copy the entire `skills/rfastack` folder into your agent's skills directory, including `references/`. [skills.sh lists skills automatically](https://skills.sh/docs/faq#how-do-i-get-my-skill-listed-on-the-leaderboard) from CLI installation telemetry; publishing the folder on GitHub makes it installable before it appears in the directory.
+[View on skills.sh](https://skills.sh/ishk-sftckz/rfastack/rfastack).
 
 ## Contributing
 

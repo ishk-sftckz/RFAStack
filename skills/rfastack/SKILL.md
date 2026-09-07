@@ -8,11 +8,9 @@ license: CC-BY-4.0
 
 Guide the requested Next.js work with explicit feature ownership and public operations. Apply the conventions to the affected behavior; preserve the user's scope and the target application's documented choices.
 
-The target is the user's application workspace. Resolve bundled reference links relative to this skill's installation directory; resolve application paths relative to the target project. The skill works without a local RFAStack checkout.
-
 ## Establish the target and the operation
 
-Read the target application's agent instructions, package manifest, Next.js configuration, and nearest relevant feature. Identify its router, runtime, import aliases, validation library, auth provider, and data strategy. Use that application's package manager and checks; the RFAStack documentation site's Bun version and GitHub Pages base path are not application requirements.
+Read the target application's agent instructions, package manifest, Next.js configuration, and nearest relevant feature. Identify its router, runtime, import aliases, validation library, auth provider, and data strategy. Use that application's package manager and checks.
 
 For each affected operation, identify its business owner, whether it reads or mutates, who calls it, and what must update afterward. Trace existing callers before moving an operation. For a new application, choose a consistent data strategy from [data paths](references/data-paths.md); for an existing one, preserve its strategy unless the requested work changes it.
 
@@ -81,4 +79,4 @@ Use a production build when checking Next.js cache behavior. Report what changed
 
 Adapted from [RFAStack by Ishk](https://github.com/ishk-sftckz/RFAStack), guide snapshot `73ae7c1`. This skill's prose and documentation examples are licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). This license does not change the consuming application's license.
 
-The bundled references contain the conventions needed to use the skill outside the RFAStack checkout. Consult the linked upstream guides when a case needs more detail. When maintaining this skill, compare it with the current guides and update affected references and this source revision together.
+Consult the linked upstream guides when a case needs more detail. When maintaining this skill, compare it with the current guides and update affected references and this source revision together.
