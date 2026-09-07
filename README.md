@@ -57,14 +57,6 @@ Use `npx skills` in place of `bunx skills` if you use npm. To make the skill ava
 bunx skills add ishk-sftckz/RFAStack --skill rfastack --global --agent codex
 ```
 
-Once installed, ask your agent to use the RFAStack skill. In Codex:
-
-```text
-Use $rfastack to plan an order-cancellation feature in this application.
-Use $rfastack to implement the approved plan.
-Use $rfastack to refactor this feature while preserving its existing behavior.
-```
-
 [View on skills.sh](https://skills.sh/ishk-sftckz/rfastack/rfastack).
 
 ## Contributing
