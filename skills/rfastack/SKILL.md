@@ -1,7 +1,6 @@
 ---
 name: rfastack
 description: "Apply RFAStack conventions when planning, building, or refactoring full-stack React applications with Next.js. Use when the user requests RFAStack or the target project adopts it, including feature ownership, module placement, data paths, authorization, and caching."
-license: CC-BY-4.0
 ---
 
 # RFAStack
@@ -74,9 +73,3 @@ Inspect changed imports for both ownership and server/browser compatibility. Run
 - Refactored callers retain their expected routes, payloads, UI states, and behavior.
 
 Use a production build when checking Next.js cache behavior. Report what changed, the checks actually run, and any unresolved deviations. Mark an unrun check as unverified.
-
-## Source and attribution
-
-Adapted from [RFAStack by Ishk](https://github.com/ishk-sftckz/RFAStack), guide snapshot `73ae7c1`. This skill's prose and documentation examples are licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). This license does not change the consuming application's license.
-
-Consult the linked upstream guides when a case needs more detail. When maintaining this skill, compare it with the current guides and update affected references and this source revision together.

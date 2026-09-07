@@ -32,6 +32,6 @@ Playwright builds and serves the documentation through `playwright.config.ts`; d
 - Keep the approved tagline exact: “An Opinionated React Fullstack Architecture for Next.js Applications.”
 - Public-facing copy and content: read and follow `VOICE.md`, then use the `copy-editing` and `no-ai-slop` skills before finalizing it.
 - Follow `CONTRIBUTING.md` terminology and cite primary sources for claims about framework behavior.
-- When changing architecture guidance, update the affected `skills/rfastack/references/` files and the skill's source revision together.
+- When changing architecture guidance, update the affected `skills/rfastack/references/` files and the source revision in `skills/rfastack/LICENSE.md` together.
 - Preserve the MIT boundary for source code and CC BY 4.0 boundary for prose, examples, diagrams, and visual assets.
 - Put publication-copy checks in `tests/publication.spec.ts`, route and interaction checks in `tests/site.spec.ts`, and WCAG checks in `tests/accessibility.spec.ts`.
