@@ -899,7 +899,7 @@ This link sends browser requests to the same origin, using the application’s s
 The orders feature supplies its own client type and query utilities:
 
 ```ts
-// src/features/orders/order.client.ts
+// src/features/orders/order.rpc-client.ts
 import { createORPCClient } from '@orpc/client'
 import type { RouterClient } from '@orpc/server'
 import { createTanstackQueryUtils } from '@orpc/tanstack-query'
@@ -923,7 +923,7 @@ The files have these responsibilities:
 | `app/api/rpc/router.ts` | Assemble feature procedures into the application API |
 | `app/api/rpc/[...rest]/route.ts` | Expose the API through HTTP |
 | `platform/rpc/client.ts` | Shared browser transport |
-| `features/orders/order.client.ts` | Typed order client and TanStack Query utilities |
+| `features/orders/order.rpc-client.ts` | Typed order client and TanStack Query utilities |
 
 The schema file is shared with browser code, so it must stay free of server-only dependencies. Other features running on the server can still call the public queries and use cases directly. Adding the API doesn’t make repositories or internal mappers public; those remain behind the operations described in the [folder dependency rules](./folder-structure#keep-operation-modules-at-the-feature-root).
 
@@ -933,7 +933,7 @@ The earlier options factory defined the HTTP request and query key by hand. oRPC
 
 ```ts
 // src/features/orders/order.query-options.ts
-import { orpc } from './order.client'
+import { orpc } from './order.rpc-client'
 import type { OrderReferenceInput } from './model/order.schema'
 
 export function orderDetailsOptions(input: OrderReferenceInput) {
@@ -954,7 +954,7 @@ The cancellation control calls the procedure, then invalidates order queries aft
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { orpc } from '../order.client'
+import { orpc } from '../order.rpc-client'
 import type { OrderReferenceInput } from '../model/order.schema'
 
 export function CancelOrderButton(input: OrderReferenceInput) {

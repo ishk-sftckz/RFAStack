@@ -897,7 +897,7 @@ This link sends browser requests to the same origin, using the application’s s
 The orders feature supplies its own client type and query utilities:
 
 ```ts
-// src/features/orders/order.client.ts
+// src/features/orders/order.rpc-client.ts
 import { createORPCClient } from '@orpc/client'
 import type { RouterClient } from '@orpc/server'
 import { createTanstackQueryUtils } from '@orpc/tanstack-query'
@@ -921,7 +921,7 @@ The files have these responsibilities:
 | `app/api/rpc/router.ts` | Assemble feature procedures into the application API |
 | `app/api/rpc/[...rest]/route.ts` | Expose the API through HTTP |
 | `platform/rpc/client.ts` | Shared browser transport |
-| `features/orders/order.client.ts` | Typed order client and TanStack Query utilities |
+| `features/orders/order.rpc-client.ts` | Typed order client and TanStack Query utilities |
 
 Keep shared runtime schemas free of server-only dependencies. Other features call public server queries and use cases directly; repositories and internal mappers remain private. This follows the [folder dependency rules](../docs/folder-structure.md#keep-feature-server-operations-in-server).
 
@@ -931,7 +931,7 @@ Replace the earlier manual HTTP options factory with the oRPC version. Keep the 
 
 ```ts
 // src/features/orders/order.query-options.ts
-import { orpc } from './order.client'
+import { orpc } from './order.rpc-client'
 import type { OrderReferenceInput } from './model/order.schema'
 
 export function orderDetailsOptions(input: OrderReferenceInput) {
@@ -952,7 +952,7 @@ The cancellation control calls the procedure, then invalidates order queries aft
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { orpc } from '../order.client'
+import { orpc } from '../order.rpc-client'
 import type { OrderReferenceInput } from '../model/order.schema'
 
 export function CancelOrderButton(input: OrderReferenceInput) {

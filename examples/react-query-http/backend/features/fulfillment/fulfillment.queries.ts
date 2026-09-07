@@ -1,22 +1,20 @@
 import { asc, eq } from 'drizzle-orm'
 import { database } from '@backend/platform/database/client'
-import { requireMembership } from '@backend/features/membership/membership.queries'
+import { withMembership } from '@backend/features/membership/membership.queries'
 import { shipment, product } from './fulfillment.table'
 import { shipmentSchema, productSchema } from './model/fulfillment.schema'
 
-export async function listShipments(requestHeaders: Headers) {
-  const membership = await requireMembership(requestHeaders)
-
+export const listShipments = withMembership(async ({ scopeId }) => {
   return shipmentSchema
     .array()
     .parse(
       await database
         .select()
         .from(shipment)
-        .where(eq(shipment.warehouseId, membership.scopeId))
+        .where(eq(shipment.warehouseId, scopeId))
         .orderBy(asc(shipment.id)),
     )
-}
+})
 
 export async function listProducts() {
   return productSchema.array().parse(await database.select().from(product).orderBy(asc(product.id)))

@@ -47,6 +47,27 @@ To follow checkout, open these files in order:
 Cancellation rules live in `src/features/orders/cancel-order.use-case.ts`. Change the rule there,
 then run the checks below.
 
+## Follow membership verification into the order reads
+
+Keep the related order reads in [order.queries.ts](src/features/orders/order.queries.ts). They use
+`withMembership`, exported beside `requireMembership` in
+[membership.queries.ts](src/features/membership/membership.queries.ts):
+
+```ts
+export const listOrders = withMembership(({ scopeId }) => listCachedOrders(scopeId))
+```
+
+Calling `listOrders(requestHeaders)` verifies the caller before the callback receives their
+membership. Its private cached helper receives only the authorized scope ID. The same wrapper
+protects the detail lookup and delivery estimate; orders still owns record scoping and safe result
+fields.
+
+`OrderDetails` and `OrderTotal` import the same memoized `getOrder(orderId)`. That render adapter
+supplies current headers to the private wrapped detail read, so both components share the result
+during one render. The
+[folder structure guide](https://ishk-sftckz.github.io/RFAStack/folder-structure#group-growing-order-reads-inside-the-feature)
+shows an optional split for larger query modules.
+
 ## Observe cache reads
 
 Server Actions invalidate affected tags after a write and refresh the route. The tracking button

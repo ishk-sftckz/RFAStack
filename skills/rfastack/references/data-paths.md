@@ -35,7 +35,7 @@ When hydrating, create a request-scoped server `QueryClient`, call the protected
 
 ## oRPC
 
-Keep procedures in `<entity>.rpc.ts`, app router assembly and HTTP mounting in `app`, generic transport in `platform/rpc/client.ts`, and the feature-typed client in `<entity>.client.ts`. A type-only procedure import can supply client typing without bundling its implementation; keep runtime server imports out of that client.
+Keep procedures in `<entity>.rpc.ts`, app router assembly and HTTP mounting in `app`, generic transport in `platform/rpc/client.ts`, and the feature-typed client in `<entity>.rpc-client.ts`. A type-only procedure import can supply client typing without bundling its implementation; keep runtime server imports out of that client.
 
 Use generated query or mutation options directly when sufficient. Add an options factory for a shared policy; add an API wrapper only when it contributes behavior. Preserve the application's actual endpoint and base path.
 

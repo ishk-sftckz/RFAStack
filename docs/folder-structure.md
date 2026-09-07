@@ -21,7 +21,7 @@ Next.js also requires some framework entry files outside these directories. Put 
 
 Review imports as well as file placement.
 
-Follow the ownership, placement, and dependency rules from the first feature. Put operation modules directly in the feature root, with presentation in `ui/` and schemas and pure rules in `model/`. Repositories and separate mappers are additional abstractions with their own conditions for use.
+Follow the ownership, placement, and dependency rules from the first feature. Start with operation modules directly in the feature root, with presentation in `ui/` and schemas and pure rules in `model/`. Group related operation modules inside the feature when they become difficult to follow at the root. Repositories and separate mappers are additional abstractions with their own conditions for use.
 
 ## Give each directory a responsibility
 
@@ -95,7 +95,7 @@ The implementation depends on your database and providers. Platform modules can 
 
 Feature server code imports the platform modules it needs. Platform code must not import features. Keep feature-specific database queries and repository adapters with the feature that owns them.
 
-For authentication, put the browser SDK client in `platform/auth/client.ts` and the provider factory in `platform/auth/server.ts`. The auth feature supplies its own tables to that factory and assembles the configured instance in `auth.provider.ts`. This lets auth own persistence without making platform import the feature. A typed client that binds membership's RPC procedures remains in `features/membership/membership.client.ts`; the common RPC transport belongs in `platform/rpc/client.ts`.
+For authentication, put the browser SDK client in `platform/auth/client.ts` and the provider factory in `platform/auth/server.ts`. The auth feature supplies its own tables to that factory and assembles the configured instance in `auth.provider.ts`. This lets auth own persistence without making platform import the feature. A typed client that binds membership's RPC procedures remains in `features/membership/membership.rpc-client.ts`; the common RPC transport belongs in `platform/rpc/client.ts`.
 
 ### `src/shared`: share code with generic behavior
 
@@ -296,13 +296,13 @@ For an application with that limit, a create-order schema could use `z.array(ord
 
 Keep the status values in `orderStatusSchema`; this example has no separate need for a status constants file. A label used by one component can stay in `ui/`. Provider URLs and credentials belong with server or platform configuration.
 
-## Keep operation modules at the feature root
+## Start operation modules at the feature root {#keep-operation-modules-at-the-feature-root}
 
-Put queries, Server Actions, use cases, and supporting modules directly in the feature root. Use filenames such as `order.queries.ts`, `order.actions.ts`, and `cancel-order.use-case.ts` to identify their responsibilities. Browser request functions and query options live alongside them when the feature needs those paths.
+Start queries, Server Actions, use cases, and supporting modules directly in the feature root. Use filenames such as `order.queries.ts`, `order.actions.ts`, and `cancel-order.use-case.ts` to identify their responsibilities. Browser request functions and query options live alongside them when the feature needs those paths.
 
 Sharing a directory does not make every module safe to import in the browser or public to other features. Keep runtime protection in the modules and import only the operations intended for each caller. As a feature grows, group a concern when its files become difficult to follow; keep the same runtime and public-import rules within that group.
 
-Expose queries and use cases as the feature’s public server operations. Routes and other features may import those functions directly. Keep repositories, internal DTO mappers, and helpers private to the feature. The [public-interface example](#expose-the-operations-and-components-callers-need) shows the allowed imports.
+Expose queries and use cases as the feature’s public server operations. Routes and other features may import those functions directly. Membership can also expose [its access wrapper](#share-membership-checks-through-the-query-module) from the query module. Keep repositories, internal DTO mappers, and implementation helpers private to the feature. The [public-interface example](#expose-the-operations-and-components-callers-need) shows the allowed imports.
 
 When using RPC, expose the procedure exports from `order.rpc.ts` for the application's router to mount. Cross-feature business calls still use public queries and use cases.
 
@@ -329,6 +329,56 @@ Always select the fields a caller may receive. A query can select and map those 
 The runnable order examples reuse `toOrderDto()` for list and detail results, so their mapper lives in `order.dto.ts`. It selects public fields and converts the stored date to an ISO string. Adding a column to the table does not automatically add it to the response.
 
 A repository uses the platform database client. Keep business decisions in the model or use case. If you need a replaceable repository, the feature owns both its contract and the adapter implementing it. The [concepts guide](./concepts#clean-architecture-keep-business-rules-independent-of-integrations) explains that optional separation.
+
+### Share membership checks through the query module
+
+Export `withMembership` beside `requireMembership` in `membership.queries.ts` when operations share the same membership check. This module exposes membership reads and the public wrapper that applies them. Keep the wrapper server-only and import it directly from that module.
+
+The native example keeps its related order reads in one `order.queries.ts`:
+
+```ts
+import { withMembership } from '@/features/membership/membership.queries'
+
+export const listOrders = withMembership(({ scopeId }) => listCachedOrders(scopeId))
+```
+
+The wrapper returns a function called as `listOrders(requestHeaders)`. On each invocation, it verifies membership before passing the verified member and any remaining arguments to the callback. A failed check prevents the callback from running. Orders still owns resource permissions, input validation, safe result fields, and caching; the private cached helper receives the authorized scope ID.
+
+See the [wrapper implementation](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/membership/membership.queries.ts) and [order reads](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/orders/order.queries.ts). Direct `requireMembership()` calls remain suitable when an operation needs the membership value as part of its workflow. The wrapper has no automatic cache policy. It shortens repeated access checks, but file splitting still depends on how easy the complete query module is to follow.
+
+### Group growing order reads inside the feature
+
+Keep one `order.queries.ts` while its reads are easy to follow together. When list filtering, detail retrieval, and reporting each need substantial implementation, split those concerns into separate query modules. If those modules crowd the feature root, group them in `queries/`:
+
+```text
+src/features/orders/
+  queries/
+    order-list.queries.ts       # List reads and their private helpers
+    order-details.queries.ts    # Detail reads and their private helpers
+    order-report.queries.ts     # Order reporting reads
+  order.actions.ts
+  cancel-order.use-case.ts
+  model/
+    order.schema.ts
+    order-cancellation.ts
+  ui/
+    OrderDetails.tsx
+    CancelOrderForm.tsx
+```
+
+This is a possible next structure for the smaller orders feature above. Add only the concerns your application has; a second short function alone does not require another file or folder. Grouping adds a directory level and longer import paths, so use it when keeping related reads together makes them easier to find.
+
+Keep the protected public read and its private helpers in the same query module. For example, `order-list.queries.ts` can export `listOrders(requestHeaders)` and keep `listCachedOrders(scopeId)` unexported. The public operation still verifies membership before calling its helper. A `.controller.ts` layer is unnecessary for this split: access checks, data retrieval, and safe result selection remain part of the public query. Actions, Route Handlers, and RPC procedures handle their respective request and response formats.
+
+Update callers to import the operation from its implementing module:
+
+```ts
+import { listOrders } from '@/features/orders/queries/order-list.queries'
+```
+
+Keep these modules under `features/orders/`; an application-wide `src/queries/` would separate order reads from the feature that owns them. Preserve direct imports, server-only markers, and private helpers after moving files. Other features can keep one query file at their root until they need a split of their own.
+
+This tree illustrates an optional structure for a larger feature. The native example keeps its list, detail, and delivery reads together in [order.queries.ts](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/orders/order.queries.ts), using `withMembership` for their shared access check.
 
 ### Follow a cancellation from the form to the stored order
 
@@ -434,7 +484,7 @@ import { cancelOrder } from '@/features/orders/order.actions'
 import { OrderDetails } from '@/features/orders/ui/OrderDetails'
 ```
 
-Implement the feature’s server reads in `order.queries.ts`. Keep related reads together and export the operations callers need directly from that module. The [data-fetching guide](./data-fetching-and-mutation#read-during-rendering-through-a-server-component) shows a query that calls the database and returns a DTO.
+Start the feature’s server reads in `order.queries.ts`. Keep related reads together and export the operations callers need directly from their implementing module, including after [splitting growing order reads](#group-growing-order-reads-inside-the-feature). The [data-fetching guide](./data-fetching-and-mutation#read-during-rendering-through-a-server-component) shows a query that calls the database and returns a DTO.
 
 The route obtains its inputs and calls that public query:
 
@@ -561,6 +611,8 @@ These are project conventions. Google's API guidelines use [`Get` for one resour
 “Data fetching” describes loading data. It does not require a `fetch` prefix or an HTTP call: Server Components can use an ORM or database client directly. [Next.js data fetching](https://nextjs.org/docs/app/getting-started/fetching-data)
 
 A feature query may use a database, cache, or external service internally and keep its `get` or `list` name. Keep library-defined names such as `findMany` and generated RPC methods as provided. A TanStack `queryFn` can call any function that returns a promise for data and rejects on failure; the function's name does not control that behavior. [TanStack query functions](https://tanstack.com/query/latest/docs/framework/react/guides/query-functions)
+
+Keep public query names such as `listOrders` and `getOrder` when adding caching. `Cached` is optional in private helper names: `listCachedOrders(scopeId)` emphasizes the cache boundary, while `listOrdersForScope(scopeId)` emphasizes the selected data. The caching guide uses the first form to make the boundary visible. Two functions in the same module still need distinct names; adding `cache()` or `'use cache'` does not establish a separate naming convention.
 
 ## Put components with the behavior they represent
 

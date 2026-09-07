@@ -2,7 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { membershipRpc } from '../membership.client'
+import { membershipRpc } from '../membership.rpc-client'
 
 export function Preferences({ preference }: { preference: string }) {
   const router = useRouter()

@@ -37,7 +37,19 @@ The React Server Component payload, or RSC payload, describes the server-rendere
 
 ## Reuse repeated reads within a server render
 
-When several Server Components need the same order, they can call one shared memoized query:
+Keep caching opt-in. Add React's `cache()` when several Server Components need the same read during one render. Choose `'use cache'` separately when a result can be reused across requests and you have defined its acceptable age and invalidation rules.
+
+| Decision | React cache() | Next.js 'use cache' |
+| --- | --- | --- |
+| What work should be reused? | Repeated calls with matching arguments during one server render. | A function's data or a component's output across requests, where cache storage permits. |
+| What happens on a new server request? | The function runs again when called. | A valid cached result can be reused. |
+| What controls freshness? | The request boundary. | `cacheLife` and invalidation after changes. |
+
+These are separate mechanisms. React describes [request memoization](https://react.dev/reference/react/cache); Next.js describes [cached scopes and storage](https://nextjs.org/docs/app/api-reference/directives/use-cache).
+
+In the native example, `OrderDetails` and `OrderTotal` both call `getOrder(orderId)`. They share one order read during the render. `listCachedOrders(scopeId)` uses `'use cache'` because the account page accepts a briefly outdated list, with invalidation after writes. Returning one order or a collection does not determine which cache to use.
+
+For repeated component reads, export one shared memoized query:
 
 ```ts
 // src/features/orders/order.queries.ts
@@ -51,13 +63,15 @@ export const getOrderDetailsForRender = cache(
 
 Add this alongside the protected `getOrderDetails` query from the [data-fetching guide](./data-fetching-and-mutation#fetch-where-a-server-component-needs-the-data). Every caller imports the same exported function. Primitive account and order IDs allow equivalent calls to match without sharing an input object.
 
-React `cache()` clears its stored results between server requests. It also memoizes errors. Calls outside React's cache context, including ordinary calls from a Route Handler, do not get this reuse. [React cache reference](https://react.dev/reference/react/cache)
+Repeated calls reuse the first result even if the database changes during the render. Errors are reused too: if `getOrder('123')` fails, another matching call rethrows that error instead of retrying. Object arguments match by identity: two newly created `{ orderId: '123' }` objects miss the cache. React clears these entries between requests; ordinary Route Handler calls are outside its cache context. [React cache reference](https://react.dev/reference/react/cache)
+
+Caching adds storage and lookup work. A read called once gains no deduplication benefit, so avoid wrapping every query by default. Keep mutations and reads that must execute afresh outside this memoized path.
 
 Matching `fetch` GET requests are memoized automatically during server rendering. This is separate from opting into storage across requests. Passing an `AbortController` signal opts out of that automatic memoization; Route Handlers are outside the React component tree. [Next.js fetch memoization](https://nextjs.org/docs/app/api-reference/functions/fetch#memoization)
 
 Use this mechanism when the problem is repeated work during one render. It does not need a tag to invalidate on the next request.
 
-A separate render wrapper is useful when the underlying operation also has callers that supply their own request context. When all callers run during rendering, expose one memoized query. The native example's `getOrder(orderId)` reads request headers internally, verifies membership, and retrieves the order. Both components import that same function; no forwarding export is needed.
+Once repeated reads justify memoization, choose where the wrapper belongs. A separate render wrapper is useful when the underlying operation also has callers that supply their own request context. If it only serves rendering, wrap the query directly. The native example's memoized `getOrder(orderId)` supplies current headers to a private read protected by `withMembership`. Both components import the same `getOrder` function, so they share its membership check and order result during the render.
 
 ## Understand data and route caching without Cache Components
 
@@ -190,6 +204,23 @@ async function Orders() {
 ```
 
 The heading can render before the account lookup and order list finish. Keep cancellation eligibility and other mutation checks on current stored data inside the [use case](./protected-resources#authorize-mutations-against-the-current-resource). A cached list supplies display data; it cannot establish whether a write is still allowed.
+
+### Combine the caches when the list has repeated render callers
+
+If two Server Components need `listOrders()` during one render, memoize the public query while keeping the private helper's `'use cache'` directive. Replace the exported function above with:
+
+```ts
+import { cache } from 'react'
+
+export const listOrders = cache(async () => {
+  const account = await requireAccount()
+  return listCachedOrdersForAccount(account.id)
+})
+```
+
+The outer cache shares the account check and list result during that render. On the next request, the query checks access again before consulting the inner cache. Keep authorization outside the helper that reuses data across requests. Next.js shows [authorization memoization during rendering](https://nextjs.org/docs/app/guides/authentication#creating-a-data-access-layer-dal) and [authorization before shared cached reads](https://nextjs.org/docs/app/guides/authentication-with-cache-components#step-4-cache-session-derived-data).
+
+The runnable native example instead accepts `listOrders(requestHeaders)`. If you wrap that signature in `cache()`, both components must pass the same `Headers` instance to share the result. Without the outer wrapper, each call checks membership even when the inner list cache hits. Add the wrapper when repeated callers need that reuse; keep the helper's existing lifetime and invalidation policy.
 
 ## Use private caching for request-dependent UI
 

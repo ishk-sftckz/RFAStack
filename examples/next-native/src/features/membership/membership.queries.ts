@@ -4,7 +4,7 @@ import { database } from '@/platform/database/client'
 import { AccessError } from '@/shared/utils/errors'
 import { requireSession } from '@/features/auth/auth.queries'
 import { membership } from './membership.table'
-import { membershipSchema } from './model/membership.schema'
+import { membershipSchema, type Membership } from './model/membership.schema'
 
 export async function requireMembership(requestHeaders: Headers) {
   const current = await requireSession(requestHeaders)
@@ -19,4 +19,13 @@ export async function requireMembership(requestHeaders: Headers) {
   }
 
   return membershipSchema.parse({ ...member, name: current.name })
+}
+
+export function withMembership<Args extends unknown[], Result>(
+  operation: (member: Membership, ...args: Args) => Promise<Result>,
+) {
+  return async (requestHeaders: Headers, ...args: Args): Promise<Result> => {
+    const member = await requireMembership(requestHeaders)
+    return operation(member, ...args)
+  }
 }

@@ -170,8 +170,14 @@ const cases = [
     true,
   ],
   [
+    'client may import an RPC client across features',
+    'src/features/checkout/ui/CheckoutSummary.tsx',
+    "'use client'; import { orders } from '@/features/orders/order.rpc-client'",
+    true,
+  ],
+  [
     'client may import RPC types',
-    'src/features/orders/order.client.ts',
+    'src/features/orders/order.rpc-client.ts',
     "'use client'; import type { orderRouter } from './order.rpc'",
     true,
   ],
@@ -202,7 +208,7 @@ test('client imports respect server-only markers on ordinary feature helpers', (
       "import 'server-only'; export const token = 'private'",
     )
     writeFileSync(
-      join(feature, 'order.client.ts'),
+      join(feature, 'order.rpc-client.ts'),
       "'use client'; import { token } from './credential'",
     )
     const result = spawnSync('bun', [checker], { cwd: directory, encoding: 'utf8' })

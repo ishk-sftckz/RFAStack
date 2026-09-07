@@ -14,6 +14,30 @@ const cases = [
     true,
   ],
   [
+    'grouped public query across features',
+    'src/features/checkout/checkout.use-case.ts',
+    "import { listOrders } from '@/features/orders/queries/order-list.queries'",
+    true,
+  ],
+  [
+    'grouped query can use its own private mapper',
+    'src/features/orders/queries/order-list.queries.ts',
+    "import { toOrderDto } from '../order.dto'",
+    true,
+  ],
+  [
+    'grouped private helper stays inside its feature',
+    'src/features/checkout/checkout.use-case.ts',
+    "import { read } from '@/features/orders/queries/order-list-helper'",
+    false,
+  ],
+  [
+    'client cannot import a grouped server read',
+    'src/app/page.tsx',
+    "'use client'; import { listOrders } from '@/features/orders/queries/order-list.queries'",
+    false,
+  ],
+  [
     'public action from a client',
     'src/app/page.tsx',
     "'use client'; import { cancel } from '@/features/orders/order.actions'",

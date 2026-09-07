@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { orders } from '../order.client'
+import { orders } from '../order.rpc-client'
 import { orderListOptions } from '../order.query-options'
 import type { Membership } from '@/features/membership/model/membership.schema'
 import { formatCurrency } from '@/shared/utils/currency'

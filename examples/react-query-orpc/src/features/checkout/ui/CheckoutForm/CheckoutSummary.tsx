@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import type { Product } from '@/features/catalog/model/catalog.schema'
-import { orders } from '@/features/orders/order.client'
+import { orders } from '@/features/orders/order.rpc-client'
 import { orderListOptions } from '@/features/orders/order.query-options'
 import { formatCurrency } from '@/shared/utils/currency'
 

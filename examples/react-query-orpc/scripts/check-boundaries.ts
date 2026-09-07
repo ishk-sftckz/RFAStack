@@ -60,7 +60,7 @@ for (const [file, source] of modules) {
     const publicFeatureModule =
       publicServerOperation ||
       ['ui', 'model'].includes(to[3]) ||
-      /\.(api|client|query-options|mutation-options)(\.[cm]?tsx?)?$/.test(target)
+      /\.(api|client|rpc-client|query-options|mutation-options)(\.[cm]?tsx?)?$/.test(target)
 
     if (
       foreignFeature &&

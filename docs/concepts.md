@@ -100,7 +100,7 @@ Add an entity, aggregate, repository, or domain service when it clarifies behavi
 | 6. Make runtime boundaries visible | Mark server-only implementation with `import 'server-only'`. Place `'use client'` at the smallest useful interactive boundary. |
 | 7. Separate required roles from optional abstractions | Apply ownership and dependency rules immediately. Create modules for the responsibilities present; add repository abstractions and separate mappers for a concrete need. |
 
-A public interface consists of the operations and components a feature exposes to callers. Export operations directly from their implementing modules at the feature root. That directory contains both public operations and private supporting code:
+A public interface consists of the operations and components a feature exposes to callers. Export operations directly from their implementing modules within the feature. Start those modules at the feature root, where public operations and private supporting code can live together:
 
 ```ts
 // ✅ Import the feature's public server query.
@@ -110,7 +110,7 @@ import { getOrderDetails } from '@/features/orders/order.queries'
 import { getOrderDetails } from '@/features/orders/internal/query-builder'
 ```
 
-Keep Server and Client Components together in the feature’s `ui/`, with operations at the feature root and pure rules in `model/`. A Server Component can call a query directly, while a form can submit through a Server Action. Next.js documents how [`'use client'` and `server-only` establish and protect runtime boundaries](https://nextjs.org/docs/app/getting-started/server-and-client-components). Imports, directives, and markers govern those boundaries independently of the folder layout.
+Keep Server and Client Components together in the feature’s `ui/`, with pure rules in `model/`. As operation modules grow, [group related order reads inside the feature](./folder-structure#group-growing-order-reads-inside-the-feature). A Server Component can call a query directly, while a form can submit through a Server Action. Next.js documents how [`'use client'` and `server-only` establish and protect runtime boundaries](https://nextjs.org/docs/app/getting-started/server-and-client-components). Imports, directives, and markers govern those boundaries independently of the folder layout.
 
 ## Start cross-feature work with a direct public call
 

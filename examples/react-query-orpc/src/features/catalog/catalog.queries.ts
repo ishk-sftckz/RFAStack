@@ -4,15 +4,11 @@ import { headers } from 'next/headers'
 import { asc, eq } from 'drizzle-orm'
 import { database } from '@/platform/database/client'
 import { traceRead } from '@/platform/observability/trace'
-import { requireMembership } from '@/features/membership/membership.queries'
+import { withMembership } from '@/features/membership/membership.queries'
 import { product } from './catalog.table'
 import { productSchema } from './model/catalog.schema'
 
-export async function listProducts(requestHeaders: Headers) {
-  const membership = await requireMembership(requestHeaders)
-
-  return listCachedProducts(membership.scopeId)
-}
+export const listProducts = withMembership(({ scopeId }) => listCachedProducts(scopeId))
 
 async function listCachedProducts(scopeId: string) {
   'use cache'
@@ -32,19 +28,20 @@ async function listCachedProducts(scopeId: string) {
     )
 }
 
-export async function listCurrentProducts(requestHeaders: Headers) {
-  const membership = await requireMembership(requestHeaders)
-
+export const listCurrentProducts = withMembership(async ({ scopeId }) => {
   return productSchema
     .array()
-    .parse(await database.select().from(product).where(eq(product.scopeId, membership.scopeId)))
-}
+    .parse(await database.select().from(product).where(eq(product.scopeId, scopeId)))
+})
 
 export async function getRecommendations() {
   'use cache: private'
 
   cacheLife({ stale: 30 })
-  const membership = await requireMembership(await headers())
+  return getRecommendationsForRequest(await headers())
+}
+
+const getRecommendationsForRequest = withMembership(async (membership) => {
   cacheTag(`preferences:${membership.userId}`)
   traceRead('suggested-reorders', membership.scopeId)
 
@@ -61,4 +58,4 @@ export async function getRecommendations() {
           .limit(2),
       ),
   }
-}
+})

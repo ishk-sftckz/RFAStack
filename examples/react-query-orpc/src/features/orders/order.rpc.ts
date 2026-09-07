@@ -27,7 +27,7 @@ export const orderRouter = {
   details: procedure
     .input(orderInputSchema)
     .output(orderSchema)
-    .handler(({ input, context }) => getOrder(input, context.headers)),
+    .handler(({ input, context }) => getOrder(context.headers, input)),
   submit: procedure
     .input(checkoutSchema)
     .output(z.object({ id: z.string() }))

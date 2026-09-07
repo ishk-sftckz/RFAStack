@@ -4,6 +4,8 @@ Inspect the installed Next.js version, `next.config`, and deployment runtime bef
 
 For each affected cached read, identify the stored result, its authorized visibility scope, acceptable age, key inputs, and all mutations that change it. Identify whether the visible value is owned by server rendering, a browser query, or both.
 
+Keep caching opt-in. Add React `cache()` for repeated reads in one server render; do not wrap every public query by default. Add `'use cache'` separately when cross-request reuse has an explicit freshness and invalidation policy. Collection versus single-resource naming does not determine the mechanism.
+
 | Mechanism | Use and boundary |
 | --- | --- |
 | React `cache()` | Repeated work in one React server request context. Share the same memoized function and stable arguments. Ordinary Route Handler calls do not receive this React-context reuse. |
@@ -14,6 +16,10 @@ For each affected cached read, identify the stored result, its authorized visibi
 | TanStack Query | Results owned by a `QueryClient` and indexed by query keys. |
 
 React memoization is request-scoped; it is not persistent server storage. An uncached fetch also does not by itself prove that every visit renders fresh output. [React cache](https://react.dev/reference/react/cache), [Next.js caching without Cache Components](https://nextjs.org/docs/app/guides/caching-without-cache-components)
+
+Matching React calls reuse results and errors; another call is not a fresh read or retry. Object arguments, including `Headers`, require the same instance. A single call gains no deduplication benefit. Keep mutations and reads requiring fresh execution outside memoized render queries. [React cache caveats](https://react.dev/reference/react/cache#caveats)
+
+When repeated render callers justify it, wrap the query directly if it only serves rendering; otherwise expose a shared render wrapper for those callers. Both layers may coexist: React `cache()` around the public protected query shares its access check within the render, while a private `'use cache'` helper reuses authorized data across requests. Each new request still checks access before the shared helper. Preserve the helper's lifetime, scope key, and invalidation rules. [Next.js authorization memoization](https://nextjs.org/docs/app/guides/authentication#creating-a-data-access-layer-dal), [shared cached reads](https://nextjs.org/docs/app/guides/authentication-with-cache-components#step-4-cache-session-derived-data)
 
 ## Scope protected cached results
 

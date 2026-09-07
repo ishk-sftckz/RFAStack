@@ -19,10 +19,18 @@ Framework entry files follow Next.js discovery rules. Place `src/proxy.ts` besid
 | `order.query-options.ts` | Reusable TanStack query definitions, when using a client query cache. |
 | `order.mutation-options.ts` | Shared mutation configuration when multiple consumers need it. |
 | `order.rpc.ts` | RPC procedures adapting requests to public feature operations. |
-| `order.client.ts` | Feature-typed RPC client and query utilities, when using that integration. |
+| `order.rpc-client.ts` | Feature-typed RPC client and query utilities, when using that integration. |
 | `order.repository.ts` | Private persistence shared by operations or substituted in tests. Direct database calls in queries and use cases remain valid. |
 | `order.dto.ts` | Private server mapper when conversion is shared or needs separation for clarity. Always select safe fields, including when mapping inline. |
 | `order.table.ts` | Feature-owned table declarations, when using schema-as-code persistence. |
+
+## Group query modules when the feature needs it
+
+Start with `order.queries.ts`. Split by concern when list, detail, or reporting reads need substantial implementation; several short functions may stay together. When the split modules crowd the root, group them in `features/orders/queries/` as `order-list.queries.ts`, `order-details.queries.ts`, and `order-report.queries.ts`. Create only the concerns the application has. A single small query module needs no extra directory.
+
+Keep each protected public read and its private helpers together in its query module. File growth alone does not justify a `.controller.ts` layer. Preserve access checks and safe result selection in public reads, and transport adaptation in actions, Route Handlers, or RPC procedures.
+
+Update callers to import directly from the implementing module, such as `@/features/orders/queries/order-list.queries`. Preserve server-only markers and private implementation boundaries. Keep grouping within the owning feature; do not collect different features' reads in an application-wide `src/queries/`. Other features may retain their smaller structure.
 
 ## Keep model code independent
 
@@ -35,6 +43,8 @@ Name extracted behavior after its concern, such as `order-pricing.ts`. Related s
 ## Expose deliberate imports
 
 Use explicit imports such as `@/features/orders/order.queries` or `@/features/orders/cancel-order.use-case`. A server export is public to other application modules without being a browser endpoint. Keep UI, actions, and server reads in distinct imports so their runtime constraints stay visible.
+
+Keep the public `withMembership` access wrapper beside `requireMembership` in `membership.queries.ts`, following [resource protection](resource-protection.md#share-membership-verification-through-its-public-wrapper). The native example keeps its related order reads in one `order.queries.ts`; introducing this wrapper does not require splitting query files or adding a utility module.
 
 Mark ordinary Next.js server modules with `import 'server-only'`. Use `'use server'` for action modules and `'use client'` at the smallest useful interactive boundary. Keep browser API, schemas, and shared query options free of server implementation imports. Directory names alone do not establish runtime boundaries. [Next.js server and client boundaries](https://nextjs.org/docs/app/getting-started/server-and-client-components#preventing-environment-poisoning)
 
@@ -62,5 +72,7 @@ Platform configures integration clients and factories. Keep feature-specific req
 | Business verb | Mutation | `cancelOrder` / `cancelOrderUseCase` |
 
 Preserve framework special filenames and library-generated method names. Follow an existing consistent read naming convention during a scoped refactor.
+
+Keep public names such as `listOrders` and `getOrder` when adding caching. `Cached` is optional for private helpers: `listCachedOrders(scopeId)` exposes the cache boundary in a teaching example; `listOrdersForScope(scopeId)` names the selected data. Functions in the same module need distinct names, but caching does not require a name change.
 
 RFAStack sources: [folder structure](https://github.com/ishk-sftckz/RFAStack/blob/main/docs/folder-structure.md), [concepts](https://github.com/ishk-sftckz/RFAStack/blob/main/docs/concepts.md).

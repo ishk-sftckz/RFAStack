@@ -1,7 +1,7 @@
 import 'server-only'
 import { cacheLife, cacheTag } from 'next/cache'
 import { backend } from '@/platform/http/backend'
-import { requireMembership } from '@/features/membership/membership.queries'
+import { requireMembership, withMembership } from '@/features/membership/membership.queries'
 import { traceRead } from '@/platform/observability/trace'
 import { shipmentSchema, productSchema, summarySchema } from './model/fulfillment.schema'
 
@@ -27,11 +27,7 @@ export async function listProducts() {
   return productSchema.array().parse(await backend('/products'))
 }
 
-export async function getSummary(requestHeaders: Headers) {
-  const membership = await requireMembership(requestHeaders)
-
-  return getCachedSummary(membership.scopeId)
-}
+export const getSummary = withMembership(({ scopeId }) => getCachedSummary(scopeId))
 
 async function getCachedSummary(scopeId: string) {
   'use cache'

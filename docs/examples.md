@@ -33,4 +33,6 @@ Pick one workflow to trace:
 - **Fulfillment dashboard:** start with `fulfillment.api.ts`, then open `backend/features/fulfillment`. The backend checks the operator's warehouse before changing a shipment.
 - **B2B ordering:** follow `order.rpc.ts` into `decide-order.use-case.ts`. The use case checks company membership, approver permissions, and order status.
 
+To follow shared authorization, open the customer portal's [order queries](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/orders/order.queries.ts). List, detail, and delivery reads share one file and use `withMembership` from the membership query module. The [membership wrapper example](./folder-structure#share-membership-checks-through-the-query-module) explains how that check stays with each operation.
+
 Change a rule in its owning feature, then run that example's checks. Each README includes the test commands and a way to observe cache reads after a write. For the reasoning behind those checks, read [resource protection](./protected-resources) and [caching](./caching).

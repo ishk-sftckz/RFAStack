@@ -12,6 +12,14 @@ Every protected query or use case establishes the caller and enforces access int
 
 Add `user` or `account` features when profiles or business account lifecycle need their own operations. Preserve the application's provider and domain model. A single-user application need not invent a tenant model; still enforce ownership using its verified actor.
 
+## Share membership verification through its public wrapper
+
+When operations share membership verification, `membership.queries.ts` may export `withMembership` beside `requireMembership`. This is a public access API that other features may import directly. Keep it server-only.
+
+The wrapper accepts an operation and returns a function taking request headers followed by the operation's arguments. Verify membership on each invocation before calling the operation with the verified member and remaining arguments. Preserve argument and result types and propagate failures. Never accept a caller-supplied membership object as proof of access.
+
+Resource operations still own input validation, record scoping, business permissions, and safe DTOs. Keep membership verification outside shared cached bodies and pass only the authorized visibility inputs into cached helpers. The wrapper adds no automatic caching. Direct membership reads remain valid for workflows that need the returned member. Test denied access without callback execution, changed or expired membership/session state, argument forwarding, and callback errors.
+
 ## Trace a protected read or mutation
 
 1. Establish the session through auth and resolve applicable membership or permissions through the owning public operation.

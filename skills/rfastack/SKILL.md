@@ -26,9 +26,11 @@ Proceed once the affected operations, owners, callers, and runtime boundaries ar
 | `src/platform` | Database connections, provider factories, common transport and integration clients | External packages, application configuration, shared primitives |
 | `src/shared` | Generic UI and behavior independent of business policy | Other generic shared primitives |
 
-Use product capabilities such as `orders`, `billing`, and `membership` for feature names. Keep presentation in `ui/`, schemas and pure business behavior in `model/`, and operation modules at the feature root. Match the target's source root and aliases when applying these locations.
+Use product capabilities such as `orders`, `billing`, and `membership` for feature names. Keep presentation in `ui/` and schemas and pure business behavior in `model/`. Start operation modules at the feature root; group related modules inside that feature when growth makes them difficult to follow. Match the target's source root and aliases when applying these locations.
 
 Public server queries and use cases define the access boundary. Import them directly from their implementing modules. Keep repositories, server DTO mappers, and helpers private to the feature. Platform remains independent of features; shared remains independent of application business behavior. The narrowly scoped table foreign-key exception is in [file placement](references/file-placement.md).
+
+Membership may also expose `withMembership` as a public access wrapper from its query module. Follow the invocation and authorization contract in [resource protection](references/resource-protection.md).
 
 Read the references that match the work before choosing files or writing the plan:
 
