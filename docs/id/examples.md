@@ -1,38 +1,38 @@
 ---
 title: Contoh Aplikasi
-description: Pilih aplikasi, jalankan secara lokal, lalu telusuri request melalui kode fiturnya.
+description: Jalankan salah satu contoh, lalu ikuti alur request dari UI sampai ke database.
 ---
 
 # Contoh Aplikasi
 
-Contoh aplikasi menunjukkan bagaimana route, kode fitur, dan database bekerja bersama. Pilih aplikasi yang paling dekat dengan kebutuhan Anda, jalankan secara lokal, lalu telusuri request dari UI sampai hasilnya tersimpan.
+Pilih contoh yang kebutuhannya paling dekat dengan aplikasimu. Setelah berjalan di lokal, ikuti satu request dari UI sampai datanya tersimpan. Dari situ, kamu bisa melihat hubungan antara route, kode fitur, dan database.
 
 ## Pilih contoh {#choose-an-example}
 
-| Aplikasi | Pelajari | Kode sumber dan penyiapan |
+| Aplikasi | Yang bisa dipelajari | Source dan cara menjalankan |
 | --- | --- | --- |
-| Portal pesanan pelanggan | Halaman yang dirender di server dan formulir dengan query serta Server Actions bawaan Next.js. | [Next.js native](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/next-native) |
-| Dashboard pemenuhan pesanan | Antrean dengan polling menggunakan React Query dan backend terpisah melalui HTTP. | [React Query + HTTP](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-http) |
-| Pemesanan B2B | Operasi bertipe yang digunakan bersama oleh browser dan klien command-line. | [React Query + oRPC](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-orpc) |
+| Portal pesanan pelanggan | Halaman dan form dengan query server serta Server Actions bawaan Next.js. | [Next.js native](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/next-native) |
+| Dashboard pengiriman | Antrean yang diperbarui lewat polling, memakai React Query dan backend HTTP terpisah. | [React Query + HTTP](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-http) |
+| Pemesanan B2B | Operasi API dengan tipe input dan hasil yang dipakai bersama oleh browser dan klien command-line. | [React Query + oRPC](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-orpc) |
 
-Mulai dari portal pelanggan untuk halaman dan formulir. Gunakan dashboard ketika browser membutuhkan pembaruan berkelanjutan dari layanan HTTP, atau pemesanan B2B ketika Anda ingin berbagi API bertipe antarklien. [Panduan pengambilan data](./data-fetching-and-mutation#choose-the-default-that-matches-the-caller) menjelaskan pilihan tersebut.
+Mulai dari portal pelanggan kalau kebutuhan utamanya halaman dan form. Pilih dashboard kalau browser perlu terus mengambil pembaruan dari layanan HTTP. Contoh B2B cocok untuk mempelajari API bertipe yang dipakai beberapa klien. Alasannya dijelaskan dalam [panduan pengambilan data](./data-fetching-and-mutation#choose-the-default-that-matches-the-caller).
 
-## Jalankan secara lokal {#run-it-locally}
+## Jalankan di lokal {#run-it-locally}
 
-Buka README contoh yang dipilih untuk melihat perintah penyiapan dan akun demo. Anda membutuhkan Bun 1.4.0, Docker Compose, serta Node.js 22 atau lebih baru untuk alat pengujian. Instal dependensi di dalam contoh tersebut; instalasi di root hanya mencakup situs dokumentasi.
+README tiap contoh berisi perintah setup dan akun demo. Siapkan Bun 1.4.0, Docker Compose, serta Node.js 22 atau lebih baru untuk menjalankan alat pengujian. Instal dependensi dari folder contoh yang dipilih. Instalasi di root repositori hanya untuk situs dokumentasi.
 
-Setiap aplikasi memiliki database PostgreSQL, port, dan pengujiannya sendiri. Pengiriman disimulasikan, jadi Anda tidak membutuhkan kredensial eksternal atau penyiapan pembayaran. Contoh ini tidak mencakup pendaftaran publik, pengiriman email, dan hosting produksi.
+Masing-masing aplikasi punya database PostgreSQL, port, dan test sendiri. Proses pengiriman barang disimulasikan, jadi tidak perlu kredensial layanan luar atau setup pembayaran. Contoh ini belum mencakup registrasi publik, pengiriman email, dan hosting produksi.
 
-## Telusuri satu request {#follow-one-request}
+## Ikuti satu request {#follow-one-request}
 
-Setiap aplikasi menempatkan route di `app`, aturan bisnis di `features`, penyiapan integrasi di `platform`, dan kode generik di `shared`. Lihat [panduan struktur folder](./folder-structure) untuk aturan dependensinya.
+Ketiga aplikasi memakai pembagian yang sama: route di `app`, aturan bisnis di `features`, setup integrasi di `platform`, dan kode umum di `shared`. Aturan dependensinya ada di [panduan struktur folder](./folder-structure).
 
-Pilih satu alur untuk ditelusuri:
+Pilih salah satu alur berikut:
 
-- **Portal pelanggan:** ikuti `checkout.actions.ts` ke `create-order.use-case.ts`. Server membaca harga produk dan menyimpan pesanan.
-- **Dashboard pemenuhan pesanan:** mulai dari `fulfillment.api.ts`, lalu buka `backend/features/fulfillment`. Backend memeriksa gudang operator sebelum mengubah pengiriman.
-- **Pemesanan B2B:** ikuti `order.rpc.ts` ke `decide-order.use-case.ts`. Use case memeriksa keanggotaan perusahaan, izin pemberi persetujuan, dan status pesanan.
+- **Portal pelanggan:** ikuti `checkout.actions.ts` ke `create-order.use-case.ts`. Server mengambil harga produk lalu menyimpan pesanan.
+- **Dashboard pengiriman:** mulai dari `fulfillment.api.ts`, lalu buka `backend/features/fulfillment`. Sebelum mengubah pengiriman, backend memeriksa gudang yang boleh diakses operator.
+- **Pemesanan B2B:** ikuti `order.rpc.ts` ke `decide-order.use-case.ts`. Use case memeriksa keanggotaan perusahaan, izin approver, dan status pesanan.
 
-Untuk menelusuri otorisasi bersama, buka [query pesanan](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/orders/order.queries.ts) pada portal pelanggan. Pembacaan daftar, detail, dan pengiriman berada dalam satu file dan menggunakan `withMembership` dari modul query keanggotaan. [Contoh wrapper keanggotaan](./folder-structure#share-membership-checks-through-the-query-module) menjelaskan cara pemeriksaan itu tetap melekat pada setiap operasi.
+Untuk melihat pemeriksaan akses yang dipakai bersama, buka [query pesanan](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/orders/order.queries.ts) di portal pelanggan. Query daftar, detail, dan pengiriman berada dalam satu file. Semuanya memakai `withMembership` dari modul query membership, sehingga pemeriksaan keanggotaan tetap dijalankan pada setiap operasi. [Contoh wrapper membership](./folder-structure#share-membership-checks-through-the-query-module) membahas polanya.
 
-Ubah aturan di fitur pemiliknya, lalu jalankan pemeriksaan contoh tersebut. Setiap README memuat perintah pengujian dan cara mengamati pembacaan cache setelah penulisan. Untuk memahami alasan di balik pemeriksaan itu, baca [perlindungan resource](./protected-resources) dan [caching](./caching).
+Coba ubah aturan bisnis di fitur terkait, lalu jalankan test contoh itu. README-nya juga menjelaskan cara mengamati cache setelah data berubah. Untuk memahami apa yang perlu diperiksa, lanjutkan ke [perlindungan resource](./protected-resources) dan [caching](./caching).

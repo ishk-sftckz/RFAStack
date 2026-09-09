@@ -1,45 +1,45 @@
 ---
 title: Perlindungan Resource
-description: Tempat memverifikasi sesi, menegakkan akses resource, dan mengembalikan data yang aman dalam aplikasi Next.js.
+description: Tentukan tempat pemeriksaan sesi dan izin akses agar data privat tetap terlindungi, dari jalur mana pun operasinya dipanggil.
 ---
 
 # Perlindungan Resource
 
-Melindungi resource adalah tanggung jawab utama saat membangun aplikasi full-stack Next.js. Anda harus mengendalikan siapa yang dapat mengakses data privat dan menjalankan operasi yang mengubahnya. Kontrol akses tersebut harus menjadi bagian dari arsitektur aplikasi sejak awal.
+Aplikasi full-stack harus memastikan siapa yang boleh membaca data privat dan siapa yang boleh mengubahnya. Pemeriksaan ini perlu masuk ke rancangan aplikasi sejak awal, supaya setiap jalur akses mendapat perlindungan yang sama.
 
-Gunakan beberapa lapisan perlindungan. Kami merekomendasikan Proxy untuk pemeriksaan route awal dan pengalihan ke login, query auth untuk verifikasi sesi, serta Data Access Layer (DAL) untuk menegakkan akses ke data dan operasi. Setiap lapisan memiliki tanggung jawab, dan bersama-sama melindungi berbagai jalur dalam aplikasi.
+Bagi pemeriksaannya menjadi beberapa lapisan. Gunakan Proxy untuk pemeriksaan awal dan redirect ke login, query auth untuk memverifikasi sesi, serta Data Access Layer (DAL) untuk memeriksa akses ke data dan operasi. Masing-masing punya pekerjaan yang berbeda.
 
-Tegakkan autentikasi dan otorisasi di dalam operasi fitur yang membaca atau mengubah resource terlindungi. Pemeriksaan di tingkat halaman tidak melindungi Server Actions miliknya, yang dapat menerima request secara independen dari halaman. [Keamanan data Next.js](https://nextjs.org/docs/app/guides/data-security#authentication-and-authorization)
+Pemeriksaan autentikasi dan otorisasi harus ada di operasi fitur yang membaca atau mengubah resource. Pemeriksaan di halaman saja tidak cukup: Server Action bisa menerima request tanpa melewati halaman tersebut. [Keamanan data Next.js](https://nextjs.org/docs/app/guides/data-security#authentication-and-authorization)
 
-## Tetapkan tanggung jawab setiap lapisan perlindungan {#give-each-protection-layer-a-clear-responsibility}
+## Bagi tugas setiap lapisan pemeriksaan {#give-each-protection-layer-a-clear-responsibility}
 
-Autentikasi memastikan siapa yang membuat request. Otorisasi menentukan apa yang boleh diakses atau diubah oleh pemanggil tersebut. Login yang valid tidak memberikan akses ke semua pesanan. [Panduan otorisasi OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)
+Autentikasi menjawab siapa yang mengirim request. Otorisasi menentukan apa yang boleh ia akses atau ubah. Sudah login bukan berarti boleh melihat semua pesanan. [Panduan otorisasi OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html)
 
-Untuk pembatalan pesanan, ada beberapa keputusan di sepanjang jalur:
+Pada pembatalan pesanan, pemeriksaannya terbagi seperti ini:
 
-| Lapisan | Tanggung jawab |
+| Lapisan | Yang diperiksa |
 | --- | --- |
-| Proxy | Mengalihkan pengunjung yang tidak lolos pemeriksaan sesi awal. |
-| Fitur auth | Memverifikasi sesi dan mengidentifikasi pengguna yang terautentikasi. |
-| Fitur membership | Menetapkan akun dan peran yang boleh digunakan pemanggil. |
-| Fitur orders | Memverifikasi akses ke pesanan yang diminta dan menegakkan aturan pembatalan. |
-| UI | Menampilkan kontrol yang tersedia dan menjelaskan hasilnya. |
+| Proxy | Apakah pengunjung lolos pemeriksaan sesi awal, atau perlu diarahkan ke login? |
+| Fitur auth | Apakah sesinya valid, dan pengguna mana yang sedang login? |
+| Fitur membership | Akun dan peran apa yang boleh dipakai pengguna? |
+| Fitur orders | Apakah pengguna boleh mengakses pesanan ini, dan apakah pesanannya masih bisa dibatalkan? |
+| UI | Kontrol apa yang perlu ditampilkan, dan bagaimana hasilnya disampaikan? |
 
-Setiap lapisan memiliki informasi berbeda. Proxy dapat memutuskan apakah pengunjung perlu dialihkan, sementara fitur orders dapat memeriksa siapa pemilik pesanan dan apakah pesanan sudah dikirim.
+Informasi yang tersedia di setiap lapisan berbeda. Proxy bisa memutuskan redirect, sedangkan fitur orders bisa memeriksa pemilik pesanan dan status pengirimannya.
 
-Simpan keputusan itu bersama kode pemiliknya. Fitur orders harus menegakkan aturannya meskipun request mencapainya tanpa pemeriksaan route sebelumnya.
+Simpan setiap pemeriksaan di tempat yang mengurusnya. Fitur orders tetap harus memeriksa akses dan aturan pembatalan meskipun request tidak melewati pemeriksaan route lebih dulu.
 
-## Gunakan Proxy untuk pengalihan awal {#use-proxy-for-early-redirects}
+## Gunakan Proxy untuk redirect awal {#use-proxy-for-early-redirects}
 
-Next.js 16 mengganti nama Middleware menjadi Proxy. Konfigurasi `matcher` menentukan path request yang melewatinya. [Referensi Proxy Next.js](https://nextjs.org/docs/app/api-reference/file-conventions/proxy)
+Sejak Next.js 16, Middleware berganti nama menjadi Proxy. Konfigurasi `matcher` menentukan path request yang melewatinya. [Referensi Proxy Next.js](https://nextjs.org/docs/app/api-reference/file-conventions/proxy)
 
-Tempatkan `proxy.ts` di samping `app` dalam `src`, agar ditemukan oleh Next.js. Perlakukan sebagai entry point framework yang menangani pencocokan request dan pengalihan. Mengimpor fungsi bantu cookie Better Auth di sini sesuai dengan tanggung jawab itu; mengimpor `auth.provider.ts`, query membership, atau operasi resource akan menarik pekerjaan fitur ke pemeriksaan awal ini.
+Letakkan `proxy.ts` di dalam `src`, sejajar dengan `app`, agar ditemukan oleh Next.js. File ini mengurus pencocokan request dan redirect. Helper cookie Better Auth boleh dipakai untuk pemeriksaan tersebut. Namun, jangan tarik `auth.provider.ts`, query membership, atau operasi resource ke sini; pekerjaan fitur itu bukan bagian dari pemeriksaan awal.
 
-Kami merekomendasikan Proxy untuk area aplikasi yang membutuhkan autentikasi. Anda memiliki satu tempat untuk mengarahkan pengunjung yang belum login sebelum route dirender. Next.js menganggap lapisan ini opsional dan menyarankan pemeriksaan ringan karena Proxy juga dapat berjalan untuk route yang di-prefetch. [Panduan autentikasi Next.js](https://nextjs.org/docs/app/guides/authentication#optimistic-checks-with-proxy-optional)
+Untuk area aplikasi yang membutuhkan login, kami menyarankan Proxy agar redirect pengunjung yang belum login bisa diatur di satu tempat. Lapisan ini opsional menurut Next.js. Pemeriksaannya sebaiknya ringan karena Proxy juga bisa berjalan saat route di-prefetch. [Panduan autentikasi Next.js](https://nextjs.org/docs/app/guides/authentication#optimistic-checks-with-proxy-optional)
 
-Simpan keputusan khusus resource dalam operasi fitur. Memeriksa kepemilikan pesanan di Proxy akan mengikat aturan pada pencocokan URL dan mengulangnya untuk setiap transport yang menyediakan operasi sama.
+Pemeriksaan khusus resource tetap di operasi fitur. Kalau kepemilikan pesanan diperiksa di Proxy, aturannya akan bergantung pada URL. Pemeriksaan itu juga harus diulang saat operasi yang sama dibuka lewat transport lain.
 
-Contohnya, alihkan pengunjung tanpa cookie sesi Better Auth sebelum merender `/orders` atau route turunannya:
+Contoh berikut mengarahkan pengunjung tanpa cookie sesi Better Auth ke login sebelum `/orders` atau route turunannya dirender:
 
 ```ts
 // src/proxy.ts
@@ -59,37 +59,37 @@ export const config = {
 }
 ```
 
-Contoh ini menggunakan konfigurasi cookie bawaan Better Auth. Sesuaikan nama atau prefix cookie kustom di `getSessionCookie()` juga. Keberadaan cookie hanya menentukan pengalihan ini: cookie kedaluwarsa atau palsu bisa lolos, sehingga operasi terlindungi tetap harus memverifikasi sesi. [Integrasi Proxy Better Auth](https://better-auth.com/docs/integrations/next#auth-protection)
+Contoh ini memakai konfigurasi cookie bawaan Better Auth. Kalau nama atau prefix cookie diubah, sesuaikan juga `getSessionCookie()`. Adanya cookie hanya menentukan apakah redirect dijalankan. Cookie palsu atau kedaluwarsa masih bisa lolos, jadi operasi fitur tetap harus memeriksa apakah sesinya valid. [Integrasi Proxy Better Auth](https://better-auth.com/docs/integrations/next#auth-protection)
 
-Tulis path matcher sebagai literal agar Next.js dapat menganalisisnya saat build. Matcher ini mengecualikan login, endpoint auth, dan aset framework dari pemeriksaan pengalihan. Saat menambahkan halaman terlindungi, masukkan URL-nya ke matcher; route group seperti `(authenticated)` tidak menambahkan segmen URL. Endpoint API harus melaporkan kegagalan autentikasi melalui transport masing-masing.
+Tulis path matcher sebagai nilai literal agar bisa dianalisis Next.js saat build. Matcher di atas tidak mencakup halaman login, endpoint auth, dan aset framework. Saat menambah halaman yang membutuhkan login, masukkan URL-nya ke matcher. Route group seperti `(authenticated)` tidak menambah segmen URL. Endpoint API menangani kegagalan autentikasi lewat respons API-nya sendiri.
 
-Periksa bahwa cookie sesi yang tidak ada atau kosong menyebabkan pengalihan, nama cookie biasa maupun secure berfungsi, serta cookie palsu atau kedaluwarsa tetap gagal saat verifikasi sesi dalam operasi terlindungi. Jaga agar login tetap bisa diakses ketika ada cookie lama sehingga pengunjung dapat login kembali.
+Uji cookie yang tidak ada, kosong, palsu, dan kedaluwarsa. Pastikan nama cookie biasa maupun secure dikenali. Cookie yang tidak valid tetap harus ditolak saat operasi fitur memverifikasi sesi. Halaman login juga harus tetap bisa dibuka ketika browser masih menyimpan cookie lama.
 
-Dokumen statis privat membutuhkan perhatian terpisah: akses harus ditegakkan di tempat dokumen disajikan. Query aplikasi tidak bisa melindungi file yang dapat diambil langsung melalui URL publik. [Panduan OWASP tentang resource statis](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html#enforce-authorization-checks-on-static-resources)
+Untuk dokumen statis privat, periksa akses di tempat file itu disajikan. Query aplikasi tidak bisa melindungi file yang masih dapat diunduh langsung lewat URL publik. [Panduan OWASP tentang resource statis](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html#enforce-authorization-checks-on-static-resources)
 
-## Tempatkan perlindungan data dalam operasi server fitur {#put-data-protection-in-the-feature-s-server-operations}
+## Periksa akses data di operasi server fitur {#put-data-protection-in-the-feature-s-server-operations}
 
-Data Access Layer, atau DAL, mengendalikan akses ke data aplikasi. Next.js merekomendasikan agar lapisan ini berjalan di server, memeriksa otorisasi, dan mengembalikan data transfer object yang aman serta minimal. Dokumentasinya juga menunjukkan autentikasi di dalam operasi data, sehingga Server Action pemanggil tetap tipis. [Panduan DAL Next.js](https://nextjs.org/docs/app/guides/data-security#data-access-layer)
+Data Access Layer (DAL) mengatur akses ke data aplikasi. Next.js menyarankan lapisan ini berjalan di server, memeriksa otorisasi, dan mengembalikan DTO dengan field seperlunya yang aman bagi penerima. Contoh Next.js juga menempatkan autentikasi di dalam operasi data, sehingga Server Action cukup memanggilnya. [Panduan DAL Next.js](https://nextjs.org/docs/app/guides/data-security#data-access-layer)
 
-Simpan tanggung jawab tersebut dalam [struktur fitur yang sudah ada](./folder-structure#keep-operation-modules-at-the-feature-root):
+Gunakan [struktur fitur yang sudah ada](./folder-structure#keep-operation-modules-at-the-feature-root) untuk membagi pekerjaan ini:
 
 | Lokasi | Tanggung jawab |
 | --- | --- |
-| `features/auth/auth.queries.ts` | Memverifikasi sesi dan mengembalikan pengguna yang terautentikasi. |
-| `features/membership/membership.queries.ts` | Menentukan keanggotaan bisnis pengguna dan konteks akun yang diizinkan. |
-| `features/orders/order.queries.ts` | Mengotorisasi pembacaan pesanan dan mengembalikan field yang boleh diterima pemanggil. |
-| `features/orders/cancel-order.use-case.ts` | Mengotorisasi pembatalan dan menerapkan aturan bisnis. |
-| `features/orders/order.repository.ts` | Membungkus persistensi ketika repository terpisah berguna. |
+| `features/auth/auth.queries.ts` | Memeriksa sesi dan mengembalikan pengguna yang sedang login. |
+| `features/membership/membership.queries.ts` | Mencari keanggotaan pengguna dan akun bisnis yang boleh diaksesnya. |
+| `features/orders/order.queries.ts` | Memeriksa izin membaca pesanan dan memilih field hasil yang boleh diterima. |
+| `features/orders/cancel-order.use-case.ts` | Memeriksa izin dan aturan bisnis sebelum membatalkan pesanan. |
+| `features/orders/order.repository.ts` | Menampung kode persistensi jika memang perlu repository terpisah. |
 
-Anda tidak membutuhkan direktori `dal/` global untuk menetapkan batas ini. Simpan kebijakan resource bersama fiturnya, bagikan verifikasi sesi melalui auth, dan pemeriksaan akses akun melalui membership.
+Tidak perlu membuat folder `dal/` global. Aturan akses resource tetap di fitur terkait, verifikasi sesi dipakai bersama lewat auth, dan pemeriksaan akses akun lewat membership.
 
-Untuk operasi atas nama pengguna yang sedang login, peroleh akun di dalam query atau use case publik yang dilindungi. Saat halaman lain mengimpor operasi itu, perlindungannya ikut terbawa.
+Jika operasi dijalankan atas nama pengguna yang sedang login, tentukan akunnya di dalam query atau use case publik yang dilindungi. Dengan begitu, halaman lain yang memanggil operasi itu otomatis mendapat pemeriksaan yang sama.
 
-## Pastikan pembacaan terlindungi mengenali pemanggilnya {#make-a-protected-read-establish-its-caller}
+## Query yang dilindungi harus memastikan siapa penggunanya {#make-a-protected-read-establish-its-caller}
 
-Bayangkan query yang menampilkan daftar pesanan. Jika query memercayai ID akun yang diberikan, setiap pemanggil harus tahu dari mana ID tersebut boleh berasal. Satu pemanggil mungkin memperolehnya dari sesi terverifikasi, sementara yang lain meneruskan parameter URL.
+Bayangkan query daftar pesanan yang langsung percaya pada ID akun dari argumen. Setiap kode yang memanggilnya harus memastikan sendiri asal ID itu. Satu halaman mungkin mengambilnya dari sesi yang valid, sementara handler lain meneruskan parameter URL begitu saja.
 
-Operasi terlindungi dapat mengambil alih keputusan itu dari pemanggilnya:
+Lebih baik query menentukan akun yang boleh diakses sendiri:
 
 ```ts
 // src/features/orders/order.queries.ts
@@ -124,9 +124,9 @@ export async function listOrders() {
 }
 ```
 
-Contoh ini menggunakan [schema ringkasan pesanan dan klien database bergaya Prisma](./data-fetching-and-mutation#read-during-rendering-through-a-server-component) dari panduan pengambilan data. `requireAccount()` harus menolak sesi tidak valid dan mengembalikan akun yang boleh digunakan pemanggil terautentikasi.
+Contoh ini menggunakan [schema ringkasan pesanan dan klien database bergaya Prisma](./data-fetching-and-mutation#read-during-rendering-through-a-server-component) dari panduan pengambilan data. `requireAccount()` harus menolak sesi yang tidak valid dan hanya mengembalikan akun yang boleh dipakai pengguna.
 
-Query membatasi pembacaan database pada akun itu dan memilih field yang dikembalikan. Halaman cukup memanggil operasi dan merender hasilnya:
+Query lalu mengambil pesanan dari akun itu dan memilih field hasilnya. Halaman tinggal memanggil query dan menampilkan data:
 
 ```tsx
 // src/app/(authenticated)/orders/page.tsx
@@ -140,19 +140,19 @@ export default async function OrdersPage() {
 }
 ```
 
-Untuk query detail, pemanggil tetap memberikan ID pesanan yang diminta. Validasi input tersebut, lalu cari pesanan di dalam akun yang diizinkan. Format ID yang benar memastikan bentuk input; pencarian dalam lingkup akun memastikan apakah akun ini boleh mengakses pesanan tersebut.
+Untuk detail pesanan, ID pesanan tetap dikirim sebagai input. Validasi ID-nya, lalu cari pesanan dalam akun yang sudah diizinkan. Format ID yang benar hanya membuktikan input-nya valid. Filter akun pada query yang memastikan akses ke pesanan tersebut.
 
-Sebagian pembacaan juga menerima ID akun untuk menentukan lingkup yang diminta, seperti pada [contoh query browser](./data-fetching-and-mutation#add-tanstack-query-for-caching-and-background-updates). Query terlindungi harus memverifikasi pilihan itu terhadap akun yang terautentikasi. Mencantumkan ID akun dalam URL atau cache key tidak memberikan akses ke akun tersebut.
+Sebagian query juga menerima ID akun untuk menunjukkan akun yang diminta, seperti pada [contoh query browser](./data-fetching-and-mutation#add-tanstack-query-for-caching-and-background-updates). Tetap cocokkan ID itu dengan akun pengguna yang terautentikasi. Menaruh ID akun di URL atau cache key tidak memberi izin untuk membacanya.
 
-## Otorisasi mutasi berdasarkan resource terkini {#authorize-mutations-against-the-current-resource}
+## Periksa izin mutasi terhadap data terbaru {#authorize-mutations-against-the-current-resource}
 
-Request pembatalan memberikan ID pesanan. Use case pembatalan harus mengenali pemanggil, menemukan pesanan dalam akun yang diizinkan bagi pemanggil itu, dan memeriksa status terkini sebelum memperbaruinya.
+Request pembatalan membawa ID pesanan. Use case harus memverifikasi pengguna, mencari pesanan dalam akun yang boleh diaksesnya, lalu memeriksa status terkini sebelum melakukan update.
 
-UI boleh menggunakan aturan pembatalan murni yang sama untuk menentukan apakah tombol ditampilkan. Use case menerapkan aturan itu lagi pada data tersimpan karena pesanan mungkin berubah sejak halaman dirender.
+UI boleh memakai aturan pembatalan yang sama untuk menentukan apakah tombol ditampilkan. Namun, use case harus memeriksanya lagi menggunakan data tersimpan. Status pesanan bisa saja berubah sejak halaman dibuka.
 
-Sertakan batasan kepemilikan dan kelayakan dalam operasi penulisan jika database mendukungnya. [Contoh pembatalan](./folder-structure#follow-a-cancellation-from-the-form-to-the-stored-order) menyertakan akun dan status yang diperiksa dalam kondisi update, sehingga pesanan yang berubah bersamaan tidak dibatalkan berdasarkan keputusan lama.
+Kalau database mendukungnya, sertakan syarat kepemilikan dan status pada operasi update. [Contoh pembatalan](./folder-structure#follow-a-cancellation-from-the-form-to-the-stored-order) memakai akun dan status yang sudah diperiksa sebagai kondisi update. Jadi, pesanan tidak dibatalkan berdasarkan status lama ketika ada perubahan bersamaan.
 
-Berikut use case dengan seluruh pemeriksaan perlindungannya:
+Seluruh pemeriksaannya ada dalam use case berikut:
 
 ```ts
 // src/features/orders/cancel-order.use-case.ts
@@ -191,11 +191,11 @@ export async function cancelOrderUseCase(input: CancelOrderInput) {
 }
 ```
 
-`canCancelOrder()` menerima pesanan berstatus pending atau confirmed, sesuai [aturan pembatalan murni](./folder-structure#follow-a-cancellation-from-the-form-to-the-stored-order). Pesanan milik akun lain menghasilkan respons tidak ditemukan yang sama dengan ID tidak dikenal. Jika status berubah setelah pembacaan, penulisan bersyarat tidak memengaruhi baris mana pun dan operasi gagal.
+Sesuai [aturan pembatalan murni](./folder-structure#follow-a-cancellation-from-the-form-to-the-stored-order), `canCancelOrder()` mengizinkan status pending atau confirmed. Pesanan milik akun lain mendapat hasil “tidak ditemukan” yang sama dengan ID yang tidak dikenal. Kalau status berubah setelah query selesai, update bersyarat tidak mengubah baris apa pun dan operasi gagal.
 
-Server Action, Route Handler, atau prosedur RPC dapat memanggil use case terlindungi ini. Setiap adapter menangani transport-nya: mem-parsing input, menyesuaikan kegagalan, dan menyegarkan UI atau mengembalikan response.
+Server Action, Route Handler, dan prosedur RPC bisa memanggil use case yang sama. Masing-masing adapter mengurus format input, penanganan error, serta respons atau refresh UI yang sesuai.
 
-Server Action tidak menerima ID akun dari formulir:
+Server Action tidak mengambil ID akun dari form:
 
 ```ts
 // src/features/orders/order.actions.ts
@@ -215,25 +215,25 @@ export async function cancelOrder(formData: FormData) {
 }
 ```
 
-Memanggil action ini secara langsung tetap melewati pemeriksaan sesi, kepemilikan, dan status dalam use case. Contoh ini menyegarkan route setelah berhasil; jika pembacaan menggunakan cache, [batalkan validitas entri yang terpengaruh](./caching#invalidate-the-affected-result-after-a-successful-write) juga.
+Request langsung ke action tetap melewati pemeriksaan sesi, kepemilikan, dan status dalam use case. Setelah berhasil, contoh ini me-refresh route. Jika query memakai cache, [invalidasi entri yang terpengaruh](./caching#invalidate-the-affected-result-after-a-successful-write) juga.
 
-Operasi bersama harus melaporkan kegagalan autentikasi dalam bentuk yang dapat disesuaikan pemanggilnya. Halaman dapat mengalihkan ke login; API harus mengembalikan respons error yang sesuai.
+Laporkan kegagalan autentikasi dalam bentuk yang bisa ditangani oleh kode yang memanggil operasi. Halaman bisa melakukan redirect ke login, sedangkan API mengembalikan respons error yang sesuai.
 
-## Gunakan ulang verifikasi tanpa bergantung pada layout {#reuse-verification-without-relying-on-a-layout}
+## Pakai pemeriksaan sesi yang sama, tanpa bergantung pada layout {#reuse-verification-without-relying-on-a-layout}
 
-Memanggil query membership yang sama dari operasi terlindungi menggunakan ulang pemeriksaan akses akun dan verifikasi sesi auth. Masalah perawatan muncul ketika setiap operasi membuat verifikasi sesinya sendiri.
+Operasi yang dilindungi bisa memanggil query membership yang sama. Dari sana, pemeriksaan akun dan verifikasi sesi auth dipakai ulang. Ini lebih mudah dirawat daripada menulis ulang cara memverifikasi sesi di setiap operasi.
 
-Selama rendering Server Component, React `cache()` dapat membagikan hasil verifikasi yang berulang. Cache-nya direset antar-request server, dan pemanggil di luar konteks cache React tidak mendapatkan perilaku memoization yang sama. [React cache](https://react.dev/reference/react/cache)
+Saat rendering Server Component, `cache()` React bisa menghindari pekerjaan verifikasi yang berulang. Cache ini direset pada request server berikutnya. Panggilan di luar konteks cache React tidak mendapat memoization yang sama. [React cache](https://react.dev/reference/react/cache)
 
-Pemeriksaan layout memiliki tujuan berbeda. Layout tidak dirender ulang pada setiap navigasi, dan menyembunyikan turunannya tidak mencegah seluruh segmen route bersarang dieksekusi. Tempatkan pemeriksaan resource dekat akses data meskipun layout juga menggunakan informasi sesi. [Panduan autentikasi layout Next.js](https://nextjs.org/docs/app/guides/authentication#layouts-and-auth-checks)
+Pemeriksaan di layout punya fungsi berbeda. Layout tidak dirender ulang pada setiap navigasi, dan menyembunyikan children tidak mencegah semua segmen route di bawahnya dieksekusi. Walaupun layout memakai data sesi, tetap periksa akses resource dekat dengan operasi datanya. [Panduan autentikasi layout Next.js](https://nextjs.org/docs/app/guides/authentication#layouts-and-auth-checks)
 
-Jika operasi juga membutuhkan pemanggil berupa background job atau kredensial alternatif, definisikan konteks aktor tepercaya yang eksplisit untuk implementasi itu. Setiap entry point harus memastikan aktor beserta izinnya. Jaga aturan bisnis tetap tidak bergantung pada cookie browser.
+Jika operasi juga dipakai background job atau klien dengan kredensial lain, definisikan konteks aktor tepercaya yang jelas. Setiap entry point bertanggung jawab memastikan identitas dan izin aktor tersebut. Aturan bisnisnya tetap tidak perlu bergantung pada cookie browser.
 
-## Tempatkan Better Auth di balik batas auth {#keep-better-auth-behind-the-identity-boundary}
+## Batasi penggunaan Better Auth di fitur auth {#keep-better-auth-behind-the-identity-boundary}
 
-Letakkan verifikasi sesi di fitur auth. Membership memanggil query publik auth, lalu menentukan keanggotaan dan akun yang boleh digunakan pemanggil. Pengguna terautentikasi tanpa keanggotaan bisnis bisa memiliki sesi valid, sementara membership menolak akses ke akun aplikasi.
+Simpan verifikasi sesi di fitur auth. Membership memanggil query publik auth, lalu mencari keanggotaan dan akun yang boleh dipakai. Sesi valid belum tentu cukup: pengguna yang belum punya keanggotaan bisnis tetap bisa ditolak saat mengakses akun aplikasi.
 
-Auth memiliki tabel provider di `auth.table.ts`. File `auth.provider.ts` memberikan tabel tersebut ke factory di `platform/auth/server.ts`. Factory mengonfigurasi Better Auth dan adapter database-nya tanpa mengimpor fitur. Adapter Drizzle Better Auth menerima schema yang diberikan. [Konfigurasi adapter Drizzle](https://better-auth.com/docs/adapters/drizzle)
+Tabel provider berada di `auth.table.ts`. File `auth.provider.ts` memberikan tabel itu ke factory di `platform/auth/server.ts`. Factory mengonfigurasi Better Auth dan adapter database tanpa mengimpor fitur. Adapter Drizzle Better Auth mendukung schema yang diberikan dari luar. [Konfigurasi adapter Drizzle](https://better-auth.com/docs/adapters/drizzle)
 
 Query sesi publik hanya mengembalikan field yang dibutuhkan membership:
 
@@ -256,22 +256,22 @@ export async function requireSession(requestHeaders: Headers) {
 }
 ```
 
-Di sini, `sessionSchema` mendefinisikan ID dan nama pengguna publik. `requireMembership()` milik fitur membership memanggil `requireSession()`, mencari keanggotaan pengguna, dan menolak pemanggil yang tidak memilikinya. `requireAccount()` kemudian dapat menentukan akun bisnis yang diminta jika aplikasi mendukung pemilihan akun.
+`sessionSchema` mendefinisikan ID dan nama pengguna yang boleh diteruskan. `requireMembership()` memanggil `requireSession()`, mencari keanggotaan pengguna, lalu menolak akses jika tidak ada. Kalau aplikasi mendukung pemilihan akun bisnis, `requireAccount()` bisa menentukan akun yang diminta setelah pemeriksaan tersebut.
 
-Simpan UI login dan logout di `features/auth/ui`. Komponen tersebut menggunakan klien browser Better Auth dari `platform/auth/client.ts`. Route Handler auth memasang `authProvider.handler` langsung dari `auth.provider.ts`. Fitur lain menggunakan query sesi secara langsung.
+UI login dan logout berada di `features/auth/ui` dan memakai klien browser Better Auth dari `platform/auth/client.ts`. Route Handler auth memasang `authProvider.handler` langsung dari `auth.provider.ts`. Fitur lain cukup memakai query sesi.
 
-Better Auth mendokumentasikan API ini untuk Server Components dan Server Actions. Fungsi bantu `getSessionCookie()` hanya memeriksa keberadaan cookie, jadi gunakan untuk pengalihan optimistis dan validasi sesi sebelum memberikan akses ke resource terlindungi. [Integrasi Next.js Better Auth](https://better-auth.com/docs/integrations/next)
+Better Auth mendokumentasikan API ini untuk Server Components dan Server Actions. Helper `getSessionCookie()` hanya memeriksa keberadaan cookie. Pakai untuk redirect awal, lalu verifikasi sesi sebelum memberi akses ke data privat. [Integrasi Next.js Better Auth](https://better-auth.com/docs/integrations/next)
 
-Fungsi bantu membership kemudian harus menentukan konteks akun aplikasi. Record `Account` Better Auth mewakili metode autentikasi yang ditautkan; record itu tidak otomatis mewakili akun pelanggan atau tenant aplikasi Anda. [Schema database Better Auth](https://better-auth.com/docs/concepts/database#account)
+Setelah sesi valid, helper membership tetap harus menentukan akun bisnis aplikasi. Record `Account` di Better Auth mewakili metode login yang ditautkan, bukan otomatis akun pelanggan atau tenant. [Schema database Better Auth](https://better-auth.com/docs/concepts/database#account)
 
-Pilih caching sesi dengan pertimbangan yang jelas. Jika cookie cache Better Auth diaktifkan, sesi yang sudah dicabut dapat tetap diterima sampai data cache kedaluwarsa. Operasi yang membutuhkan pemeriksaan terkini terhadap penyimpanan sesi dapat melewati cookie cache dengan `disableCookieCache`. [Pengelolaan sesi Better Auth](https://better-auth.com/docs/concepts/session-management)
+Perhatikan kebijakan cache sesi. Jika cookie cache Better Auth aktif, sesi yang sudah dicabut masih bisa diterima sampai cache-nya kedaluwarsa. Operasi yang harus memeriksa penyimpanan sesi secara langsung bisa melewati cookie cache dengan `disableCookieCache`. [Pengelolaan sesi Better Auth](https://better-auth.com/docs/concepts/session-management)
 
-Query sesi di atas menonaktifkan penggunaan ulang cookie cache agar memeriksa penyimpanan sesi. Simpan kebijakan itu di auth. Membership memiliki pemeriksaan keanggotaan, dan orders memiliki akses ke data pesanan.
+Query di atas menonaktifkan cookie cache agar memeriksa penyimpanan sesi. Kebijakan ini tetap di auth. Membership mengurus keanggotaan, sementara orders mengurus izin akses pesanan.
 
-## Tentukan akses sebelum memilih caching {#choose-caching-after-defining-access}
+## Tentukan aturan akses sebelum menambahkan cache {#choose-caching-after-defining-access}
 
-Contoh di atas membaca data terkini tanpa cache data bersama. Saat menambahkannya, kenali pemanggil sebelum mengakses cache dan sertakan lingkup visibilitas yang diizinkan dalam key-nya. [Contoh caching terlindungi](./caching#keep-protected-checks-outside-shared-cached-results) menunjukkan batas tersebut.
+Contoh di atas selalu membaca data terkini tanpa cache bersama. Jika ingin menambahkan cache, verifikasi pengguna lebih dulu dan pastikan key membedakan lingkup data yang boleh dilihatnya. [Contoh caching untuk data privat](./caching#keep-protected-checks-outside-shared-cached-results) menunjukkan pembagiannya.
 
-Untuk UI yang bergantung pada request, panduan caching juga menyediakan [contoh `use cache: private`](./caching#use-private-caching-for-request-dependent-ui). Directive ini mengizinkan API request di dalam fungsi yang di-cache dan menggunakan ulang hasilnya di memori browser. Pemeriksaan akses query terlindungi tetap diperlukan setiap kali server mengeksekusinya. [Private caching Next.js](https://nextjs.org/docs/app/api-reference/directives/use-cache-private)
+Untuk UI yang bergantung pada request, ada juga [contoh `use cache: private`](./caching#use-private-caching-for-request-dependent-ui). Directive ini mengizinkan API request di dalam fungsi cache dan memakai ulang hasilnya di memori browser. Setiap kali fungsi berjalan di server, pemeriksaan akses pada query tetap harus dijalankan. [Private caching Next.js](https://nextjs.org/docs/app/api-reference/directives/use-cache-private)
 
-Selanjutnya: [pilih batas cache dan segarkan data yang terpengaruh](./caching).
+Selanjutnya: [tentukan apa yang di-cache dan cara memperbaruinya](./caching).

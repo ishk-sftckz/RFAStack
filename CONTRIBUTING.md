@@ -35,4 +35,6 @@ The English guides live in `docs/`; their Indonesian translations live in `docs/
 
 Keep explicit section anchors aligned across languages so cross-references and language switching preserve the reader's place. Register new pages in both sidebars, both homepage reading paths, and the route tests. Locale navigation and search labels live in `docs/.vitepress/id.ts`; custom homepage and diagram copy live in the theme components. Follow [VitePress internationalization](https://vitepress.dev/guide/i18n) for locale configuration.
 
+Write Indonesian as a developer explaining the code to another developer. Address the reader as `kamu` and keep familiar technical terms such as `query`, `cache`, `form`, and `codebase`. Rewrite sentences around their meaning instead of following English word order. Read explanations aloud to catch stiff phrasing.
+
 By contributing, you agree that source-code contributions are licensed under MIT and content or visual contributions are licensed under CC BY 4.0 under the repository’s existing terms.

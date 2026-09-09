@@ -1,60 +1,60 @@
 ---
 title: Latar Belakang & Motivasi
-description: Mengapa aplikasi full-stack Next.js membutuhkan aturan bersama untuk penempatan kode dan kerja antarbagian.
+description: Mengapa aplikasi Next.js butuh aturan yang konsisten untuk menempatkan kode dan menghubungkan fitur.
 ---
 
 # Latar Belakang & Motivasi
 
-Aplikasi Next.js jarang menjadi sulit dirawat dalam semalam. Biasanya, ini terjadi karena jalan pintas yang satu per satu terasa masuk akal, sampai akhirnya tidak ada yang yakin di mana logika bisnis seharusnya berada atau apa yang bisa rusak akibat perubahan kecil. RFAStack memberi Anda arsitektur dengan pilihan yang tegas untuk diikuti sebelum basis kode mencapai titik itu.
+Aplikasi Next.js biasanya makin sulit dirawat karena keputusan kecil yang menumpuk. Awalnya masuk akal: taruh logika di sini dulu, salin sedikit kode di sana. Lama-lama, kita tidak yakin lagi logika bisnis harus ditaruh di mana atau perubahan kecil akan berdampak ke bagian mana. RFAStack menawarkan pola arsitektur yang bisa diikuti sebelum codebase sampai ke titik itu.
 
-## Next.js menyerahkan sebagian keputusan kepada aplikasi Anda {#next-js-leaves-some-decisions-to-your-application}
+## Next.js tidak menentukan semua keputusan aplikasi {#next-js-leaves-some-decisions-to-your-application}
 
-[React](https://react.dev/) menyediakan komponen dasar untuk membangun antarmuka pengguna. [Next.js](https://nextjs.org/docs/app) menambahkan routing, rendering, eksekusi di server, dan konvensi lain untuk membangun aplikasi full-stack.
+[React](https://react.dev/) menyediakan dasar untuk membuat UI. [Next.js](https://nextjs.org/docs/app) menambahkan routing, rendering, eksekusi kode di server, dan konvensi untuk membangun aplikasi full-stack.
 
-Dokumentasinya menjelaskan cara kerja bagian-bagian tersebut. Setelah menggabungkannya dalam aplikasi, Anda masih harus mengambil sejumlah keputusan.
+Dokumentasinya menjelaskan cara kerja masing-masing bagian. Tapi saat menyusun aplikasi, masih ada keputusan yang harus kamu ambil sendiri.
 
-Di mana logika bisnis ditempatkan? Apakah halaman boleh membaca database secara langsung? Apakah mutasi menggunakan Server Action atau Route Handler? Di mana validasi dan otorisasi dilakukan? Jika beberapa pemanggil membutuhkan operasi yang sama, bagian mana yang harus mereka gunakan bersama?
+Logika bisnis ditaruh di mana? Bolehkah halaman langsung membaca database? Untuk mutasi, pakai Server Action atau Route Handler? Validasi dan otorisasi dilakukan di mana? Kalau beberapa bagian membutuhkan operasi yang sama, kode mana yang sebaiknya dipakai bersama?
 
-Next.js tidak bisa menjawab pertanyaan itu tanpa mengetahui aplikasi Anda. Anda membutuhkan aturan sendiri tentang cara fitur-fiturnya bekerja bersama.
+Jawabannya bergantung pada aplikasi yang sedang kamu bangun. Karena itu, kamu perlu aturan tentang cara fitur-fiturnya bekerja sama.
 
-## Kode yang berjalan pun bisa kehilangan konsistensi {#working-code-can-still-drift}
+## Sama-sama jalan, polanya bisa berbeda {#working-code-can-still-drift}
 
-Saat aplikasi masih kecil, Anda biasanya memilih jalur terpendek agar fitur berjalan. Halaman membaca database karena membutuhkan data. Mutasi berada di dalam Server Action karena hanya satu formulir yang menggunakannya. Fungsi bantu masuk ke `utils` karena belum jelas tempatnya.
+Saat aplikasi masih kecil, kita cenderung memilih cara tercepat agar fitur bisa dipakai. Halaman butuh data, jadi langsung panggil database. Mutasi hanya dipakai satu form, jadi taruh di Server Action. Belum tahu helper ini masuk ke mana, jadi simpan di `utils`.
 
-Next.js mengizinkan susunan tersebut. Tetapkan tempat yang konsisten untuk setiap tanggung jawab sejak fitur pertama.
+Semua itu bisa berjalan di Next.js. Meski begitu, tentukan tempat untuk setiap tanggung jawab sejak fitur pertama, lalu gunakan aturan yang sama pada fitur berikutnya.
 
-Masalah muncul ketika setiap fitur menjawab pertanyaan yang sama dengan cara berbeda. Satu halaman membaca database langsung, sementara halaman lain memanggil endpoint HTTP internal. Satu mutasi menyimpan aturannya di dalam fitur, sementara yang lain menaruhnya di route atau komponen. Validasi ditempatkan di mana pun implementasi saat itu membutuhkannya.
+Masalah mulai terasa ketika setiap fitur punya cara sendiri. Satu halaman membaca database langsung, halaman lain lewat endpoint HTTP internal. Satu mutasi menyimpan aturan bisnis di fitur, yang lain menaruhnya di route atau komponen. Validasi pun tersebar mengikuti kebutuhan masing-masing implementasi.
 
-Developer berikutnya tidak punya aturan yang jelas untuk diikuti. Mereka menyalin contoh terdekat, meskipun contoh itu dibuat untuk kebutuhan berbeda. Seiring penambahan fitur, perbedaan tersebut menjadi bagian dari aplikasi.
+Developer berikutnya akhirnya menyalin contoh terdekat, walaupun kebutuhan awalnya berbeda. Semakin banyak fitur, semakin banyak pula pola yang harus dipelajari.
 
-Otorisasi dan caching membuat ketidakkonsistenan ini semakin sulit diabaikan. Operasi yang dilindungi membutuhkan tempat pemeriksaan yang bisa diandalkan. Pembacaan yang menggunakan cache membutuhkan jalur mutasi yang mengetahui kapan data berubah. Jika pembacaan, mutasi, dan aturan bisnis tidak punya pemilik yang jelas, setiap kebutuhan baru menambah tempat yang harus diperiksa.
+Otorisasi dan caching membuat dampaknya lebih terasa. Pemeriksaan akses harus selalu dijalankan sebelum operasi yang dilindungi. Query yang memakai cache juga harus punya jalur invalidasi saat datanya berubah. Kalau tempat query, mutasi, dan aturan bisnis belum jelas, setiap kebutuhan baru menambah bagian yang harus ditelusuri.
 
-## Utang teknis bermula dari ketidakpastian {#technical-debt-begins-as-uncertainty}
+## Utang teknis dimulai dari rasa ragu saat mengubah kode {#technical-debt-begins-as-uncertainty}
 
-Dampak pertamanya adalah keraguan.
+Perubahan yang terlihat kecil pun jadi sulit dimulai.
 
-Perubahan terdengar kecil, tetapi Anda tidak tahu harus mulai dari mana. Sebelum mengedit kode, Anda menelusuri repositori untuk mencari implementasi mana yang menjadi acuan, pemanggil mana yang mengulang aturan yang sama, dan bagian lain yang mungkin bergantung pada perilaku itu.
+Sebelum mengedit, kamu harus mencari implementasi mana yang menjadi acuan. Lalu cek siapa saja yang mengulang aturan itu dan bagian lain yang mungkin ikut terpengaruh.
 
-Code review mulai memperdebatkan selera pribadi karena kode yang ada memberi jawaban yang bertentangan. Developer baru mempelajari aplikasi dengan mencoba dan melakukan kesalahan. Aturan yang hanya ada di kepala seseorang hilang ketika orang tersebut tidak tersedia.
+Code review mulai membahas selera masing-masing karena contoh yang ada tidak konsisten. Developer baru belajar lewat trial and error. Aturan yang hanya diingat satu orang pun sulit diikuti saat orang itu tidak bisa ditanya.
 
-Aplikasi mungkin masih berjalan dengan benar, tetapi perubahan biasa membutuhkan penelusuran lebih banyak dari yang seharusnya. Ketidakpastian itu menjadi utang teknis: pengembangan melambat, kesalahan berulang, dan Anda terus khawatir tentang apa yang bisa rusak akibat suatu perubahan.
+Aplikasinya masih berjalan, tapi perubahan sehari-hari membutuhkan terlalu banyak penelusuran. Waktu pengembangan bertambah, kesalahan yang sama terulang, dan setiap perubahan terasa berisiko. Ketidakpastian seperti ini juga bagian dari utang teknis.
 
-## Tetapkan pilihan awal untuk keputusan yang berulang {#give-recurring-decisions-a-default}
+## Tentukan pola untuk keputusan yang sering berulang {#give-recurring-decisions-a-default}
 
-Gunakan rekomendasi dalam panduan ini sebagai titik awal untuk keputusan yang diserahkan framework kepada Anda.
+Gunakan rekomendasi dalam panduan ini sebagai acuan untuk keputusan yang tidak diatur oleh framework.
 
-Kode harus punya pemilik yang jelas. Dependensi harus mengikuti arah yang bisa dijelaskan. Pembacaan dan mutasi harus menempuh jalur yang sesuai dengan pemanggil dan runtime-nya. Route dan action menyesuaikan request serta response; operasi server milik fitur menangani pekerjaan bisnis. Terapkan batas tersebut saat memperkenalkan operasi.
+Setiap kode perlu jelas tanggung jawabnya. Arah dependensi harus bisa dijelaskan. Cara membaca dan mengubah data harus sesuai dengan kode yang memanggilnya dan tempat kode itu berjalan. Route dan action menangani request serta response, sedangkan pekerjaan bisnis dijalankan oleh operasi server di fitur terkait. Terapkan pembagian ini saat membuat operasinya.
 
-Struktur folder adalah bagian dari arsitektur itu, tetapi penalaran yang sama harus berlanjut di luar folder. Penalaran itu juga harus memandu cara data mencapai fitur, tempat operasi berjalan, serta tempat aturan seperti otorisasi atau invalidasi cache berada.
+Aturan itu tidak berhenti pada struktur folder. Gunakan juga untuk menentukan cara data masuk ke fitur, tempat operasi dijalankan, serta lokasi pemeriksaan akses dan invalidasi cache.
 
-Aplikasi yang bisa berkembang harus dapat menerima fitur dan kontributor baru tanpa membuat setiap perubahan semakin sulit ditelusuri. Pilihan awal dalam panduan ini membantu menjaga alasan di balik keputusan tetap terlihat dalam basis kode.
+Fitur dan kontributor baru seharusnya bisa ditambahkan tanpa membuat setiap perubahan makin sulit ditelusuri. Pola yang konsisten membantu orang memahami keputusan arsitektur dengan membaca kodenya.
 
 ## Terapkan aturan sejak fitur pertama {#apply-the-rules-from-the-first-feature}
 
-Ikuti aturan kepemilikan fitur, penempatan file, dan dependensi sejak awal. Fitur yang hanya membaca data dapat dimulai dengan komponen dan query server. Fitur pembatalan membutuhkan operasi bisnis untuk menegakkan aturannya, meskipun hanya satu formulir yang memanggilnya.
+Mulai dari fitur kecil pun, ikuti aturan penempatan kode dan dependensi yang sama. Fitur yang hanya menampilkan data mungkin cukup punya komponen dan query server. Fitur pembatalan pesanan sudah membutuhkan operasi bisnis untuk memeriksa aturan pembatalan, walaupun baru satu form yang memanggilnya.
 
-Buat modul yang dibutuhkan oleh tanggung jawab tersebut. Tambahkan abstraksi repository saat perilaku persistensi perlu dibagikan atau diganti, dan mapper DTO terpisah saat pemetaan membutuhkan modul sendiri. Query atau use case dapat mengakses database dan memilih field hasil yang aman sebelum kedua abstraksi itu ada.
+Buat modul sesuai kebutuhan yang ada. Tambahkan repository ketika beberapa operasi perlu berbagi kode akses database atau menggantinya saat pengujian. Pisahkan mapper DTO ketika proses mapping memang perlu tempat sendiri. Sebelum itu, query atau use case boleh mengakses database dan memilih field hasilnya langsung.
 
-Ukuran fitur tidak mengubah tempat aturan bisnisnya atau modul mana yang boleh diimpor pemanggil. Saat Anda menambahkan pembacaan, mengubah mutasi, atau melindungi resource, aturan yang sama menunjukkan tempat implementasi dimulai dan kode lain yang bisa terpengaruh.
+Ukuran fitur tidak mengubah tempat aturan bisnisnya atau file mana yang boleh diimpor dari luar. Saat menambah query, mengubah mutasi, atau melindungi resource, gunakan aturan yang sama untuk menentukan tempat implementasi dan memahami dampaknya.
 
-Selanjutnya: [pelajari dasar arsitektur di balik kepemilikan dan arah dependensi](./concepts).
+Selanjutnya: [pelajari dasar pembagian tanggung jawab dan arah dependensi](./concepts).

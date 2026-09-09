@@ -1,13 +1,13 @@
 ---
 title: Struktur Folder
-description: Tempat kode fitur berada, tanggung jawab setiap file, dan kapan struktur tambahan diperlukan.
+description: Cara membagi kode aplikasi ke dalam route, fitur, platform, dan shared, serta kapan perlu menambah file atau folder.
 ---
 
 # Struktur Folder
 
-Aturan pesanan, klien database, dan header khusus route memiliki alasan perubahan yang berbeda. Tempatkan masing-masing dalam direktori yang sesuai dengan tanggung jawabnya.
+Struktur folder membantu kamu menemukan kode yang perlu diubah. Aturan pesanan, koneksi database, dan header halaman punya tanggung jawab berbeda. Pisahkan ketiganya supaya perubahan di satu bagian tidak mengaburkan tugas bagian lain.
 
-Gunakan empat direktori di tingkat teratas `src`:
+Mulai dengan empat direktori di dalam `src`:
 
 ```text
 src/
@@ -17,17 +17,17 @@ src/
   shared/       # Code with generic behavior across features
 ```
 
-Next.js juga membutuhkan beberapa file entry point framework di luar direktori tersebut. Letakkan `src/proxy.ts` di samping `src/app` untuk [pengalihan route awal](./protected-resources#use-proxy-for-early-redirects). Batasi pekerjaannya pada batas request. [Konvensi Proxy Next.js](https://nextjs.org/docs/app/api-reference/file-conventions/proxy)
+Beberapa file khusus Next.js tetap berada di luar direktori itu. Misalnya, letakkan `src/proxy.ts` di samping `src/app` untuk [redirect awal](./protected-resources#use-proxy-for-early-redirects). Batasi tugasnya pada penanganan request yang masuk. [Konvensi Proxy Next.js](https://nextjs.org/docs/app/api-reference/file-conventions/proxy)
 
-Tinjau import sekaligus penempatan file.
+Penempatan file perlu diperiksa bersama import-nya. Folder yang rapi belum cukup kalau dependensinya saling menembus batas.
 
-Ikuti aturan kepemilikan, penempatan, dan dependensi sejak fitur pertama. Mulai dengan modul operasi langsung di root fitur, presentasi di `ui/`, serta schema dan aturan murni di `model/`. Kelompokkan modul operasi terkait di dalam fitur ketika mulai sulit ditelusuri di root. Repository dan mapper terpisah adalah abstraksi tambahan dengan syarat penggunaan masing-masing.
+Terapkan pembagian tanggung jawab ini sejak fitur pertama. Letakkan modul operasi langsung di root fitur, UI di `ui/`, serta schema dan aturan murni di `model/`. Kalau modul operasi mulai sulit dicari, kelompokkan yang berkaitan. Repository dan mapper terpisah baru ditambahkan ketika ada kebutuhan yang dijelaskan di bawah.
 
-## Tetapkan tanggung jawab setiap direktori {#give-each-directory-a-responsibility}
+## Perjelas tugas setiap direktori {#give-each-directory-a-responsibility}
 
-### `src/app`: tangani route dan susun halaman {#src-app-handle-routes-and-compose-pages}
+### `src/app`: urus route dan susun halaman {#src-app-handle-routes-and-compose-pages}
 
-Simpan pohon URL dan file siklus hidup Next.js di `app`:
+Letakkan struktur URL dan file khusus Next.js di `app`:
 
 ```text
 src/app/
@@ -50,32 +50,32 @@ src/app/
       route.ts
 ```
 
-[Referensi struktur proyek Next.js](https://nextjs.org/docs/app/getting-started/project-structure) mendefinisikan konvensi routing. Perjelas kepemilikan: file route menggunakan antarmuka fitur untuk menyusun aplikasi.
+Ikuti konvensi routing dalam [referensi struktur proyek Next.js](https://nextjs.org/docs/app/getting-started/project-structure). File route menyusun halaman dengan memakai operasi dan komponen yang disediakan fitur.
 
-| File atau konvensi | Tanggung jawab |
+| File atau konvensi | Tugasnya |
 | --- | --- |
-| `page.tsx` | Membaca input route dan menyusun UI fitur untuk URL tersebut. |
-| `layout.tsx` | Menyusun presentasi yang digunakan bersama oleh sebagian pohon route. |
-| `loading.tsx` | Menampilkan UI loading ketika segmen route sedang menunggu. |
-| `error.tsx` | Menyediakan error boundary dan UI pemulihan; Next.js mengharuskan file ini berupa Client Component. |
-| `route.ts` | Menyesuaikan request dan response HTTP, seperti health check atau API pesanan. |
-| `(authenticated)/` | Mengelompokkan route tanpa menambah segmen URL. Nama itu sendiri tidak menegakkan autentikasi. |
+| `page.tsx` | Membaca input route dan menyusun UI untuk URL itu. |
+| `layout.tsx` | Menyusun tampilan yang dipakai bersama oleh sejumlah route. |
+| `loading.tsx` | Menampilkan loading saat segmen route masih menunggu. |
+| `error.tsx` | Menyediakan error boundary dan tampilan pemulihan. Next.js mewajibkannya menjadi Client Component. |
+| `route.ts` | Menangani request dan response HTTP, misalnya untuk health check atau API pesanan. |
+| `(authenticated)/` | Mengelompokkan route tanpa menambah segmen URL. Nama folder ini tidak otomatis memeriksa autentikasi. |
 | `[orderId]/` | Menyediakan ID pesanan sebagai parameter route. |
-| `_components/DashboardHeader.tsx` | Menyimpan UI yang hanya digunakan untuk menyusun route dashboard tersebut. |
+| `_components/DashboardHeader.tsx` | Menyimpan UI yang hanya dipakai untuk menyusun halaman dashboard ini. |
 
-Simpan aturan pembatalan pesanan dalam fitur orders, meskipun hanya satu route yang memanggilnya.
+Aturan pembatalan pesanan tetap masuk fitur orders, meskipun baru satu route yang memakainya.
 
-### `src/features`: satukan satu kapabilitas bisnis {#src-features-keep-a-business-capability-together}
+### `src/features`: kumpulkan kode untuk satu fitur bisnis {#src-features-keep-a-business-capability-together}
 
-Fitur berisi kode yang berubah ketika perilaku bisnisnya berubah. Fitur dapat mencakup kode server dan klien. Gunakan nama produk seperti `orders`, `billing`, dan `membership` agar Anda tahu tempat memulai perubahan.
+Satu fitur berisi kode yang perlu berubah saat aturan bisnisnya berubah, baik di server maupun di browser. Pakai nama seperti `orders`, `billing`, dan `membership` supaya tujuan foldernya langsung terbaca.
 
-Simpan autentikasi di `auth`: UI login, verifikasi sesi, dan tabel autentikasi. Simpan keanggotaan akun, peran, penentuan lingkup akun, dan preferensi keanggotaan di `membership`, yang memanggil query sesi publik auth. Tambahkan `user` ketika profil pribadi dan pengaturan pengguna membutuhkan operasi sendiri, serta `account` ketika detail dan siklus hidup akun bisnis membutuhkannya. Akun login tertaut di Better Auth adalah bagian dari autentikasi; akun itu tidak mewakili akun bisnis.
+Letakkan UI login, verifikasi sesi, dan tabel autentikasi di `auth`. Keanggotaan akun, role, pemilihan akun yang boleh diakses, dan preferensi keanggotaan masuk `membership`. Fitur ini memanggil query sesi yang disediakan auth. Tambahkan `user` saat profil dan pengaturan pribadi perlu operasi sendiri, serta `account` saat data dan pengelolaan akun bisnis membutuhkannya. Akun login tertaut di Better Auth tetap bagian dari autentikasi; maknanya berbeda dari akun bisnis.
 
-Fitur yang hanya membaca data dapat dimulai dengan komponen dan query server. Untuk mutasi bisnis, tempatkan operasi dalam use case dan biarkan action atau adapter HTTP menangani request serta response. Contoh orders di bawah menunjukkan file untuk tanggung jawab tersebut.
+Fitur yang hanya menampilkan data bisa dimulai dengan komponen dan query server. Untuk mutasi bisnis, tulis operasinya dalam use case. Action atau adapter HTTP menangani request dan response-nya. Contoh orders di bawah memperlihatkan pembagian ini.
 
-### `src/platform`: hubungkan database dan layanan luar {#src-platform-connect-to-databases-and-outside-services}
+### `src/platform`: siapkan koneksi database dan layanan luar {#src-platform-connect-to-databases-and-outside-services}
 
-Simpan penyiapan integrasi dan klien di `platform`:
+Letakkan konfigurasi integrasi dan kliennya di `platform`:
 
 ```text
 src/platform/
@@ -91,15 +91,15 @@ src/platform/
     object-storage.ts  # Wrap the object-storage provider
 ```
 
-Implementasinya bergantung pada database dan provider Anda. Modul platform dapat membuka transaksi, mengirim pesan, atau mencatat metrik. Fitur orders menentukan apakah pesanan boleh dibatalkan dan pelanggan mana yang berhak menerima pengembalian dana.
+Isinya mengikuti database dan provider yang kamu pakai. Modul platform bisa membuka transaksi, mengirim pesan, atau mencatat metrik. Keputusan seperti boleh tidaknya membatalkan pesanan dan siapa yang berhak mendapat refund tetap ada di fitur orders.
 
-Kode server fitur mengimpor modul platform yang dibutuhkannya. Kode platform tidak boleh mengimpor fitur. Simpan query database khusus fitur dan adapter repository bersama fitur pemiliknya.
+Kode server dalam fitur boleh mengimpor platform. Arah sebaliknya tidak boleh: platform tidak mengimpor fitur. Query database dan adapter repository yang khusus mengurus pesanan tetap berada di orders.
 
-Untuk autentikasi, letakkan klien SDK browser di `platform/auth/client.ts` dan factory provider di `platform/auth/server.ts`. Fitur auth memberikan tabelnya kepada factory itu dan menyusun instance terkonfigurasi di `auth.provider.ts`. Dengan begitu, auth memiliki persistensi tanpa membuat platform mengimpor fitur. Klien bertipe yang mengikat prosedur RPC membership tetap di `features/membership/membership.rpc-client.ts`; transport RPC bersama berada di `platform/rpc/client.ts`.
+Untuk autentikasi, letakkan SDK browser di `platform/auth/client.ts` dan factory provider di `platform/auth/server.ts`. Fitur auth memasok tabel ke factory itu, lalu menyusun instance yang sudah dikonfigurasi di `auth.provider.ts`. Jadi, tabel autentikasi tetap di auth tanpa membuat platform bergantung pada fitur. Klien bertipe untuk prosedur RPC membership berada di `features/membership/membership.rpc-client.ts`; transport RPC yang dipakai bersama berada di `platform/rpc/client.ts`.
 
-### `src/shared`: bagikan kode dengan perilaku generik {#src-shared-share-code-with-generic-behavior}
+### `src/shared`: simpan kode yang tidak terikat aturan fitur {#src-shared-share-code-with-generic-behavior}
 
-Gunakan `shared` untuk kode yang perilakunya tidak bergantung pada fitur bisnis tertentu:
+Gunakan `shared` untuk kode yang tetap masuk akal tanpa mengetahui fitur bisnis tertentu:
 
 ```text
 src/shared/
@@ -115,20 +115,20 @@ src/shared/
     assert-unreachable.ts   # Report an unexpected exhaustive-branch value
 ```
 
-Namai utilitas berdasarkan pekerjaannya. Gunakan `utils/currency.ts` dengan ekspor `formatCurrency()` untuk pemformatan tampilan. Contoh aplikasi menerima jumlah dalam sen dan menampilkannya sebagai USD, sesuai lingkup satu mata uangnya.
+Beri nama utilitas sesuai tugasnya. Misalnya, `utils/currency.ts` mengekspor `formatCurrency()` untuk menampilkan nominal. Contoh aplikasi menerima nilai dalam sen dan menampilkannya dalam USD karena hanya mendukung satu mata uang.
 
-Simpan aturan harga, pajak, dan pembulatan khusus pesanan di `model/` fitur pemiliknya. Formatter menampilkan jumlah yang diberikan; fitur menentukan jumlah yang ditagihkan. Batas yang sama berlaku pada UI: `StatusBadge` yang mengenali status pemenuhan pesanan berada di fitur tersebut.
+Aturan harga, pajak, dan pembulatan pesanan tetap di `model/` fitur terkait. Formatter cukup menampilkan nominal; fitur menentukan berapa yang harus ditagih. Hal yang sama berlaku untuk UI. `StatusBadge` yang memahami status pengiriman pesanan masuk fitur orders.
 
-Gunakan dua pemeriksaan sebelum memindahkan kode ke shared:
+Sebelum memindahkan kode ke shared, periksa dua hal:
 
-1. Bisakah Anda mendeskripsikan modul tanpa menyebut fitur?
-2. Bisakah Anda mengubahnya tanpa mengubah atau menegosiasikan aturan bisnis suatu fitur?
+1. Bisa dijelaskan tanpa menyebut fitur tertentu?
+2. Bisa diubah tanpa ikut mengubah atau menyepakati ulang aturan bisnis fitur?
 
-Jika salah satu jawabannya tidak, simpan bersama fitur. Izinkan sebagian duplikasi selama perilaku bersama belum jelas. Setelah beberapa fitur bergantung pada abstraksi bersama, perubahannya membutuhkan pemeriksaan seluruh pemanggil tersebut.
+Kalau salah satu jawabannya tidak, biarkan di fitur. Sedikit duplikasi masih wajar selama belum jelas perilaku mana yang benar-benar sama. Begitu beberapa fitur memakai satu abstraksi bersama, kamu perlu memeriksa semua pemakainya saat mengubah abstraksi itu.
 
-## Mulai fitur orders dengan file yang digunakannya {#start-the-orders-feature-with-the-files-it-uses}
+## Mulai fitur orders dengan file yang memang dipakai {#start-the-orders-feature-with-the-files-it-uses}
 
-Misalkan halaman pesanan membaca database aplikasi ini dan menggunakan Server Action Next.js untuk membatalkan pesanan. Fitur itu dimulai dengan file berikut:
+Misalnya, halaman pesanan membaca database aplikasi dan memakai Server Action Next.js untuk membatalkan pesanan. Susunan awalnya seperti ini:
 
 ```text
 src/features/orders/
@@ -143,31 +143,31 @@ src/features/orders/
   cancel-order.use-case.ts
 ```
 
-Tempatkan query, action, dan use case di samping UI serta model fitur. Server Component di `ui/` dapat memanggil `order.queries.ts` langsung, dan formulir dapat mengirim melalui `order.actions.ts`. Server Component dan Client Component sama-sama berada di `ui/`; letakkan `'use client'` pada batas interaktif. Direktori ini mengatur tanggung jawab dalam satu fitur. Next.js mendefinisikan graf modul server dan klien melalui import dan directive. [Komposisi komponen Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#interleaving-server-and-client-components)
+Query, action, dan use case berada di samping `ui/` dan `model/`. Server Component dalam `ui/` bisa langsung memanggil `order.queries.ts`, sedangkan form mengirim lewat `order.actions.ts`. Server Component dan Client Component sama-sama masuk `ui/`; tambahkan `'use client'` di komponen yang menjadi awal bagian interaktif. Folder membagi tanggung jawab fitur, sedangkan import dan directive menentukan hubungan modul server dan klien di Next.js. [Komposisi komponen Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#interleaving-server-and-client-components)
 
-| File | Isi | Pengguna |
+| File | Isi | Dipakai oleh |
 | --- | --- | --- |
 | `ui/OrderDetails.tsx` | Tampilan detail pesanan. | Halaman pesanan atau tampilan fitur lain. |
-| `ui/CancelOrderForm.tsx` | Kontrol pengiriman pembatalan pesanan. | Tampilan detail pesanan. |
-| `model/order.schema.ts` | Schema Zod dan tipe yang diinferensikan darinya. | Formulir, action, query, dan modul fitur lainnya. |
-| `model/order-cancellation.ts` | Aturan murni yang menentukan apakah status pesanan yang diberikan mengizinkan pembatalan. | UI pembatalan dan use case server. |
-| `order.queries.ts` | Implementasi dan ekspor pembacaan server terkait, seperti `getOrderDetails` dan `listOrders`. | Server Component dan adapter server. |
-| `order.actions.ts` | Mem-parsing request Server Action Next.js, memanggil use case terlindungi, lalu menyegarkan atau merevalidasi UI. | Formulir dan kontrol yang mengirim melalui Server Actions. |
-| `cancel-order.use-case.ts` | Memverifikasi pemanggil, memeriksa kepemilikan dan kelayakan pembatalan terhadap pesanan tersimpan, lalu menjalankan update. | Action, Route Handler, atau operasi server fitur lain. |
+| `ui/CancelOrderForm.tsx` | Form untuk membatalkan pesanan. | Tampilan detail pesanan. |
+| `model/order.schema.ts` | Schema Zod beserta tipe hasil inferensinya. | Form, action, query, dan modul fitur lain. |
+| `model/order-cancellation.ts` | Aturan murni untuk memeriksa apakah status pesanan masih mengizinkan pembatalan. | UI pembatalan dan use case server. |
+| `order.queries.ts` | Query server yang berkaitan, seperti `getOrderDetails` dan `listOrders`. | Server Component dan adapter server. |
+| `order.actions.ts` | Parsing input Server Action, memanggil use case yang memeriksa akses, lalu menjalankan refresh atau revalidasi. | Form dan kontrol yang memakai Server Actions. |
+| `cancel-order.use-case.ts` | Memverifikasi pemanggil, memeriksa pemilik dan status pesanan di database, lalu membatalkannya jika diizinkan. | Action, Route Handler, atau operasi server fitur lain. |
 
-`order.actions.ts` bersifat opsional. Gunakan `.actions.ts` khusus untuk Server Actions Next.js yang didefinisikan dengan `'use server'`. Mutasi adalah operasi yang mengubah data atau memicu efek; Server Action adalah salah satu cara UI memanggilnya. [Panduan mutasi Next.js](https://nextjs.org/docs/app/getting-started/mutating-data)
+`order.actions.ts` hanya diperlukan kalau UI memakai Server Actions Next.js. Gunakan akhiran `.actions.ts` khusus untuk fungsi dengan `'use server'` ini. Mutasi adalah operasi yang mengubah data atau memicu efek; Server Action menyediakan salah satu cara UI memanggilnya. [Panduan mutasi Next.js](https://nextjs.org/docs/app/getting-started/mutating-data)
 
-Ketika browser memanggil API langsung, tempatkan request fitur di [`order.api.ts`](#put-browser-api-requests-in-order-api-ts). Request tersebut tidak membutuhkan file actions.
+Kalau browser memanggil API langsung, simpan request-nya di [`order.api.ts`](#put-browser-api-requests-in-order-api-ts). Jalur itu tidak memerlukan file actions.
 
-Fitur yang hanya membaca data dapat menghilangkan formulir pembatalan, kebijakan, action, dan use case. Repository, prosedur RPC, atau konfigurasi TanStack Query memiliki alasan keberadaan sendiri; contoh ini tidak mewajibkan satu pun.
+Fitur yang hanya membaca data tidak perlu form pembatalan, aturan pembatalan, action, atau use case di atas. Repository, prosedur RPC, dan konfigurasi TanStack Query juga ditambahkan sesuai kebutuhan masing-masing.
 
-### Simpan presentasi dan interaksi di `ui/` {#keep-presentation-and-interaction-in-ui}
+### Simpan tampilan dan interaksi di `ui/` {#keep-presentation-and-interaction-in-ui}
 
-Komponen fitur dapat berupa Server Component atau Client Component. Lokasinya mengidentifikasi kapabilitas bisnis yang ditampilkan.
+Komponen tetap berada dalam fitur yang ditampilkannya, baik berupa Server Component maupun Client Component.
 
-Tempatkan `'use client'` pada batas interaktif terkecil yang berguna. Halaman pesanan dapat tetap berupa Server Component sementara kontrol interaktif menangani state browser. Formulir yang mengirim Server Action juga dapat dirender oleh Server Component. [Server dan Client Components Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components), [Server Actions Next.js](https://nextjs.org/docs/app/getting-started/mutating-data#server-components)
+Pasang `'use client'` pada bagian interaktif sekecil yang masih masuk akal. Halaman pesanan bisa tetap menjadi Server Component, sementara kontrolnya mengurus state browser. Form yang mengirim Server Action pun bisa dirender oleh Server Component. [Server dan Client Components Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components), [Server Actions Next.js](https://nextjs.org/docs/app/getting-started/mutating-data#server-components)
 
-Saat tampilan membesar, satukan bagian internalnya:
+Kalau satu tampilan mulai besar, kumpulkan bagian internalnya:
 
 ```text
 ui/OrderDetails/
@@ -176,11 +176,11 @@ ui/OrderDetails/
   useOrderDetails.ts  # Coordinate React interaction state, if needed
 ```
 
-Formulir checkout dalam contoh aplikasi menggunakan susunan yang sama: `ui/CheckoutForm/` berisi `CheckoutForm.tsx`, `CheckoutItem.tsx`, dan `CheckoutSummary.tsx`. Formulir memiliki draft jumlah barang dan memberikan nilai serta callback kepada komponen anak. Gunakan context ketika konsumen yang lebih dalam membutuhkannya; anak langsung dapat menerima props. Nama komponen menjelaskan perilakunya dan sesuai dengan nama file. Nama itu tidak harus mengulang nama direktori fitur.
+Form checkout dalam contoh aplikasi memakai susunan serupa. Folder `ui/CheckoutForm/` berisi `CheckoutForm.tsx`, `CheckoutItem.tsx`, dan `CheckoutSummary.tsx`. Form menyimpan draft jumlah barang, lalu mengirim nilai dan callback ke komponen anak lewat props. Context baru diperlukan kalau komponen yang lebih jauh di bawahnya membutuhkan data itu. Samakan nama komponen dengan file-nya dan jelaskan tugasnya; nama tersebut tidak harus mengulang nama fitur.
 
-### Tempatkan request API browser di `order.api.ts` {#put-browser-api-requests-in-order-api-ts}
+### Simpan request API dari browser di `order.api.ts` {#put-browser-api-requests-in-order-api-ts}
 
-Aplikasi full-stack Next.js juga dapat menggunakan backend yang sudah ada. Jika UI orders memanggil backend itu langsung, fiturnya dapat dimulai dengan:
+Aplikasi full-stack Next.js bisa memakai backend yang sudah ada. Kalau UI orders menghubungi backend itu langsung, mulai dengan susunan ini:
 
 ```text
 src/features/orders/
@@ -192,31 +192,31 @@ src/features/orders/
   order.api.ts          # HTTP/RPC requests for order reads and mutations
 ```
 
-Gunakan `order.api.ts` untuk fungsi request biasa seperti `fetchOrderDetails` dan `cancelOrder`. Fungsi ini memanggil endpoint HTTP atau klien RPC, memeriksa response, dan mem-parsing data hasil dengan Zod. API dapat berasal dari backend yang sudah ada atau Route Handler aplikasi Next.js ini.
+`order.api.ts` berisi fungsi request biasa seperti `fetchOrderDetails` dan `cancelOrder`. Fungsi ini memanggil endpoint HTTP atau klien RPC, memeriksa response, lalu melakukan parsing hasil dengan Zod. API-nya bisa berasal dari backend lain atau Route Handler dalam aplikasi Next.js ini.
 
-Komponen dapat memanggil fungsi tersebut langsung. Ketika fitur menggunakan TanStack Query, factory options-nya dapat memanggil fungsi yang sama. Kelompokkan pembacaan dan mutasi terkait dalam file ini; tanggung jawabnya tetap sama dengan atau tanpa library query. [Contoh mutasi API](./data-fetching-and-mutation#call-an-existing-api-for-mutations) menunjukkan kedua konsumen.
+Komponen bisa memanggil fungsi tersebut langsung. Jika memakai TanStack Query, factory options juga bisa memakai fungsi yang sama. Satukan request baca dan mutasi yang berkaitan di sini; tugas file ini tidak berubah karena pilihan library query. [Contoh mutasi API](./data-fetching-and-mutation#call-an-existing-api-for-mutations) menunjukkan keduanya.
 
-Tambahkan `order.queries.ts` ketika pemanggil server membutuhkan pembacaan fitur langsung, dan `order.actions.ts` ketika UI mengirim melalui Server Action Next.js. Tempatkan mutasi bisnis yang diimplementasikan aplikasi ini dalam use case server. Fitur hanya membutuhkan file untuk jalur yang digunakannya.
+Tambahkan `order.queries.ts` saat kode server perlu mengambil data fitur secara langsung, dan `order.actions.ts` saat UI memakai Server Action. Mutasi bisnis yang dikerjakan aplikasi ini tetap masuk use case server. Buat file sesuai jalur yang benar-benar dipakai.
 
-Jaga `order.api.ts` aman untuk diimpor browser. Penyiapan klien HTTP atau RPC bersama berada di `platform`; request khusus pesanan berada di sini. Panggilan yang membutuhkan kredensial privat tetap di implementasi server fitur dan menggunakan klien platform khusus server. [Tanggung jawab server dan klien Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#when-to-use-server-and-client-components)
+Pastikan `order.api.ts` aman diimpor browser. Konfigurasi klien HTTP atau RPC bersama berada di `platform`, sedangkan request khusus pesanan berada di fitur. Request yang memakai kredensial privat harus tetap di server dan menggunakan klien platform khusus server. [Tanggung jawab server dan klien Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#when-to-use-server-and-client-components)
 
-## Tempatkan definisi dan perilaku bisnis murni di `model/` {#put-definitions-and-pure-business-behavior-in-model}
+## Simpan definisi data dan aturan murni di `model/` {#put-definitions-and-pure-business-behavior-in-model}
 
-Schema input pembatalan dapat menerima ID pesanan yang valid meskipun pesanannya sudah dikirim. Input valid hanyalah satu bagian dari keputusan apakah operasi boleh dilanjutkan.
+ID pesanan bisa lolos validasi schema meskipun pesanannya sudah dikirim. Jadi, input yang valid belum cukup untuk mengizinkan pembatalan.
 
-Gunakan `model/` untuk schema Zod, tipe, konstanta, perhitungan, dan aturan yang bekerja dari nilai yang diberikan. Modul ini harus berjalan tanpa Next.js, database, atau koneksi jaringan. Record ORM mendeskripsikan persistensi; model fitur mendeskripsikan data dan perilaku bisnis yang dibutuhkan.
+Gunakan `model/` untuk schema Zod, tipe, konstanta, perhitungan, dan aturan yang cukup bekerja dari nilai masukannya. Kode ini harus bisa berjalan tanpa Next.js, database, atau jaringan. Record ORM menggambarkan cara data disimpan; model fitur menggambarkan data dan perilaku yang dibutuhkan bisnis.
 
-| Tanggung jawab | Pertanyaan yang dijawab | Contoh |
+| Bagian | Yang diperiksa atau dijelaskan | Contoh |
 | --- | --- | --- |
-| Schema Zod | Apakah data memenuhi batasannya? | Apakah jumlah barang pada baris pesanan merupakan bilangan bulat positif? |
-| Tipe | Nilai apa yang digunakan kode ini? | Field apa yang membentuk hasil internal `OrderTotals`? |
-| Konstanta | Nilai tetap apa yang digunakan aturan bisnis? | Berapa baris yang boleh dimiliki satu pesanan? |
-| Perhitungan | Hasil apa yang diperoleh dari nilai ini? | Berapa total harga baris-baris ini? |
-| Keputusan bisnis | Berdasarkan fakta ini, apakah operasi diizinkan? | Apakah status saat ini mengizinkan pembatalan? |
+| Schema Zod | Bentuk dan batas nilai data. | Apakah jumlah barang berupa bilangan bulat positif? |
+| Tipe | Nilai yang dipakai kode. | Field apa saja dalam hasil internal `OrderTotals`? |
+| Konstanta | Nilai tetap dalam aturan bisnis. | Berapa banyak baris yang boleh ada dalam satu pesanan? |
+| Perhitungan | Hasil dari nilai yang diberikan. | Berapa total harga seluruh baris pesanan? |
+| Keputusan bisnis | Boleh tidaknya operasi berdasarkan fakta yang ada. | Apakah pesanan dengan status ini masih boleh dibatalkan? |
 
-### Gunakan schema Zod dan inferensikan tipenya {#use-zod-schemas-and-infer-their-types}
+### Definisikan schema Zod, lalu ambil tipenya dari schema {#use-zod-schemas-and-infer-their-types}
 
-Gunakan [Zod](https://zod.dev/basics) untuk schema runtime dan validasi. Simpan schema bersama fitur pemilik maknanya, lalu parsing input tidak tepercaya pada batas saat input memasuki operasi.
+Gunakan [Zod](https://zod.dev/basics) untuk validasi saat runtime. Simpan schema di fitur yang mengatur makna datanya. Lakukan parsing saat input dari luar masuk ke operasi.
 
 ```ts
 // src/features/orders/model/order.schema.ts
@@ -243,11 +243,11 @@ export type CancelOrderInput = z.infer<typeof cancelOrderInputSchema>
 export type OrderLine = z.infer<typeof orderLineSchema>
 ```
 
-`orderStatusSchema` mendefinisikan nilai status yang diizinkan dan memvalidasinya saat runtime. Inferensikan `OrderStatus` dari schema itu agar nilai hanya memiliki satu definisi. Contoh ini tidak membutuhkan objek konstanta status atau enum TypeScript terpisah. [Enum Zod](https://zod.dev/api#enums)
+`orderStatusSchema` mendefinisikan sekaligus memvalidasi status yang diizinkan. Ambil tipe `OrderStatus` dari schema itu supaya daftar status cukup ditulis sekali. Contoh ini tidak perlu objek konstanta atau enum TypeScript terpisah. [Enum Zod](https://zod.dev/api#enums)
 
-Schema input pembatalan memeriksa bahwa ID adalah string yang tidak kosong. Operasi server tetap perlu menemukan pesanan dan mengotorisasi pemanggil.
+Schema input pembatalan hanya memeriksa bahwa ID berupa string yang tidak kosong. Operasi server tetap harus mencari pesanannya dan memeriksa hak akses pemanggil.
 
-Secara bawaan, simpan tipe berbasis schema di samping schema-nya. Tambahkan `order.types.ts` ketika tipe fitur lain membutuhkan modul sendiri, misalnya hasil perhitungan internal:
+Letakkan tipe hasil inferensi di samping schema-nya. Buat `order.types.ts` kalau tipe lain perlu tempat sendiri, misalnya hasil perhitungan internal:
 
 ```ts
 // src/features/orders/model/order.types.ts
@@ -258,13 +258,13 @@ export type OrderTotals = {
 }
 ```
 
-Tipe ini mendeskripsikan hasil yang dibuat di dalam fitur. Jika bentuk yang sama nantinya membutuhkan validasi runtime, definisikan schema Zod dan inferensikan tipenya. API [`z.infer`](https://zod.dev/basics#inferring-types) menjaga tipe selaras dengan schema; transformasi dapat menggunakan `z.input` dan `z.output` ketika input dan output berbeda.
+Tipe ini menjelaskan hasil yang dibuat di dalam fitur. Kalau nanti hasil tersebut perlu divalidasi saat runtime, buat schema Zod dan ambil tipenya dari sana. [`z.infer`](https://zod.dev/basics#inferring-types) menjaga tipe mengikuti schema; gunakan `z.input` dan `z.output` saat transformasi membuat tipe input dan output berbeda.
 
-### Ekstrak perilaku bisnis ketika membutuhkan modul sendiri {#extract-business-behavior-when-it-needs-its-own-module}
+### Pisahkan aturan bisnis saat perlu modul sendiri {#extract-business-behavior-when-it-needs-its-own-module}
 
-Simpan perhitungan singkat yang digunakan sekali di dekat pemanggilnya dalam fitur pemilik selama mudah diikuti. Penjumlahan harga baris pesanan saja tidak membenarkan pembuatan file model. Ketika penetapan harga melibatkan kelayakan diskon, pembulatan, atau keputusan khusus pesanan lainnya, kelompokkan perilaku itu di `order-pricing.ts` agar dapat dipahami dan diuji bersama.
+Perhitungan singkat yang hanya dipakai sekali boleh tetap dekat dengan pemanggilnya. Menjumlahkan harga beberapa baris saja belum perlu file model baru. Namun, kalau perhitungan harga sudah mencakup syarat diskon, pembulatan, dan aturan pesanan lain, kumpulkan di `order-pricing.ts` agar mudah dibaca dan diuji bersama.
 
-Alasan lain untuk mengekstrak modul adalah aturan yang digunakan bersama UI dan kode server. Misalkan formulir harus menyembunyikan pembatalan untuk pesanan terkirim, dan server harus menegakkan aturan kelayakan yang sama. Letakkan perilaku bersama itu di `model/order-cancellation.ts`:
+Alasan lain untuk membuat modul adalah aturan yang dipakai UI dan server. Misalnya, form harus menyembunyikan pembatalan untuk pesanan yang sudah dikirim, dan server harus memeriksa aturan yang sama. Letakkan di `model/order-cancellation.ts`:
 
 ```ts
 // src/features/orders/model/order-cancellation.ts
@@ -275,66 +275,66 @@ export function canCancelOrder(status: OrderStatus) {
 }
 ```
 
-`shipped` adalah status valid, tetapi tidak mengizinkan pembatalan menurut aturan contoh ini. [Penelusuran pembatalan](#follow-a-cancellation-from-the-form-to-the-stored-order) menggunakan fungsi ini pada formulir dan operasi server. Formulir menggunakan status yang ditampilkan; server memeriksa pesanan tersimpan terkini sebelum mengubah data.
+`shipped` adalah status yang valid, tetapi menurut aturan contoh ini pesanannya tidak boleh dibatalkan. [Alur pembatalan](#follow-a-cancellation-from-the-form-to-the-stored-order) di bawah memakai fungsi yang sama di form dan server. Form memeriksa status yang sedang ditampilkan; server memeriksa status terbaru di database sebelum mengubahnya.
 
-Ini mengikuti [panduan konsep](./concepts#clean-architecture-keep-business-rules-independent-of-integrations): simpan perilaku pesanan bersama orders dan biarkan aturan bisnis yang diekstrak bekerja tanpa akses database atau framework. Modul ini ada untuk berbagi kebijakan pembatalan di antara pemanggil tersebut.
+Ini mengikuti [panduan konsep](./concepts#clean-architecture-keep-business-rules-independent-of-integrations): simpan aturan pesanan di orders dan buat aturan yang dipisahkan ini bisa berjalan tanpa database atau framework. Modul tersebut diperlukan karena UI dan server berbagi aturan pembatalan.
 
-Namai modul yang diekstrak sesuai tanggung jawab bisnisnya. Gunakan `order-cancellation.ts` untuk kebijakan pembatalan atau `order-pricing.ts` untuk perilaku harga. Satukan fungsi terkait; membuat fungsi tidak mengharuskan pembuatan file. File umum fitur seperti `order.utils.ts` atau `order.rules.ts` memberi lebih sedikit petunjuk tentang tanggung jawab mana yang harus dibuka.
+Beri nama berdasarkan tugas bisnisnya, seperti `order-cancellation.ts` atau `order-pricing.ts`. Beberapa fungsi yang berkaitan boleh berada dalam satu file. Nama umum seperti `order.utils.ts` atau `order.rules.ts` membuat pembaca harus membuka file dulu untuk tahu aturan apa yang ada di dalamnya.
 
-Zod mendukung [custom refinement](https://zod.dev/api#refinements). Jika parsing perlu menegakkan aturan murni yang sudah ada, panggil aturan itu dari refinement. Simpan pencarian database dan otorisasi dalam operasi server agar parsing schema model tidak menjalankan I/O tersembunyi.
+Zod menyediakan [custom refinement](https://zod.dev/api#refinements). Kalau parsing perlu menerapkan aturan murni yang sudah ada, panggil aturan itu dari refinement. Pencarian database dan otorisasi tetap dikerjakan operasi server supaya parsing schema model tidak diam-diam menjalankan I/O.
 
-### Tempatkan konstanta bersama aturannya {#place-constants-with-the-rules-they-belong-to}
+### Letakkan konstanta dekat aturan yang memakainya {#place-constants-with-the-rules-they-belong-to}
 
-Simpan konstanta di samping satu-satunya konsumen. Tambahkan `order.constants.ts` ketika nilai bisnis tetap yang berkaitan digunakan bersama oleh beberapa modul orders:
+Konstanta yang hanya dipakai satu modul cukup disimpan di sana. Tambahkan `order.constants.ts` saat beberapa modul orders memakai nilai bisnis tetap yang sama:
 
 ```ts
 // src/features/orders/model/order.constants.ts
 export const MAX_ORDER_LINES = 100
 ```
 
-Untuk aplikasi dengan batas tersebut, schema pembuatan pesanan dapat menggunakan `z.array(orderLineSchema).min(1).max(MAX_ORDER_LINES)`, sementara editor menggunakan batas yang sama untuk menentukan kapan berhenti menambah baris. Batas produk bersama itu layak mendapat definisi terpisah. Nilai `100` hanya contoh; pilih batas yang dibutuhkan aplikasi Anda.
+Dengan batas ini, schema pembuatan pesanan bisa memakai `z.array(orderLineSchema).min(1).max(MAX_ORDER_LINES)`. Editor memakai nilai yang sama untuk berhenti menambahkan baris. Karena keduanya mengikuti satu batas produk, konstanta bersama memang diperlukan. Angka `100` hanya contoh; pilih batas sesuai aplikasimu.
 
-Simpan nilai status dalam `orderStatusSchema`; contoh ini tidak membutuhkan file konstanta status terpisah. Label yang digunakan satu komponen dapat tetap di `ui/`. URL provider dan kredensial berada bersama konfigurasi server atau platform.
+Daftar status tetap di `orderStatusSchema`. Label yang hanya dipakai satu komponen cukup di `ui/`. URL provider dan kredensial berada dalam konfigurasi server atau platform.
 
-## Mulai modul operasi di root fitur {#keep-operation-modules-at-the-feature-root}
+## Letakkan modul operasi langsung di root fitur {#keep-operation-modules-at-the-feature-root}
 
-Mulai query, Server Action, use case, dan modul pendukung langsung di root fitur. Gunakan nama file seperti `order.queries.ts`, `order.actions.ts`, dan `cancel-order.use-case.ts` untuk mengidentifikasi tanggung jawab. Fungsi request browser dan query options berada di sampingnya ketika fitur membutuhkan jalur itu.
+Mulai query, Server Action, use case, dan modul pendukung di root fitur. Nama seperti `order.queries.ts`, `order.actions.ts`, dan `cancel-order.use-case.ts` menjelaskan tugasnya. Tambahkan fungsi request browser dan query options di sana kalau diperlukan.
 
-Berbagi direktori tidak membuat setiap modul aman diimpor browser atau terbuka bagi fitur lain. Pertahankan perlindungan runtime dalam modul dan impor hanya operasi yang ditujukan bagi setiap pemanggil. Saat fitur tumbuh, kelompokkan tanggung jawab ketika file-nya sulit diikuti; gunakan aturan runtime dan import publik yang sama dalam kelompok itu.
+Berada dalam folder yang sama tidak berarti semua modul boleh diimpor browser atau fitur lain. Tetap pasang penanda runtime dan batasi import pada operasi yang memang disediakan untuk pemanggilnya. Kalau file mulai sulit ditelusuri, kelompokkan menurut tanggung jawabnya tanpa mengubah aturan tersebut.
 
-Sediakan query dan use case sebagai operasi server publik fitur. Route dan fitur lain boleh mengimpor fungsi tersebut langsung. Membership juga dapat menyediakan [wrapper aksesnya](#share-membership-checks-through-the-query-module) dari modul query. Jaga repository, mapper DTO internal, dan fungsi bantu implementasi tetap privat dalam fitur. [Contoh antarmuka publik](#expose-the-operations-and-components-callers-need) menunjukkan import yang diizinkan.
+Sediakan query dan use case sebagai operasi server publik fitur. Route dan fitur lain boleh mengimpornya langsung. Membership juga bisa mengekspor [wrapper pemeriksaan akses](#share-membership-checks-through-the-query-module) dari modul query. Repository, mapper DTO internal, dan helper implementasi tetap privat. [Contoh antarmuka publik](#expose-the-operations-and-components-callers-need) memperlihatkan import yang diizinkan.
 
-Saat menggunakan RPC, sediakan ekspor prosedur dari `order.rpc.ts` untuk dipasang oleh router aplikasi. Panggilan bisnis lintas fitur tetap menggunakan query dan use case publik.
+Jika memakai RPC, ekspor prosedur dari `order.rpc.ts` untuk dipasang di router aplikasi. Operasi bisnis antarfitur tetap memanggil query dan use case publik secara langsung.
 
-Pasang API HTTP provider langsung di entry point aplikasi. Route Handler auth mengimpor instance terkonfigurasi dari `auth.provider.ts` dan mengekspor `handler`-nya sebagai `GET` dan `POST`. Backend terpisah memasang handler tersebut di `backend/server.ts`. Batasi import provider pada entry point auth ini; fitur lain memanggil `auth.queries.ts` untuk verifikasi sesi. Frontend HTTP meneruskan request auth melalui `platform/auth/server.ts`.
+Pasang API HTTP provider di entry point aplikasi. Route Handler auth mengimpor instance dari `auth.provider.ts`, lalu mengekspor `handler`-nya sebagai `GET` dan `POST`. Untuk backend terpisah, pasang handler di `backend/server.ts`. Batasi import provider pada entry point auth ini. Fitur lain memakai `auth.queries.ts` untuk memverifikasi sesi, sementara frontend HTTP meneruskan request auth lewat `platform/auth/server.ts`.
 
-Tandai modul server biasa dengan `import 'server-only'`, termasuk query dan use case publik. Next.js menggunakan penanda itu untuk menolak import Client Component yang tidak disengaja. Modul Server Action menggunakan `'use server'` agar UI dapat memanggil ekspornya melalui Next.js. Jaga modul API browser dan query options bebas dari dependensi khusus server. [Batas runtime Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#preventing-environment-poisoning), [Server Functions](https://nextjs.org/docs/app/api-reference/directives/use-server)
+Tandai modul server biasa, termasuk query dan use case publik, dengan `import 'server-only'`. Next.js akan menolak import yang tidak sengaja masuk ke Client Component. Modul Server Action memakai `'use server'` agar UI bisa memanggilnya melalui Next.js. Modul API browser dan query options harus bebas dependensi khusus server. [Batas runtime Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#preventing-environment-poisoning), [Server Functions](https://nextjs.org/docs/app/api-reference/directives/use-server)
 
-Query mengambil data. Use case memiliki mutasi bisnis atau alur kerja, yang dapat mencakup pembacaan, penulisan, dan panggilan ke fitur lain. Pembatalan sudah membutuhkan use case karena memeriksa kepemilikan, menerapkan aturan kelayakan, dan mengoordinasikan update. Simpan pekerjaan itu dalam use case meskipun fungsinya pendek. Action dan Route Handler mem-parsing input, memanggil operasi, dan menyesuaikan response. Operasi publik terlindungi memverifikasi pemanggil melalui fitur membership dan menegakkan akses resource secara internal; ikuti [panduan perlindungan resource](./protected-resources#put-data-protection-in-the-feature-s-server-operations) untuk batas tersebut.
+Query mengambil data. Use case menjalankan mutasi atau alur bisnis yang bisa mencakup query, penulisan, dan panggilan ke fitur lain. Pembatalan pesanan sudah perlu use case karena harus memeriksa pemilik, menerapkan aturan pembatalan, dan mengatur update. Tetap letakkan pekerjaan itu di use case meskipun fungsinya pendek. Action dan Route Handler melakukan parsing input, memanggil operasi, lalu menyiapkan response. Operasi publik yang dilindungi memverifikasi pemanggil lewat membership dan memeriksa akses resource di dalamnya. Ikuti [panduan perlindungan resource](./protected-resources#put-data-protection-in-the-feature-s-server-operations) untuk pembagian ini.
 
-| File server | Tanggung jawab | Kapan dibuat |
+| File | Tugas | Kapan diperlukan |
 | --- | --- | --- |
-| `order.queries.ts` | Mengimplementasikan pembacaan server publik terkait, dengan pembatasan akses dan field hasil yang aman. | Fitur menyediakan pembacaan server langsung. |
-| `order.actions.ts` | Menyesuaikan kiriman Server Action Next.js menjadi panggilan use case dan respons UI. | UI menggunakan Server Actions. |
-| `create-order.use-case.ts` | Memiliki pembuatan pesanan, termasuk pemeriksaan bisnis dan persistensi. | Aplikasi mengimplementasikan pembuatan pesanan. |
-| `cancel-order.use-case.ts` | Memiliki pembatalan berdasarkan status pesanan terkini dan akun pemanggil. | Aplikasi mengimplementasikan pembatalan pesanan; ditunjukkan di bawah. |
-| `order.dto.ts` | Memetakan record internal menjadi data transfer object (DTO) yang boleh diterima pemanggil. | Pemetaan digunakan bersama atau membutuhkan modul terpisah agar pemilihan field dan konversi jelas. |
-| `order.repository.ts` | Membungkus operasi persistensi khusus pesanan. | `findOrderForAccount`, `cancelOrderIfUnchanged`; tambahkan ketika beberapa operasi menggunakan ulang perilaku persistensi atau membutuhkan pengganti untuk pengujian. |
-| `order.rpc.ts` | Menyesuaikan request RPC menjadi query dan use case fitur. | Aplikasi menyediakan operasi ini melalui RPC. |
+| `order.queries.ts` | Memverifikasi akses, mengambil data, dan memilih hasil yang boleh diterima pemanggil. | Kode server perlu membaca data pesanan. |
+| `order.actions.ts` | Menerima input Server Action, memanggil use case, dan memperbarui UI. | UI memakai Server Actions. |
+| `create-order.use-case.ts` | Menjalankan pembuatan pesanan, termasuk pemeriksaan bisnis dan penyimpanan. | Aplikasi membuat pesanan. |
+| `cancel-order.use-case.ts` | Membatalkan pesanan berdasarkan status terbaru dan akun pemanggil. | Aplikasi menyediakan pembatalan, seperti contoh di bawah. |
+| `order.dto.ts` | Mengubah record internal menjadi DTO yang boleh diterima pemanggil. | Beberapa query berbagi pemetaan, atau konversinya perlu dipisahkan agar mudah dibaca. |
+| `order.repository.ts` | Menangani operasi penyimpanan khusus pesanan. | Operasi seperti `findOrderForAccount` dan `cancelOrderIfUnchanged` dipakai ulang atau perlu diganti saat pengujian. |
+| `order.rpc.ts` | Menghubungkan request RPC dengan query dan use case fitur. | Aplikasi menyediakan operasi lewat RPC. |
 
-Fungsi terkait dapat berbagi file. `order.queries.ts` dapat berisi beberapa pembacaan, dan `order.repository.ts` dapat berisi pembacaan serta penulisan. Pisahkan berdasarkan tanggung jawab ketika diperlukan; tidak ada aturan satu fungsi per file.
+Satu file boleh berisi beberapa fungsi yang berkaitan. `order.queries.ts` bisa memuat beberapa query; repository bisa memuat operasi baca dan tulis. Pisahkan saat tanggung jawabnya sulit diikuti, bukan setiap kali menambah fungsi.
 
-Selalu pilih field yang boleh diterima pemanggil. Query dapat memilih dan memetakan field itu langsung. Simpan schema dan tipe DTO yang digunakan browser di `model/`; tempatkan mapper server terpisah di `order.dto.ts` ketika pemetaan memenuhi syarat di atas. Data hasil yang aman tetap wajib meskipun tidak ada file mapper.
+Selalu pilih field yang boleh diterima pemanggil. Query bisa memilih dan memetakannya sendiri. Schema dan tipe DTO yang dipakai browser tetap di `model/`; mapper server baru dipisah ke `order.dto.ts` sesuai kebutuhan di atas. Hasil tetap harus aman meskipun mapper-nya tidak punya file sendiri.
 
-Contoh aplikasi orders menggunakan ulang `toOrderDto()` untuk hasil daftar dan detail, sehingga mapper-nya berada di `order.dto.ts`. Mapper memilih field publik dan mengubah tanggal tersimpan menjadi string ISO. Menambahkan kolom ke tabel tidak otomatis menambahkannya ke response.
+Contoh aplikasi orders memakai `toOrderDto()` untuk hasil daftar dan detail, sehingga mapper ditempatkan di `order.dto.ts`. Fungsi ini memilih field publik dan mengubah tanggal menjadi string ISO. Penambahan kolom tabel pun tidak otomatis membocorkan field baru ke response.
 
-Repository menggunakan klien database platform. Simpan keputusan bisnis dalam model atau use case. Jika membutuhkan repository yang dapat diganti, fitur memiliki kontrak sekaligus adapter implementasinya. [Panduan konsep](./concepts#clean-architecture-keep-business-rules-independent-of-integrations) menjelaskan pemisahan opsional itu.
+Repository memakai klien database dari platform. Keputusan bisnis tetap di model atau use case. Jika repository perlu bisa diganti, simpan kontrak dan adapter implementasinya dalam fitur. [Panduan konsep](./concepts#clean-architecture-keep-business-rules-independent-of-integrations) membahas pilihan ini.
 
-### Bagikan pemeriksaan membership melalui modul query {#share-membership-checks-through-the-query-module}
+### Pakai ulang pemeriksaan membership dari modul query {#share-membership-checks-through-the-query-module}
 
-Ekspor `withMembership` di samping `requireMembership` dalam `membership.queries.ts` ketika beberapa operasi berbagi pemeriksaan membership yang sama. Modul ini menyediakan pembacaan membership dan wrapper publik yang menerapkannya. Jaga wrapper khusus server dan impor langsung dari modul tersebut.
+Saat beberapa operasi membutuhkan pemeriksaan membership yang sama, ekspor `withMembership` di samping `requireMembership` dalam `membership.queries.ts`. Modul ini menyediakan query membership dan wrapper publik untuk menerapkannya. Wrapper tetap khusus server dan diimpor langsung dari modul itu.
 
-Contoh native menyimpan pembacaan pesanan terkait dalam satu `order.queries.ts`:
+Contoh native menyatukan query pesanan yang berkaitan dalam `order.queries.ts`:
 
 ```ts
 import { withMembership } from '@/features/membership/membership.queries'
@@ -342,13 +342,13 @@ import { withMembership } from '@/features/membership/membership.queries'
 export const listOrders = withMembership(({ scopeId }) => listCachedOrders(scopeId))
 ```
 
-Wrapper mengembalikan fungsi yang dipanggil sebagai `listOrders(requestHeaders)`. Pada setiap panggilan, wrapper memverifikasi membership sebelum meneruskan anggota terverifikasi dan argumen lainnya ke callback. Pemeriksaan yang gagal mencegah callback berjalan. Orders tetap memiliki izin resource, validasi input, field hasil yang aman, dan caching; fungsi bantu cache privat menerima ID lingkup yang diizinkan.
+Wrapper menghasilkan fungsi yang bisa dipanggil sebagai `listOrders(requestHeaders)`. Setiap panggilan memverifikasi membership lebih dulu, lalu mengirim data anggota yang sudah terverifikasi beserta argumen lainnya ke callback. Kalau verifikasi gagal, callback tidak dijalankan. Orders tetap mengurus izin terhadap pesanan, validasi input, field hasil, dan caching. Helper cache privat hanya menerima ID lingkup akses yang sudah diizinkan.
 
-Lihat [implementasi wrapper](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/membership/membership.queries.ts) dan [pembacaan pesanan](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/orders/order.queries.ts). Panggilan langsung `requireMembership()` tetap sesuai ketika operasi membutuhkan nilai membership sebagai bagian alurnya. Wrapper tidak memiliki kebijakan cache otomatis. Wrapper mempersingkat pemeriksaan akses berulang, tetapi pemisahan file tetap bergantung pada kemudahan menelusuri modul query secara utuh.
+Lihat [implementasi wrapper](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/membership/membership.queries.ts) dan [query pesanan](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/orders/order.queries.ts). Kamu tetap bisa memanggil `requireMembership()` langsung kalau hasilnya dibutuhkan dalam alur operasi. Wrapper ini mengurangi pemeriksaan akses yang berulang; ia tidak otomatis mengatur cache. Perlu tidaknya memecah file tetap ditentukan oleh kemudahan membaca keseluruhan modul.
 
-### Kelompokkan pembacaan orders yang membesar di dalam fitur {#group-growing-order-reads-inside-the-feature}
+### Kelompokkan query orders kalau modulnya mulai besar {#group-growing-order-reads-inside-the-feature}
 
-Pertahankan satu `order.queries.ts` selama pembacaannya mudah diikuti bersama. Ketika filter daftar, pengambilan detail, dan pelaporan masing-masing membutuhkan implementasi besar, pisahkan tanggung jawab itu ke modul query terpisah. Jika modul tersebut memenuhi root fitur, kelompokkan dalam `queries/`:
+Pertahankan satu `order.queries.ts` selama query di dalamnya masih mudah dibaca bersama. Kalau filter daftar, detail, dan laporan masing-masing mulai panjang, pisahkan ke modul query sendiri. Saat file-file itu mulai memenuhi root fitur, kelompokkan dalam `queries/`:
 
 ```text
 src/features/orders/
@@ -366,23 +366,23 @@ src/features/orders/
     CancelOrderForm.tsx
 ```
 
-Ini salah satu kemungkinan struktur lanjutan dari fitur orders yang lebih kecil di atas. Tambahkan hanya tanggung jawab yang dimiliki aplikasi; fungsi pendek kedua saja tidak membutuhkan file atau folder baru. Pengelompokan menambah tingkat direktori dan memperpanjang path import, jadi gunakan ketika membantu menemukan pembacaan terkait.
+Ini pilihan susunan untuk fitur yang sudah lebih besar. Tambahkan hanya bagian yang diperlukan aplikasi. Dua fungsi pendek belum menjadi alasan membuat folder baru. Pengelompokan menambah tingkat folder dan panjang import, jadi pastikan memang membantu menemukan query terkait.
 
-Simpan pembacaan publik terlindungi dan fungsi bantu privatnya dalam modul query yang sama. Misalnya, `order-list.queries.ts` dapat mengekspor `listOrders(requestHeaders)` dan menjaga `listCachedOrders(scopeId)` tanpa ekspor. Operasi publik tetap memverifikasi membership sebelum memanggil fungsi bantunya. Lapisan `.controller.ts` tidak diperlukan untuk pemisahan ini: pemeriksaan akses, pengambilan data, dan pemilihan hasil aman tetap menjadi bagian query publik. Action, Route Handler, dan prosedur RPC menangani format request serta response masing-masing.
+Query publik yang memeriksa akses dan helper privatnya tetap bisa berada dalam satu modul. Contohnya, `order-list.queries.ts` mengekspor `listOrders(requestHeaders)`, sementara `listCachedOrders(scopeId)` tidak diekspor. Query publik memverifikasi membership sebelum memanggil helper. Tidak perlu menambah `.controller.ts` untuk pembagian ini: pemeriksaan akses, query data, dan pemilihan hasil aman masih menjadi tugas query publik. Action, Route Handler, dan prosedur RPC mengurus format request dan response masing-masing.
 
-Perbarui pemanggil agar mengimpor operasi dari modul implementasinya:
+Setelah memindahkan file, perbarui import agar langsung menunjuk modul implementasinya:
 
 ```ts
 import { listOrders } from '@/features/orders/queries/order-list.queries'
 ```
 
-Simpan modul ini di bawah `features/orders/`; `src/queries/` global akan memisahkan pembacaan pesanan dari fitur pemiliknya. Pertahankan import langsung, penanda khusus server, dan fungsi bantu privat setelah memindahkan file. Fitur lain dapat tetap menggunakan satu file query di root sampai membutuhkan pemisahan sendiri.
+Modul tetap di bawah `features/orders/`. Folder global `src/queries/` justru menjauhkan query dari fitur yang mengurusnya. Pertahankan import langsung, penanda server-only, dan helper privat. Fitur lain boleh tetap memakai satu file query di root sampai memang perlu dipecah.
 
-Pohon ini menggambarkan struktur opsional untuk fitur yang lebih besar. Contoh native tetap menyatukan pembacaan daftar, detail, dan pengiriman dalam [order.queries.ts](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/orders/order.queries.ts), dengan `withMembership` untuk pemeriksaan akses bersama.
+Susunan ini opsional. Contoh native masih menyatukan query daftar, detail, dan pengiriman dalam [order.queries.ts](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/orders/order.queries.ts), dengan `withMembership` untuk pemeriksaan akses bersama.
 
-### Telusuri pembatalan dari formulir sampai pesanan tersimpan {#follow-a-cancellation-from-the-form-to-the-stored-order}
+### Ikuti alur pembatalan dari form sampai database {#follow-a-cancellation-from-the-form-to-the-stored-order}
 
-Contoh ini menggunakan Server Action Next.js. Formulir menggunakan kebijakan pembatalan bersama untuk menentukan apakah kontrol ditampilkan, lalu mengirim ID ke action publik:
+Contoh ini memakai Server Action Next.js. Form memeriksa aturan pembatalan untuk menentukan apakah kontrol perlu ditampilkan, lalu mengirim ID pesanan ke action publik:
 
 ```tsx
 // src/features/orders/ui/CancelOrderForm.tsx
@@ -408,7 +408,7 @@ export function CancelOrderForm({
 }
 ```
 
-Action mem-parsing input dengan Zod dan memanggil use case terlindungi:
+Action melakukan parsing input dengan Zod dan memanggil use case yang memeriksa akses:
 
 ```ts
 // src/features/orders/order.actions.ts
@@ -428,7 +428,7 @@ export async function cancelOrder(formData: FormData) {
 }
 ```
 
-Formulir hanya memberikan ID pesanan. Use case memperoleh akun melalui `requireAccount`, operasi publik membership untuk memverifikasi sesi dan menentukan akun yang boleh digunakan pemanggil. Use case memvalidasi input-nya sendiri, memuat pesanan dalam akun itu, dan menerapkan aturan murni:
+Form hanya mengirim ID pesanan. Use case memanggil `requireAccount`, operasi publik membership yang memverifikasi sesi dan menentukan akun yang boleh diakses. Setelah memvalidasi input-nya sendiri, use case mengambil pesanan dalam akun itu dan memeriksa aturan pembatalan:
 
 ```ts
 // src/features/orders/cancel-order.use-case.ts
@@ -465,17 +465,17 @@ export async function cancelOrderUseCase(input: CancelOrderInput) {
 }
 ```
 
-Contoh database menggunakan klien bergaya Prisma dari `platform/database/client`. Update menyertakan akun dan status yang sudah diperiksa, sehingga pengiriman yang terjadi bersamaan tidak dapat ditimpa pembatalan ini. Contoh mengasumsikan kelayakan bergantung pada kepemilikan dan status; aturan tambahan mungkin membutuhkan transaksi atau kontrol konkurensi lain.
+Contoh ini memakai klien database bergaya Prisma dari `platform/database/client`. Kondisi update menyertakan akun dan status yang sudah diperiksa. Dengan begitu, pembatalan tidak menimpa perubahan status pengiriman yang terjadi bersamaan. Contoh menganggap izin pembatalan hanya bergantung pada pemilik dan status; aturan tambahan bisa memerlukan transaksi atau kontrol konkurensi lain.
 
-Use case ini memanggil database langsung. Tambahkan repository ketika persistensi perlu dibagikan atau diganti. Use case tetap memiliki operasi pada kedua susunan.
+Use case di atas memanggil database langsung. Tambahkan repository kalau operasi penyimpanannya perlu dipakai bersama atau diganti. Tugas use case tetap sama.
 
-Penelusuran ini menunjukkan lokasi setiap tanggung jawab. Di UI, ubah kegagalan yang diperkirakan menjadi pesan di samping formulir. Jika pembacaan di-cache, batalkan validitas data cache terkait sekaligus segarkan halaman. [Panduan pengambilan data](./data-fetching-and-mutation#update-the-screen-after-the-mutation-succeeds) membahas keputusan respons dan cache tersebut.
+Contoh ini memperlihatkan pembagian tugas sepanjang alur. Di UI, tampilkan kegagalan yang sudah diperkirakan sebagai pesan dekat form. Kalau query memakai cache, invalidasi data terkait selain me-refresh halaman. [Panduan pengambilan data](./data-fetching-and-mutation#update-the-screen-after-the-mutation-succeeds) membahas respons dan pembaruan cache tersebut.
 
-## Sediakan operasi dan komponen yang dibutuhkan pemanggil {#expose-the-operations-and-components-callers-need}
+## Sediakan operasi dan komponen untuk pemanggil lain {#expose-the-operations-and-components-callers-need}
 
-Antarmuka publik fitur terdiri dari operasi dan komponen yang ditujukan bagi modul aplikasi lain. Query dan use case server publik adalah fungsi server biasa; mengekspornya tidak membuat endpoint HTTP atau menjadikannya dapat dipanggil dari browser.
+Antarmuka publik fitur berisi operasi dan komponen yang boleh dipakai modul aplikasi lain. Query dan use case publik tetap fungsi server biasa. Mengekspor fungsi tidak otomatis membuat endpoint HTTP atau membuatnya bisa dipanggil browser.
 
-Impor pembacaan server dan use case langsung dari modul implementasinya. Gunakan modul action saat memanggil Server Action Next.js, dan modul UI saat menyusun tampilan:
+Impor query dan use case langsung dari modul implementasinya. Gunakan modul action untuk Server Actions Next.js dan modul UI untuk menyusun tampilan:
 
 ```ts
 import { getOrderDetails } from '@/features/orders/order.queries'
@@ -484,9 +484,9 @@ import { cancelOrder } from '@/features/orders/order.actions'
 import { OrderDetails } from '@/features/orders/ui/OrderDetails'
 ```
 
-Mulai pembacaan server fitur di `order.queries.ts`. Satukan pembacaan terkait dan ekspor operasi yang dibutuhkan pemanggil langsung dari modul implementasinya, termasuk setelah [memisahkan pembacaan orders yang membesar](#group-growing-order-reads-inside-the-feature). [Panduan pengambilan data](./data-fetching-and-mutation#read-during-rendering-through-a-server-component) menunjukkan query yang memanggil database dan mengembalikan DTO.
+Mulai query server fitur di `order.queries.ts`. Satukan query yang berkaitan dan ekspor operasi dari modul implementasinya, termasuk setelah [query orders dipecah](#group-growing-order-reads-inside-the-feature). [Panduan pengambilan data](./data-fetching-and-mutation#read-during-rendering-through-a-server-component) menunjukkan query yang mengakses database lalu mengembalikan DTO.
 
-Route memperoleh input-nya dan memanggil query publik itu:
+Route membaca input-nya, lalu memanggil query publik:
 
 ```tsx
 // src/app/(authenticated)/orders/[orderId]/page.tsx
@@ -507,29 +507,29 @@ export default async function OrderPage({
 }
 ```
 
-Di sini, halaman memperoleh akun untuk mengidentifikasi lingkup yang diminta. [Query memverifikasi pemilihan akun secara internal](./data-fetching-and-mutation#verify-the-requested-account-in-a-detail-read) dan membatasi pembacaan pada kedua ID. Untuk rendering server, panggil langsung. Memanggil Route Handler aplikasi sendiri menambah perjalanan HTTP dan dapat gagal selama prerender saat build. Gunakan Route Handler ketika browser atau konsumen HTTP lain membutuhkan endpoint. [Panduan Backend for Frontend Next.js](https://nextjs.org/docs/app/guides/backend-for-frontend#server-components)
+Halaman mengambil akun untuk menentukan lingkup data yang diminta. [Query memverifikasi akun itu lagi di dalam operasinya](./data-fetching-and-mutation#verify-the-requested-account-in-a-detail-read) dan membatasi pencarian pada ID akun serta pesanan. Saat rendering server, panggil query langsung. Melewati Route Handler aplikasi sendiri menambah request HTTP dan bisa gagal saat prerender pada waktu build. Route Handler diperlukan saat browser atau klien HTTP lain membutuhkan endpoint. [Panduan Backend for Frontend Next.js](https://nextjs.org/docs/app/guides/backend-for-frontend#server-components)
 
-### Tambahkan query options ketika fitur menggunakan TanStack Query {#add-query-options-when-the-feature-uses-tanstack-query}
+### Tambahkan query options saat memakai TanStack Query {#add-query-options-when-the-feature-uses-tanstack-query}
 
-Pembacaan server dan definisi query TanStack memiliki pekerjaan berbeda:
+Query server dan query options TanStack punya tugas berbeda:
 
-| File | Hasil memanggil ekspornya | Kapan dibuat |
+| File | Hasil pemanggilannya | Kapan dibuat |
 | --- | --- | --- |
-| `order.queries.ts` | `getOrderDetails(input)` menjalankan pembacaan server dan mengembalikan data. | Pemanggil server membutuhkan pembacaan. |
-| `order.actions.ts` | `cancelOrder(formData)` memanggil Server Action Next.js yang memanggil use case. | UI menggunakan Server Action untuk mutasi tersebut. |
-| `order.api.ts` | `fetchOrderDetails(input)` atau `cancelOrder(input)` membuat request HTTP/RPC. | Fungsi request khusus fitur membutuhkan modul. |
-| `order.query-options.ts` | `orderDetailsOptions(input)` mengembalikan query key, fungsi request, dan pengaturan cache. | Fitur menggunakan TanStack Query. |
-| `order.mutation-options.ts` | Mengembalikan konfigurasi mutasi TanStack bersama. | Berbagi konfigurasi antarkonsumen layak mendapat modul terpisah. |
+| `order.queries.ts` | `getOrderDetails(input)` menjalankan query server dan mengembalikan data. | Kode server perlu mengambil data. |
+| `order.actions.ts` | `cancelOrder(formData)` menjalankan Server Action yang memanggil use case. | UI memakai Server Action untuk mutasi. |
+| `order.api.ts` | `fetchOrderDetails(input)` atau `cancelOrder(input)` mengirim request HTTP/RPC. | Request fitur perlu modul sendiri. |
+| `order.query-options.ts` | `orderDetailsOptions(input)` mengembalikan query key, fungsi request, dan pengaturan cache. | Fitur memakai TanStack Query. |
+| `order.mutation-options.ts` | Mengembalikan konfigurasi mutasi TanStack yang dipakai bersama. | Beberapa pemakai perlu berbagi konfigurasi mutasi. |
 
-Tambahkan file tersebut sesuai pemanggil yang ada. Formulir dengan Server Action tidak membutuhkan mutation options TanStack. Komponen dapat memanggil `order.api.ts` tanpa file options. Tambahkan query options untuk cache query klien, dan ekstrak mutation options ketika berbagi konfigurasinya berguna.
+Buat file sesuai kebutuhan pemanggil. Form dengan Server Action tidak memerlukan mutation options TanStack. Komponen juga bisa memakai `order.api.ts` tanpa file options. Query options diperlukan untuk konfigurasi cache query klien; pisahkan mutation options saat konfigurasinya perlu dipakai bersama.
 
-Utamakan factory options yang diekspor daripada hook yang hanya membungkus `useQuery` atau `useMutation`. Komponen dapat menggunakan options langsung; tambahkan custom hook ketika mengoordinasikan perilaku React. TanStack mendokumentasikan [query options](https://tanstack.com/query/latest/docs/framework/react/guides/query-options) dan [mutation options](https://tanstack.com/query/latest/docs/framework/react/typescript#typing-mutation-options) sebagai definisi yang dapat digunakan ulang.
+Ekspor factory options daripada membuat hook yang hanya membungkus `useQuery` atau `useMutation`. Komponen bisa memakai options langsung. Custom hook berguna kalau ada perilaku React lain yang perlu diatur bersama. Dokumentasi TanStack membahas [query options](https://tanstack.com/query/latest/docs/framework/react/guides/query-options) dan [mutation options](https://tanstack.com/query/latest/docs/framework/react/typescript#typing-mutation-options) yang bisa dipakai ulang.
 
-Options bersama harus aman diimpor pada kedua lingkungan. Jangan masukkan import database. Untuk prefetch server, gunakan pembacaan fitur langsung; refetch browser menggunakan HTTP atau RPC. Kedua jalur harus mengembalikan bentuk data terotorisasi yang sama untuk cache key yang sama. [Contoh prefetch](./data-fetching-and-mutation#prefetch-when-the-client-needs-the-same-data-afterward) menunjukkan cara mengisi cache klien dari hasil server.
+Options bersama harus aman diimpor server dan browser, jadi jangan masukkan import database. Saat prefetch di server, panggil query fitur langsung. Refetch dari browser memakai HTTP atau RPC. Kedua jalur harus memeriksa hak akses dan mengembalikan bentuk data yang sama untuk cache key yang sama. [Contoh prefetch](./data-fetching-and-mutation#prefetch-when-the-client-needs-the-same-data-afterward) menunjukkan cara mengisi cache klien dari hasil server.
 
-### Jaga import dalam batas yang diizinkan {#keep-imports-within-the-allowed-boundaries}
+### Patuhi arah import yang diizinkan {#keep-imports-within-the-allowed-boundaries}
 
-Panah menunjukkan dependensi yang diizinkan di antara empat direktori:
+Panah berikut menunjukkan arah dependensi antardirektori:
 
 ```mermaid
 flowchart LR
@@ -541,18 +541,18 @@ flowchart LR
   Platform --> Shared
 ```
 
-| Dari | Boleh bergantung pada | Tidak boleh bergantung pada |
+| Dari | Boleh mengimpor | Tidak boleh mengimpor |
 | --- | --- | --- |
-| `app` | Antarmuka publik fitur, penyiapan platform, komponen dasar shared | Implementasi privat fitur |
-| `features` | Implementasinya sendiri, antarmuka publik eksplisit fitur lain, platform, shared | `app`, implementasi privat fitur lain |
-| `platform` | Paket eksternal, konfigurasi aplikasi, komponen dasar shared | Kebijakan bisnis, `app`, fitur |
-| `shared` | Komponen dasar shared generik lainnya | `app`, fitur, perilaku platform khusus bisnis |
+| `app` | Antarmuka publik fitur, setup platform, kode dasar shared | Implementasi privat fitur |
+| `features` | Kode internalnya, antarmuka publik fitur lain, platform, shared | `app`, implementasi privat fitur lain |
+| `platform` | Paket eksternal, konfigurasi aplikasi, kode dasar shared | Aturan bisnis, `app`, fitur |
+| `shared` | Kode shared lain yang juga generik | `app`, fitur, kode platform yang terikat aturan bisnis |
 
-Deklarasi tabel boleh merujuk kolom tabel fitur lain untuk mendefinisikan foreign key. Misalnya, tabel membership merujuk ID pengguna auth untuk mempertahankan batasan database di antara keduanya. Batasi import ini pada deklarasi tabel dan gunakan hanya untuk hubungan schema. Query, use case, route, dan UI tetap menggunakan operasi publik fitur untuk mengakses data fitur lain. Pemeriksaan batas pada contoh mengizinkan referensi kolom dalam deklarasi `.references()` dan menolak query atau ekspor ulang melalui import tersebut.
+Deklarasi tabel boleh merujuk kolom tabel fitur lain untuk foreign key. Misalnya, tabel membership merujuk ID pengguna auth agar hubungan keduanya dijaga database. Batasi import ini pada deklarasi hubungan schema. Query, use case, route, dan UI tetap mengakses data fitur lain melalui operasi publiknya. Pemeriksaan batas dalam contoh mengizinkan referensi kolom lewat `.references()`, tetapi menolak query atau ekspor ulang melalui import yang sama.
 
-`app` boleh menggunakan kode platform untuk kebutuhan framework seperti penyiapan observabilitas atau endpoint kesehatan. Simpan operasi bisnis di fitur pemiliknya, termasuk panggilan operasi tersebut ke integrasi.
+`app` boleh memakai platform untuk kebutuhan framework, seperti setup observabilitas atau health check. Operasi bisnis beserta panggilan integrasinya tetap di fitur yang mengurusnya.
 
-Izin ini berlaku bersama batas runtime. Next.js melaporkan error build ketika Client Component mengimpor modul bertanda `import 'server-only'`. File khusus `'use server'` membuka Server Functions melalui framework; gunakan untuk action, sementara factory query options tetap dalam modul biasa. [Batas runtime Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#preventing-environment-poisoning), [Server Functions](https://nextjs.org/docs/app/api-reference/directives/use-server)
+Aturan import ini berjalan bersama aturan runtime. Next.js menolak build jika Client Component mengimpor modul bertanda `import 'server-only'`. File khusus `'use server'` menyediakan Server Functions lewat framework. Gunakan untuk action, sedangkan factory query options tetap berada dalam modul biasa. [Batas runtime Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#preventing-environment-poisoning), [Server Functions](https://nextjs.org/docs/app/api-reference/directives/use-server)
 
 ```ts
 // ✅ Use the feature’s public server read from server code.
@@ -562,7 +562,7 @@ import { getOrderDetails } from '@/features/orders/order.queries'
 import { orderRepository } from '@/features/orders/order.repository'
 ```
 
-Jaga import pembacaan server, action, dan UI tetap eksplisit. Satu barrel root yang mencampurnya dengan persistensi privat membuat batas runtime dan kepemilikan sulit diikuti:
+Impor query server, action, dan UI secara terpisah dan jelas. Barrel di root yang mencampur semuanya dengan kode penyimpanan privat akan menyulitkan pembaca melihat batas runtime dan tanggung jawab fitur:
 
 ```ts
 // ❌ This import combines public UI and actions with a private repository.
@@ -571,65 +571,65 @@ import { OrderDetails, cancelOrder, orderRepository } from '@/features/orders'
 
 ## Konvensi Penamaan {#naming-conventions}
 
-Nama file berikut adalah konvensi yang kami rekomendasikan. Pertahankan nama file khusus Next.js seperti `page.tsx`, `layout.tsx`, dan `route.ts`.
+Gunakan konvensi berikut untuk file aplikasi. Nama khusus Next.js seperti `page.tsx`, `layout.tsx`, dan `route.ts` tetap mengikuti framework.
 
 | Jenis | Konvensi | Contoh |
 | --- | --- | --- |
-| Direktori fitur | Kapabilitas produk, biasanya jamak untuk koleksi entity. | `orders/`; `membership/` untuk kapabilitas. |
-| Prefix file fitur | Nama entity tunggal ketika file mendeskripsikan entity tersebut. | `order.schema.ts` dalam `orders/`. |
-| Komponen | PascalCase sesuai komponen yang diekspor. | `OrderDetails.tsx` mengekspor `OrderDetails`. |
-| Hook React | `use` diikuti nama camelCase deskriptif. | `useOrderDetails.ts`. |
-| Modul bisnis yang diekstrak | Kebab-case yang menjelaskan tanggung jawab yang membutuhkan modul sendiri; fungsi terkait boleh berbagi. | `order-cancellation.ts`, `order-pricing.ts`. |
-| Schema | `.schema.ts` untuk schema Zod; tipe hasil inferensi boleh tetap di sini. | `order.schema.ts` mengekspor `cancelOrderInputSchema`. |
-| Tipe | `.types.ts` ketika definisi TypeScript terpisah membutuhkan modul. | `order.types.ts` mengekspor `OrderTotals`. |
-| Konstanta | `.constants.ts` untuk konstanta terkait yang digunakan beberapa file; nama huruf besar untuk nilai tetap. | `order.constants.ts` mengekspor `MAX_ORDER_LINES`. |
-| Pembacaan server publik | `*.queries.ts`; fungsi menjelaskan operasinya. | `order.queries.ts` mengekspor `getOrderDetails`. |
-| Server Actions Next.js | `*.actions.ts`, hanya saat menggunakan Server Actions. | `order.actions.ts` mengekspor `cancelOrder`. |
-| Mutasi dan alur bisnis | `<operation>.use-case.ts`; ekspor operasi langsung. | `cancel-order.use-case.ts` mengekspor `cancelOrderUseCase`. |
-| Request API browser | `.api.ts` untuk request HTTP/RPC khusus fitur; pembacaan dan penulisan terkait boleh berbagi. | `order.api.ts` mengekspor `fetchOrderDetails` dan `cancelOrder`. |
+| Direktori fitur | Nama fitur produk; biasanya jamak untuk kumpulan entity. | `orders/`; `membership/` untuk keanggotaan. |
+| Awalan file fitur | Nama entity tunggal jika file menjelaskan entity itu. | `order.schema.ts` di dalam `orders/`. |
+| Komponen | PascalCase, sama dengan nama komponen yang diekspor. | `OrderDetails.tsx` mengekspor `OrderDetails`. |
+| Hook React | `use` diikuti nama camelCase yang menjelaskan tugasnya. | `useOrderDetails.ts`. |
+| Modul aturan bisnis | Kebab-case sesuai tanggung jawab; fungsi terkait boleh disatukan. | `order-cancellation.ts`, `order-pricing.ts`. |
+| Schema | `.schema.ts` untuk schema Zod dan tipe hasil inferensi. | `order.schema.ts` mengekspor `cancelOrderInputSchema`. |
+| Tipe | `.types.ts` jika tipe TypeScript perlu file sendiri. | `order.types.ts` mengekspor `OrderTotals`. |
+| Konstanta | `.constants.ts` untuk nilai terkait yang dipakai beberapa file; nilai tetap memakai huruf besar. | `order.constants.ts` mengekspor `MAX_ORDER_LINES`. |
+| Query server publik | `*.queries.ts`; nama fungsi menjelaskan operasinya. | `order.queries.ts` mengekspor `getOrderDetails`. |
+| Server Actions Next.js | `*.actions.ts`, hanya jika memakai Server Actions. | `order.actions.ts` mengekspor `cancelOrder`. |
+| Mutasi dan alur bisnis | `<operation>.use-case.ts`; ekspor fungsi operasinya langsung. | `cancel-order.use-case.ts` mengekspor `cancelOrderUseCase`. |
+| Request API browser | `.api.ts` untuk request HTTP/RPC fitur; operasi baca dan tulis terkait boleh disatukan. | `order.api.ts` mengekspor `fetchOrderDetails` dan `cancelOrder`. |
 | Options TanStack | `.query-options.ts` atau `.mutation-options.ts`. | `order.query-options.ts` mengekspor `orderDetailsOptions`. |
-| Prosedur RPC | `*.rpc.ts` untuk prosedur fitur yang dibuka ke router RPC aplikasi. | `order.rpc.ts`. |
-| Modul server pendukung privat | Entity atau tanggung jawab dengan suffix peran, di root fitur. | `order.repository.ts`, `order.dto.ts`. |
+| Prosedur RPC | `*.rpc.ts` untuk prosedur yang dipasang di router RPC aplikasi. | `order.rpc.ts`. |
+| Modul server privat | Nama entity atau tugas, diikuti akhiran perannya; mulai di root fitur. | `order.repository.ts`, `order.dto.ts`. |
 
-Gunakan suffix ketika membantu pembaca membedakan peran. Namai perilaku bisnis secara langsung daripada mengumpulkannya dalam file `helpers`, `common`, `misc`, atau `utils` di tingkat fitur. Satukan fungsi kecil terkait, lalu pisahkan file ketika tanggung jawab sulit ditemukan atau diikuti.
+Akhiran nama berguna kalau membantu membedakan tugas file. Sebutkan aturan bisnisnya langsung daripada menumpuk kode di `helpers`, `common`, `misc`, atau `utils` dalam fitur. Satukan fungsi kecil yang berkaitan dan pisahkan ketika tugasnya mulai sulit dicari atau dibaca.
 
-### Namai pembacaan berdasarkan hasil dan tanggung jawabnya {#name-reads-by-their-result-and-responsibility}
+### Namai query sesuai hasil dan tugasnya {#name-reads-by-their-result-and-responsibility}
 
-Gunakan `list` untuk operasi fitur yang mengembalikan koleksi dan `get` untuk satu resource atau hasil agregat. Gunakan `fetch` untuk fungsi bantu request yang bertanggung jawab mengambil data melalui HTTP atau RPC. Pemanggil dapat membedakan `getOrderDetails` dalam modul query server dari `fetchOrderDetails` dalam modul API browser.
+Gunakan `list` untuk operasi fitur yang mengembalikan kumpulan data, `get` untuk satu resource atau hasil agregat, dan `fetch` untuk helper request HTTP/RPC. Jadi, pembaca bisa membedakan `getOrderDetails` di modul query server dengan `fetchOrderDetails` di modul API browser.
 
 | Jenis fungsi | Konvensi | Contoh |
 | --- | --- | --- |
-| Pembacaan koleksi | `list` + kata benda jamak; koleksi kosong adalah hasil valid. | `listProducts`, `listOrders`, `listCurrentProducts`. |
-| Pembacaan satu resource atau agregat | `get` + nama hasil; dokumentasikan penanganan ketiadaan data. | `getOrder`, `getOrderDetails`, `getAccountBalance`. |
-| Fungsi bantu pembacaan HTTP/RPC | `fetch` + data yang diminta. | `fetchProducts`, `fetchOrderDetails`, `fetchDeliveryEstimate`. |
-| Pencarian repository opsional | `find` + target pencarian; kembalikan `null` atau `undefined` jika tidak ada. | `findOrderForAccount`. |
-| Pemeriksaan membership atau akses wajib | `require` + konteks yang diperlukan; lempar error saat pemeriksaan gagal. | `requireAccount`, `requireMembership`. |
-| Mutasi | Kata kerja yang menjelaskan operasi bisnis. | `createOrder`, `cancelOrder`, `savePreferences`. |
+| Mengambil kumpulan data | `list` + kata benda jamak; hasil kosong tetap valid. | `listProducts`, `listOrders`, `listCurrentProducts`. |
+| Mengambil satu resource atau agregat | `get` + nama hasil; jelaskan perilakunya jika data tidak ada. | `getOrder`, `getOrderDetails`, `getAccountBalance`. |
+| Mengambil data lewat HTTP/RPC | `fetch` + data yang diminta. | `fetchProducts`, `fetchOrderDetails`, `fetchDeliveryEstimate`. |
+| Pencarian opsional di repository | `find` + target; kembalikan `null` atau `undefined` jika tidak ditemukan. | `findOrderForAccount`. |
+| Memeriksa akses yang wajib terpenuhi | `require` + konteks yang diperlukan; lempar error jika gagal. | `requireAccount`, `requireMembership`. |
+| Mutasi | Kata kerja sesuai operasi bisnis. | `createOrder`, `cancelOrder`, `savePreferences`. |
 
-Ini adalah konvensi proyek. Panduan API Google menggunakan [`Get` untuk satu resource](https://google.aip.dev/131) dan [`List` untuk koleksi](https://google.aip.dev/132). Next.js juga menggunakan `getPosts` dalam [contoh pengambilan datanya](https://nextjs.org/docs/app/getting-started/fetching-data#streaming-data-with-the-use-api), jadi `getProducts` adalah pilihan valid pada basis kode yang konsisten menggunakan `get` untuk pembacaan. Di sini, `listProducts` memperjelas bahwa hasilnya koleksi.
+Ini konvensi proyek. Panduan API Google memakai [`Get` untuk satu resource](https://google.aip.dev/131) dan [`List` untuk kumpulan data](https://google.aip.dev/132). Next.js memakai `getPosts` dalam [contoh pengambilan datanya](https://nextjs.org/docs/app/getting-started/fetching-data#streaming-data-with-the-use-api). Jadi, `getProducts` juga valid jika codebase konsisten memakai `get` untuk operasi baca. Di panduan ini, `listProducts` memperjelas bahwa hasilnya berupa kumpulan data.
 
-“Data fetching” mendeskripsikan pemuatan data. Istilah itu tidak mengharuskan prefix `fetch` atau panggilan HTTP: Server Component dapat menggunakan ORM atau klien database langsung. [Pengambilan data Next.js](https://nextjs.org/docs/app/getting-started/fetching-data)
+Istilah “data fetching” berarti mengambil data. Tidak semua fungsinya harus berawalan `fetch` atau mengirim request HTTP. Server Component bisa langsung memakai ORM atau klien database. [Pengambilan data Next.js](https://nextjs.org/docs/app/getting-started/fetching-data)
 
-Query fitur boleh menggunakan database, cache, atau layanan eksternal secara internal dan tetap bernama `get` atau `list`. Pertahankan nama bawaan library seperti `findMany` dan metode RPC hasil generasi. `queryFn` TanStack dapat memanggil fungsi apa pun yang mengembalikan promise data dan melakukan reject saat gagal; nama fungsi tidak mengendalikan perilaku itu. [Fungsi query TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/query-functions)
+Nama query fitur tetap bisa memakai `get` atau `list` meskipun di dalamnya mengakses database, cache, atau layanan luar. Pertahankan nama bawaan library seperti `findMany` dan metode RPC hasil generasi. TanStack menerima `queryFn` apa pun yang mengembalikan promise data dan melakukan reject saat gagal; nama fungsi tidak memengaruhi perilakunya. [Fungsi query TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/query-functions)
 
-Pertahankan nama query publik seperti `listOrders` dan `getOrder` saat menambahkan caching. `Cached` bersifat opsional dalam nama fungsi bantu privat: `listCachedOrders(scopeId)` menekankan batas cache, sementara `listOrdersForScope(scopeId)` menekankan data yang dipilih. Panduan caching menggunakan bentuk pertama agar batasnya terlihat. Dua fungsi dalam modul yang sama tetap membutuhkan nama berbeda; menambahkan `cache()` atau `'use cache'` tidak menetapkan konvensi penamaan terpisah.
+Saat menambahkan cache, pertahankan nama publik seperti `listOrders` dan `getOrder`. Nama helper privat boleh menyertakan `Cached`: `listCachedOrders(scopeId)` menonjolkan cache-nya, sementara `listOrdersForScope(scopeId)` menjelaskan data yang diambil. Panduan caching memakai bentuk pertama agar letak cache mudah terlihat. Dua fungsi dalam satu modul tetap perlu nama berbeda. `cache()` dan `'use cache'` tidak mewajibkan pola penamaan baru.
 
-## Tempatkan komponen bersama perilaku yang diwakilinya {#put-components-with-the-behavior-they-represent}
+## Letakkan komponen sesuai fungsi yang ditampilkannya {#put-components-with-the-behavior-they-represent}
 
 | Komponen | Lokasi | Alasan |
 | --- | --- | --- |
-| `OrderStatusBadge` | `features/orders/ui` | Mengenali status pesanan dan maknanya. |
-| `DashboardHeader` | `app/(authenticated)/dashboard/_components` | Hanya ada untuk menyusun route tersebut. |
-| `Button` | `shared/ui` | Menyediakan interaksi generik tanpa kebijakan produk. |
-| `CheckoutSummary` | `features/checkout/ui` | Mewakili perilaku checkout, meskipun baru satu route yang menampilkannya. |
+| `OrderStatusBadge` | `features/orders/ui` | Memahami status pesanan dan artinya. |
+| `DashboardHeader` | `app/(authenticated)/dashboard/_components` | Hanya diperlukan untuk menyusun halaman itu. |
+| `Button` | `shared/ui` | Menyediakan interaksi umum tanpa aturan produk. |
+| `CheckoutSummary` | `features/checkout/ui` | Menampilkan bagian dari checkout, meskipun baru dipakai satu route. |
 
-Pindahkan komponen lokal route ke fitur ketika mulai mengekspresikan perilaku bisnis fitur tersebut. Pindahkan komponen fitur ke shared ketika input dan perilakunya tidak lagi bergantung pada aturan fitur.
+Pindahkan komponen dari route ke fitur saat mulai mengandung perilaku bisnis fitur itu. Komponen fitur bisa pindah ke shared kalau input dan perilakunya sudah tidak bergantung pada aturan fitur.
 
-Jumlah route yang menggunakan komponen tidak menentukan pemiliknya.
+Jumlah route yang memakai komponen bukan penentu lokasinya.
 
-## Tetapkan pemilik alur lintas fitur {#give-a-cross-feature-workflow-its-own-owner}
+## Tentukan fitur yang mengurus alur lintas fitur {#give-a-cross-feature-workflow-its-own-owner}
 
-Alur checkout dapat membaca inventaris dan membuat pesanan. Tempatkan koordinasi itu di fitur checkout. Untuk UI yang mengirim melalui Server Action Next.js:
+Checkout bisa membaca inventaris lalu membuat pesanan. Letakkan koordinasi alurnya di fitur checkout. Kalau UI memakai Server Action Next.js, susunannya seperti ini:
 
 ```text
 src/features/checkout/
@@ -637,42 +637,42 @@ src/features/checkout/
   complete-checkout.use-case.ts       # Coordinate inventory and orders
 ```
 
-Sediakan mutasi UI melalui `checkout.actions.ts`. Simpan alur dalam `complete-checkout.use-case.ts`, tempat ia memanggil operasi server publik dari inventory dan orders. Setiap fitur yang terlibat mempertahankan aturannya sendiri. Checkout mengoordinasikan alur; orders tetap memiliki perilaku pesanan.
+UI mengirim mutasi lewat `checkout.actions.ts`. Alurnya berada di `complete-checkout.use-case.ts`, yang memanggil operasi server publik inventory dan orders. Masing-masing fitur tetap mengurus aturannya sendiri. Checkout mengatur urutan pekerjaan; aturan pesanan tetap di orders.
 
-Route Handler atau fitur lain memanggil use case publik langsung. [Contoh mutasi API](./data-fetching-and-mutation#use-route-handlers-for-mutations-consumed-through-an-api) menunjukkan import tersebut. Use case harus tetap tidak bergantung pada perilaku refresh atau penanganan formulir milik action.
+Route Handler atau fitur lain bisa memanggil use case langsung. [Contoh mutasi API](./data-fetching-and-mutation#use-route-handlers-for-mutations-consumed-through-an-api) memperlihatkan import-nya. Use case harus bisa berjalan tanpa bergantung pada cara action menangani form atau me-refresh halaman.
 
-Komposisi sederhana dari beberapa tampilan fitur dapat tetap di halaman `app`. Mulai operasi lintas fitur dengan panggilan langsung bertipe. Tambahkan event ketika fitur penerima boleh bertindak nanti dan alur mengizinkan kegagalan independen. Jangan tempatkan koordinasi bisnis di `shared`.
+Halaman `app` boleh menyusun beberapa tampilan fitur tanpa membuat fitur baru. Untuk operasi bisnis lintas fitur, mulai dengan pemanggilan fungsi bertipe secara langsung. Tambahkan event kalau fitur penerima boleh bekerja belakangan dan kegagalannya boleh ditangani terpisah. Koordinasi bisnis tetap di fitur, bukan di `shared`.
 
-## Penempatan File {#file-placement}
+## Menentukan lokasi file {#file-placement}
 
-| Pertanyaan | Penempatan |
+| Kode ini mengurus apa? | Lokasi |
 | --- | --- |
-| Apakah ini route, layout, handler, atau komposisi khusus route Next.js? | `src/app` |
-| Apakah kode mengekspresikan atau menampilkan satu kapabilitas bisnis? | `src/features/<feature>` |
-| Apakah kode mendefinisikan data fitur atau menghitung aturan dari nilai yang diberikan? | `model/` fitur tersebut |
-| Apakah ini pembacaan server publik? | File `*.queries.ts` fitur |
-| Apakah ini Server Action Next.js? | File `*.actions.ts` fitur |
-| Apakah kode mengimplementasikan mutasi atau alur bisnis? | Modul `<operation>.use-case.ts` di root fitur |
-| Apakah kode membuat request HTTP/RPC khusus fitur dari browser? | File `.api.ts` fitur |
-| Apakah ini implementasi server pendukung? | Modul di root fitur, privat bagi fitur |
-| Apakah kode mengonfigurasi TanStack Query untuk fitur? | File options fitur, ketika diperlukan |
-| Apakah kode mengoordinasikan alur bisnis lintas fitur? | Fitur pemilik alur |
-| Apakah kode mengonfigurasi klien integrasi atau koneksi bersama aplikasi? | `src/platform` |
-| Apakah perilakunya generik lintas fitur dan bebas kebijakan bisnis? | `src/shared` |
-| Apakah beberapa aplikasi harus menggunakannya ulang sebagai paket stabil? | Paket workspace |
+| Route, layout, handler, atau susunan halaman Next.js | `src/app` |
+| Perilaku atau tampilan satu fitur bisnis | `src/features/<feature>` |
+| Definisi data fitur atau aturan yang bekerja dari nilai masukan | `model/` dalam fitur |
+| Query server publik | File `*.queries.ts` dalam fitur |
+| Server Action Next.js | File `*.actions.ts` dalam fitur |
+| Mutasi atau alur bisnis | `<operation>.use-case.ts` di root fitur |
+| Request HTTP/RPC fitur dari browser | File `.api.ts` dalam fitur |
+| Implementasi pendukung di server | Modul privat di root fitur |
+| Konfigurasi TanStack Query untuk fitur | File options, jika diperlukan |
+| Koordinasi bisnis lintas fitur | Fitur yang mengurus alur tersebut |
+| Konfigurasi klien integrasi atau koneksi bersama | `src/platform` |
+| Perilaku umum tanpa aturan bisnis fitur | `src/shared` |
+| Kode yang perlu dipakai beberapa aplikasi sebagai paket stabil | Paket workspace |
 
-Ketika dua lokasi tampak masuk akal, simpan kode bersama pemilik yang lebih spesifik sampai Anda bisa menjelaskan bagian yang akan digunakan bersama oleh pemanggil lain.
+Kalau dua lokasi terasa sama-sama cocok, pilih yang tanggung jawabnya lebih spesifik. Pindahkan ke tempat bersama setelah jelas bagian mana yang memang dibutuhkan pemakai lain.
 
-## Tegakkan batas sejak fitur pertama {#enforce-the-boundaries-from-the-first-feature}
+## Terapkan aturan import sejak fitur pertama {#enforce-the-boundaries-from-the-first-feature}
 
-Periksa kepemilikan, penempatan, dan import setiap kali menambahkan operasi fitur. Sebagian fitur akan mengulang peran internal yang mirip, dan sebagian duplikasi tetap ada selama Anda menentukan apakah perilakunya memang sama. Pilihan itu tidak melonggarkan aturan import publik atau runtime.
+Setiap menambahkan operasi, periksa fitur yang mengurusnya, lokasi file, dan import-nya. Beberapa fitur mungkin punya susunan internal serupa atau kode yang masih terduplikasi. Itu wajar selama belum jelas apakah perilakunya sama. Aturan import publik dan runtime tetap berlaku.
 
-Tinjau keputusan tersebut bersama kode:
+Saat meninjau kode:
 
-1. Identifikasi pemilik bisnis dan pemanggil yang dituju oleh file baru.
-2. Gunakan import publik eksplisit lintas batas fitur.
-3. Periksa batas runtime sekaligus dependensi direktori.
-4. Buat peran yang diperlukan dan jelaskan kebutuhan abstraksi tambahan seperti repository dan mapper terpisah.
-5. Tambahkan linting dependensi ketika tinjauan manual tidak lagi menangkap pelanggaran secara andal.
+1. Tentukan fitur yang mengurus file baru dan siapa yang boleh memakainya.
+2. Gunakan import publik yang jelas saat memanggil fitur lain.
+3. Periksa batas server/browser sekaligus arah dependensi folder.
+4. Buat modul yang diperlukan, lalu jelaskan alasan menambah abstraksi seperti repository atau mapper terpisah.
+5. Tambahkan linting dependensi kalau review manual sudah sering melewatkan pelanggaran.
 
-Selanjutnya: [pilih batas eksekusi dan transport untuk pembacaan serta mutasi](./data-fetching-and-mutation).
+Selanjutnya: [tentukan tempat menjalankan query dan mutasi serta cara memanggilnya](./data-fetching-and-mutation).

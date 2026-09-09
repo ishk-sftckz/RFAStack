@@ -1,21 +1,21 @@
 ---
 title: Konsep
-description: Prinsip arsitektur agar perilaku aplikasi mudah ditemukan dan dampak perubahan lebih mudah dipahami.
+description: Dasar pembagian tanggung jawab agar kode mudah ditemukan dan dampak perubahan bisa ditelusuri.
 ---
 
 # Konsep
 
-Aplikasi semakin sulit diubah ketika Anda tidak bisa menemukan tempat suatu perilaku didefinisikan atau kode yang bergantung padanya. Permintaan kecil bisa membawa Anda ke berbagai bagian basis kode, memeriksa aturan yang berulang dan memperkirakan bagian lain yang mungkin terpengaruh.
+Mengubah aplikasi jadi sulit ketika kita tidak tahu suatu aturan ditulis di mana atau kode mana yang memakainya. Permintaan kecil pun bisa membuat kita membuka banyak folder, mencari aturan yang berulang, lalu menebak bagian lain yang akan terkena dampaknya.
 
-Mulai dengan tanggung jawab yang jelas. Tempatkan perilaku yang berkaitan bersama dan tentukan bagaimana setiap bagian boleh bergantung pada bagian lain. Konsep arsitektur berikut menjelaskan alasan di balik pilihan tersebut, sehingga Anda punya dasar untuk menempatkan kode sebelum memilih struktur folder.
+Mulai dengan membagi tanggung jawab. Dekatkan kode yang mengurus hal yang sama, lalu tentukan bagian mana yang boleh bergantung pada bagian lain. Konsep berikut memberi dasar untuk mengambil keputusan itu sebelum memilih struktur folder.
 
-## Satukan perilaku bisnis seiring pertumbuhan aplikasi {#keep-business-behavior-together-as-the-application-grows}
+## Satukan kode yang mengurus fitur bisnis yang sama {#keep-business-behavior-together-as-the-application-grows}
 
-### Screaming Architecture: tampilkan bisnis dalam struktur {#screaming-architecture-make-the-business-visible}
+### Screaming Architecture: struktur harus memperlihatkan fungsi aplikasi {#screaming-architecture-make-the-business-visible}
 
-Buka repositori yang disusun berdasarkan `components`, `services`, dan `utils`. Anda masih harus memeriksa file untuk mengetahui apa yang dilakukan aplikasi.
+Kalau folder utama hanya bernama `components`, `services`, dan `utils`, kita masih harus membuka file-nya untuk tahu aplikasi ini mengerjakan apa.
 
-[Screaming Architecture](https://blog.cleancoder.com/uncle-bob/2011/09/30/Screaming-Architecture.html) dari Robert C. Martin mempertanyakan apakah struktur memperlihatkan use case sistem. Terapkan gagasan itu di dalam `src/features`:
+Dalam [Screaming Architecture](https://blog.cleancoder.com/uncle-bob/2011/09/30/Screaming-Architecture.html), Robert C. Martin mengajak kita melihat apakah struktur aplikasi sudah mencerminkan use case-nya. Terapkan ide itu di `src/features`:
 
 ```text
 src/features/
@@ -25,38 +25,38 @@ src/features/
   reporting/
 ```
 
-Nama-nama tersebut memberi Anda titik awal. Untuk perubahan pesanan, buka `orders`. Untuk perubahan penagihan, buka `billing`.
+Dari nama folder saja, sudah ada petunjuk harus mulai dari mana. Mau mengubah pesanan, buka `orders`. Mau mengubah penagihan, buka `billing`.
 
-Konvensi Next.js tetap berada di `src/app`. Kapabilitas bisnis punya tempat sendiri di samping struktur framework tersebut.
+File yang mengikuti konvensi Next.js tetap di `src/app`. Kode bisnis punya tempat sendiri di sampingnya.
 
-### Vertical Slice Architecture: dekatkan bagian-bagian yang berubah bersama {#vertical-slice-architecture-keep-the-parts-of-a-change-nearby}
+### Vertical Slice Architecture: dekatkan kode yang berubah bersama {#vertical-slice-architecture-keep-the-parts-of-a-change-nearby}
 
-Mengubah pembatalan pesanan bisa melibatkan formulir, validasi input, aturan bisnis, dan operasi server. Simpan bagian-bagian itu di fitur pesanan agar Anda dapat menelusuri perubahan tanpa berpindah-pindah folder teknis yang mencakup seluruh aplikasi.
+Perubahan aturan pembatalan pesanan bisa menyentuh form, validasi input, aturan bisnis, dan operasi server. Simpan semuanya di fitur orders supaya alurnya bisa diikuti tanpa berpindah-pindah folder teknis di seluruh aplikasi.
 
-[Vertical Slice Architecture](https://www.jimmybogard.com/vertical-slice-architecture/) dari Jimmy Bogard mengelompokkan tanggung jawab berdasarkan use case individual di seluruh stack. Gunakan pendekatan itu pada tingkat fitur: fitur `orders` berisi beberapa operasi terkait dan kode khusus pesanan yang mereka gunakan.
+[Vertical Slice Architecture](https://www.jimmybogard.com/vertical-slice-architecture/) dari Jimmy Bogard mengelompokkan kode di seluruh stack berdasarkan use case. Gunakan pendekatan ini di tingkat fitur: `orders` berisi operasi yang berkaitan dengan pesanan beserta kode yang dibutuhkan operasi tersebut.
 
-Sebuah fitur dapat memiliki:
+Satu fitur bisa berisi:
 
 - UI;
 - schema dan tipe;
 - aturan bisnis murni;
-- antarmuka pembacaan dan mutasi;
-- use case khusus server;
-- kode repository saat persistensi membutuhkan modul sendiri.
+- fungsi untuk membaca dan mengubah data;
+- use case yang hanya berjalan di server;
+- repository, jika kode akses database perlu dipisahkan.
 
-Buat bagian yang dibutuhkan oleh tanggung jawab fitur. Fitur yang hanya membaca data dapat dimulai dengan komponen dan query server. Fitur yang menjalankan mutasi bisnis membutuhkan use case sebagai pemilik operasi tersebut. Route dan action menyesuaikan request serta response, bahkan ketika operasinya kecil.
+Tidak semuanya harus dibuat sekaligus. Fitur yang hanya menampilkan data bisa mulai dengan komponen dan query server. Kalau ada mutasi bisnis, buat use case yang menangani operasinya. Route dan action tetap mengurus request serta response, walaupun operasinya pendek.
 
-### Clean Architecture: pisahkan aturan bisnis dari integrasi {#clean-architecture-keep-business-rules-independent-of-integrations}
+### Clean Architecture: aturan bisnis tidak perlu bergantung pada integrasi {#clean-architecture-keep-business-rules-independent-of-integrations}
 
-Aturan yang menentukan apakah pesanan boleh dibatalkan harus bisa berjalan tanpa Next.js atau koneksi database.
+Untuk menentukan apakah status pesanan mengizinkan pembatalan, kita tidak perlu menjalankan Next.js atau membuka koneksi database.
 
-[Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) menjelaskan aturan dependensi yang memisahkan kebijakan bisnis dari detail framework dan infrastruktur. Jaga agar aturan murni milik fitur tidak bergantung pada detail tersebut. Kode server fitur boleh menggunakan integrasi platform secara langsung.
+[Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) menjelaskan arah dependensi yang menjaga aturan bisnis tetap terpisah dari detail framework dan infrastruktur. Terapkan ini pada aturan murni di fitur. Kode server fitur tetap boleh memakai integrasi platform secara langsung.
 
-Untuk pembacaan sederhana, query fitur dapat memanggil klien database. Simpan perhitungan murni atau aturan bisnis dalam modul yang dapat berjalan tanpa klien tersebut.
+Query sederhana boleh langsung memanggil klien database. Namun, perhitungan atau aturan bisnis murninya harus tetap bisa dijalankan tanpa klien tersebut.
 
-Tambahkan repository ketika operasi fitur perlu berbagi atau mengganti perilaku persistensi. Jika penggantian membutuhkan kontrak, fitur memiliki kontrak sekaligus adapter yang mengimplementasikannya.
+Tambahkan repository ketika beberapa operasi perlu memakai kode persistensi yang sama atau ketika implementasinya perlu diganti. Jika dibutuhkan kontrak untuk penggantian itu, letakkan kontrak dan adapter implementasinya di dalam fitur.
 
-Panah berikut menunjukkan dependensi kode sumber untuk susunan opsional tersebut:
+Diagram berikut menunjukkan arah dependensi kode untuk pilihan tersebut:
 
 ```mermaid
 flowchart TD
@@ -68,39 +68,39 @@ flowchart TD
   Repository --> Platform[src/platform/database]
 ```
 
-Query dan use case adalah operasi server publik. Repository-nya tetap privat di dalam fitur dan menggunakan klien database platform. Aturan bisnis murni bekerja dari nilai yang diberikan, sementara kode platform tetap tidak bergantung pada fitur.
+Query dan use case menjadi fungsi server yang boleh dipanggil dari luar fitur. Repository tetap internal dan memakai klien database dari platform. Aturan bisnis murni cukup menerima nilai yang akan diperiksa, sedangkan platform tidak perlu mengetahui fitur yang memakainya.
 
-Tambahkan pemisahan ini saat menyelesaikan masalah pengujian atau integrasi tertentu. Query fitur yang langsung mengakses data tetap menjadi titik awal yang valid.
+Gunakan pemisahan ini untuk kebutuhan pengujian atau integrasi yang jelas. Sebelum ada kebutuhan itu, query fitur yang langsung mengakses database sudah cukup.
 
-### Domain-Driven Design: tetapkan pemilik konsep bisnis {#domain-driven-design-give-business-concepts-a-clear-owner}
+### Domain-Driven Design: perjelas fitur yang bertanggung jawab atas konsep bisnis {#domain-driven-design-give-business-concepts-a-clear-owner}
 
-Model bersama bisa perlahan mengumpulkan aturan dari beberapa fitur. Setelah semua fitur dapat mengubahnya, Anda harus memahami seluruh pemanggilnya sebelum mengubah satu aturan bisnis.
+Model yang dipakai bersama bisa lama-lama menampung aturan dari banyak fitur. Akibatnya, untuk mengubah satu aturan saja, kita harus memahami semua kode yang memakai model tersebut.
 
-Simpan aturan bersama fitur yang memiliki maknanya. [Referensi Domain-Driven Design](https://www.domainlanguage.com/ddd/reference/) dari Eric Evans menjelaskan bagaimana bahasa domain dan bounded context membantu menentukan hubungan tersebut.
+Simpan aturan di fitur yang mengurus konsep bisnisnya. [Referensi Domain-Driven Design](https://www.domainlanguage.com/ddd/reference/) dari Eric Evans membahas bagaimana bahasa domain dan bounded context membantu menentukan pembagian ini.
 
-Gunakan praktik DDD berikut untuk memperjelas kepemilikan:
+Beberapa praktik DDD yang bisa dipakai:
 
-- namai fitur dengan bahasa produk;
-- dekatkan aturan dengan fitur pemiliknya;
-- nyatakan hubungan antarfitur secara eksplisit;
-- pisahkan model ketika makna bisnisnya berbeda;
-- pisahkan perilaku domain dari integrasi teknis.
+- beri nama fitur dengan istilah yang dipakai dalam produk;
+- simpan aturan dekat dengan fitur yang mengurusnya;
+- perjelas hubungan antarfitur;
+- pisahkan model jika maknanya berbeda dalam tiap fitur;
+- pisahkan perilaku bisnis dari kode integrasi.
 
-Tambahkan entity, aggregate, repository, atau domain service saat membantu memperjelas perilaku yang perlu dimodelkan. Kartu dashboard yang hanya membaca data tidak membutuhkan aggregate root agar memiliki arsitektur.
+Gunakan entity, aggregate, repository, atau domain service ketika membantu menjelaskan perilaku yang sedang dimodelkan. Kartu dashboard yang hanya menampilkan data tidak otomatis membutuhkan aggregate root.
 
-## Gunakan tujuh aturan untuk menempatkan kode dan meninjau import {#use-seven-rules-to-place-code-and-review-imports}
+## Tujuh aturan untuk menempatkan kode dan memeriksa import {#use-seven-rules-to-place-code-and-review-imports}
 
-| Prinsip | Tindakan |
+| Prinsip | Penerapan |
 | --- | --- |
-| 1. Susun perilaku bisnis berdasarkan fitur | Satukan UI, aturan, pembacaan, mutasi, dan pekerjaan server yang berkaitan. Ikuti aturan penempatan yang sama di setiap fitur. |
-| 2. Jaga entry point framework tetap tipis | Biarkan halaman, layout, Route Handler, dan Server Action menyesuaikan input serta output. Delegasikan aturan bisnis kepada fitur pemiliknya. |
-| 3. Pisahkan integrasi dari keputusan | Tempatkan koneksi database, klien email, dan integrasi serupa di `platform`. Tentukan kapan dan mengapa menggunakannya di dalam fitur. |
-| 4. Bagikan kode dengan alasan yang jelas | Pindahkan kode ke `shared` ketika perilakunya generik lintas fitur. Izinkan duplikasi selama perilaku bersama belum jelas. |
-| 5. Buka antarmuka fitur yang kecil | Ekspor query dan use case langsung sebagai operasi server publik. Jaga repository, mapper internal, dan fungsi bantu tetap privat di dalam fitur. |
-| 6. Perlihatkan batas runtime | Tandai implementasi khusus server dengan `import 'server-only'`. Tempatkan `'use client'` pada batas interaktif terkecil yang berguna. |
-| 7. Pisahkan peran wajib dari abstraksi opsional | Terapkan aturan kepemilikan dan dependensi sejak awal. Buat modul sesuai tanggung jawab yang ada; tambahkan abstraksi repository dan mapper terpisah untuk kebutuhan konkret. |
+| 1. Kelompokkan kode berdasarkan fitur bisnis | Satukan UI, aturan, query, mutasi, dan kode server yang saling berkaitan. Pakai aturan penempatan yang sama di setiap fitur. |
+| 2. Batasi pekerjaan entry point framework | Halaman, layout, Route Handler, dan Server Action mengurus input serta output. Panggil fitur terkait untuk menjalankan aturan bisnis. |
+| 3. Pisahkan koneksi layanan dari keputusan bisnis | Koneksi database, klien email, dan integrasi sejenis masuk ke `platform`. Fitur menentukan kapan dan untuk apa integrasi itu dipakai. |
+| 4. Pindahkan kode ke shared dengan alasan yang jelas | Gunakan `shared` untuk kode yang tidak bergantung pada aturan fitur. Duplikasi masih boleh selama belum jelas perilaku mana yang benar-benar sama. |
+| 5. Batasi bagian fitur yang bisa dipanggil dari luar | Ekspor query dan use case langsung dari modulnya. Repository, mapper internal, dan helper tetap privat di dalam fitur. |
+| 6. Perjelas kode yang boleh berjalan di server dan browser | Tandai implementasi server dengan `import 'server-only'`. Letakkan `'use client'` pada bagian terkecil yang membutuhkan interaksi. |
+| 7. Bedakan tanggung jawab wajib dari abstraksi tambahan | Terapkan pembagian tanggung jawab dan aturan dependensi sejak awal. Tambahkan repository atau mapper terpisah ketika ada kebutuhan konkret. |
 
-Antarmuka publik terdiri dari operasi dan komponen yang disediakan fitur bagi pemanggil. Ekspor operasi langsung dari modul implementasinya di dalam fitur. Mulai dengan modul tersebut di root fitur, tempat operasi publik dan kode pendukung privat dapat berada bersama:
+Antarmuka publik fitur adalah operasi dan komponen yang boleh dipakai oleh kode di luar fitur. Ekspor langsung dari modul implementasinya. Modul ini bisa dimulai di root fitur, berdampingan dengan kode pendukung internal:
 
 ```ts
 // ✅ Import the feature's public server query.
@@ -110,39 +110,39 @@ import { getOrderDetails } from '@/features/orders/order.queries'
 import { getOrderDetails } from '@/features/orders/internal/query-builder'
 ```
 
-Satukan Server Component dan Client Component di `ui/` milik fitur, dengan aturan murni di `model/`. Saat modul operasi membesar, [kelompokkan pembacaan pesanan yang berkaitan di dalam fitur](./folder-structure#group-growing-order-reads-inside-the-feature). Server Component dapat memanggil query langsung, sementara formulir dapat mengirim melalui Server Action. Next.js mendokumentasikan bagaimana [`'use client'` dan `server-only` menetapkan serta melindungi batas runtime](https://nextjs.org/docs/app/getting-started/server-and-client-components). Import, directive, dan penanda mengatur batas tersebut terlepas dari susunan folder.
+Server Component dan Client Component sama-sama berada di `ui/`, sedangkan aturan murni berada di `model/`. Saat modul operasi mulai besar, [kelompokkan query pesanan yang berkaitan di dalam fitur](./folder-structure#group-growing-order-reads-inside-the-feature). Server Component boleh langsung memanggil query, sementara form mengirim lewat Server Action. [`'use client'` dan `server-only`](https://nextjs.org/docs/app/getting-started/server-and-client-components) mengatur batas server dan browser. Batas ini mengikuti import dan directive, bukan nama folder.
 
-## Mulai pekerjaan lintas fitur dengan panggilan publik langsung {#start-cross-feature-work-with-a-direct-public-call}
+## Mulai integrasi antarfitur dengan panggilan langsung {#start-cross-feature-work-with-a-direct-public-call}
 
-Ketika `checkout` membutuhkan harga dari `catalog`, panggil query publik yang disediakan `catalog`. Simpan aturan harga di `catalog`, lalu biarkan checkout menggunakan hasilnya.
+Ketika `checkout` butuh harga produk dari `catalog`, panggil query publik `catalog`. Aturan harga tetap di `catalog`; checkout cukup memakai hasilnya.
 
-Jika sebuah alur mengoordinasikan beberapa fitur, tetapkan pemilik alur tersebut. Operasi checkout dapat mengoordinasikan inventaris dan pesanan sementara setiap fitur tetap memiliki aturan bisnisnya sendiri. [Panduan struktur folder](./folder-structure) menunjukkan tempat operasi itu berada.
+Alur yang melibatkan beberapa fitur juga perlu jelas penanggung jawabnya. Checkout bisa mengoordinasikan inventory dan orders, sementara setiap fitur tetap mengurus aturan bisnisnya sendiri. [Panduan struktur folder](./folder-structure) menunjukkan tempat kode koordinasi itu.
 
-Gunakan event ketika fitur penerima boleh memproses pekerjaan nanti dan alurnya mengizinkan kegagalan secara independen. Operasi yang membutuhkan harga sebelum melanjutkan tetap harus memperoleh harga tersebut terlebih dahulu.
+Gunakan event jika fitur penerima boleh memproses pekerjaan belakangan dan kegagalannya tidak harus menggagalkan alur utama. Kalau operasi harus tahu harga sebelum bisa lanjut, harga itu tetap harus didapatkan saat itu juga.
 
-Ekstrak konsep domain bersama hanya ketika fitur-fitur yang terlibat menggunakannya dengan makna yang sama. Kesamaan nama saja tidak cukup.
+Buat model domain bersama hanya jika fitur-fitur yang memakainya memang memberi makna yang sama pada konsep tersebut. Nama yang mirip belum cukup.
 
-Hindari mengimpor file privat fitur lain. Setelah pemanggil bergantung pada path tersebut, pemindahan modul internal mengharuskan perubahan kode di luar pemiliknya.
+Jangan impor file internal fitur lain. Kalau kode luar sudah bergantung pada path internal itu, memindahkan satu modul pun akan memaksa perubahan di luar fiturnya.
 
-## Periksa apakah perubahan punya pemilik yang jelas {#check-whether-a-change-has-a-clear-owner}
+## Periksa apakah tanggung jawab kode sudah jelas {#check-whether-a-change-has-a-clear-owner}
 
-Pilih satu perilaku dalam aplikasi dan jawab pertanyaan berikut dari kodenya:
+Ambil satu perilaku aplikasi, lalu cari jawaban berikut dari kodenya:
 
-1. Fitur mana yang memilikinya?
+1. Fitur mana yang mengurusnya?
 2. Modul mana yang boleh memanggilnya?
-3. Di mana entry point framework mendelegasikan pekerjaan kepada fitur?
-4. Kode mana yang khusus server?
-5. Integrasi mana yang bisa berubah tanpa menulis ulang aturan bisnis?
-6. Operasi dan komponen mana yang terbuka bagi fitur lain?
+3. Di mana entry point framework menyerahkan pekerjaan ke fitur?
+4. Bagian mana yang hanya boleh berjalan di server?
+5. Integrasi mana yang bisa diganti tanpa menulis ulang aturan bisnis?
+6. Operasi dan komponen mana yang boleh dipakai fitur lain?
 
-Jika jawabannya bergantung pada ingatan seseorang, dokumentasikan keputusan itu dan cerminkan dalam file atau import yang terkait.
+Kalau jawabannya harus mengandalkan ingatan seseorang, catat keputusan itu dan perjelas lewat penempatan file atau import-nya.
 
-## Gunakan aturan yang sama pada fitur kecil dan besar {#use-the-same-rules-in-small-and-large-features}
+## Fitur kecil dan besar tetap mengikuti aturan yang sama {#use-the-same-rules-in-small-and-large-features}
 
-Aturan ini sesuai untuk aplikasi dengan beberapa kapabilitas bisnis, perubahan yang melibatkan kode server dan klien, serta kontributor yang perlu memahami pekerjaan satu sama lain.
+Aturan ini berguna ketika aplikasi punya beberapa fitur bisnis, perubahan sering melibatkan server dan klien, dan para kontributornya perlu memahami kode satu sama lain.
 
-Fitur kecil tetap mengikuti aturan kepemilikan, penempatan, dan runtime yang sama. Fitur yang hanya membaca data tidak membutuhkan use case mutasi. Query dapat memilih field hasil yang aman tanpa mapper terpisah, dan use case dapat memanggil klien database tanpa abstraksi repository. Buat setiap modul untuk tanggung jawab yang sudah ada hari ini.
+Fitur kecil tetap mengikuti pembagian tanggung jawab, penempatan kode, dan batas runtime yang sama. Fitur read-only tidak perlu use case mutasi. Query boleh memilih field hasil tanpa mapper terpisah. Use case juga boleh memanggil database langsung tanpa repository. Buat modul untuk pekerjaan yang memang sudah ada.
 
-Anda tetap perlu meninjau import, mempertanyakan kode yang ditempatkan di folder bersama, dan memindahkan kode ketika pemilik bisnisnya berubah. [Panduan struktur folder](./folder-structure) menetapkan aturan penempatan dan import publik yang berlaku sejak fitur pertama.
+Tetap tinjau import, periksa alasan kode masuk ke shared, dan pindahkan kode jika tanggung jawab bisnisnya berubah. [Panduan struktur folder](./folder-structure) menjelaskan aturan penempatan dan import publik yang dipakai sejak fitur pertama.
 
-Selanjutnya: [terapkan konsep ini pada struktur folder Next.js yang konkret](./folder-structure).
+Selanjutnya: [lihat penerapannya dalam struktur folder Next.js](./folder-structure).

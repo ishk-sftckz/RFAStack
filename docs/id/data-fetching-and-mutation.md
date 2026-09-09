@@ -1,21 +1,21 @@
 ---
 title: Pengambilan Data & Mutasi
-description: Cara memilih jalur pembacaan, mutasi, lokasi eksekusi, dan konsumen dalam aplikasi Next.js.
+description: Memilih cara mengambil data dan menjalankan mutasi sesuai kebutuhan halaman, interaksi browser, dan API aplikasi.
 ---
 
 # Pengambilan Data & Mutasi
 
-Next.js menunjukkan cara [mengambil data](https://nextjs.org/docs/app/getting-started/fetching-data) dan [menangani mutasi](https://nextjs.org/docs/app/getting-started/mutating-data). Aplikasi nyata tetap membutuhkan strategi berbeda untuk memuat halaman, menjaga status pesanan tetap terkini, atau menerima pembatalan dari aplikasi mobile. Seiring pertumbuhan proyek, Anda membutuhkan strategi yang jelas agar keputusan itu konsisten di seluruh fitur.
+Next.js menyediakan cara untuk [mengambil data](https://nextjs.org/docs/app/getting-started/fetching-data) dan [menjalankan mutasi](https://nextjs.org/docs/app/getting-started/mutating-data). Tapi memuat halaman, memperbarui status pesanan di browser, dan menerima pembatalan dari aplikasi mobile punya kebutuhan berbeda. Tentukan strategi data untuk proyekmu supaya setiap fitur mengikuti pola yang sama untuk kebutuhan yang serupa.
 
 ## Next.js native {#next-js-native}
 
-### Baca data saat rendering melalui Server Component {#read-during-rendering-through-a-server-component}
+### Ambil data saat rendering lewat Server Component {#read-during-rendering-through-a-server-component}
 
-Server Component dapat memuat data sambil merender halaman, menggunakan `fetch`, ORM, atau klien database. Dalam fitur orders, komponen memanggil query dari `order.queries.ts`, lalu meneruskan hasil ke UI. [Panduan pengambilan data Next.js](https://nextjs.org/docs/app/getting-started/fetching-data)
+Server Component bisa mengambil data sambil merender halaman, baik lewat `fetch`, ORM, maupun klien database. Dalam fitur orders, komponen memanggil query dari `order.queries.ts`, lalu mengirim hasilnya ke UI. [Panduan pengambilan data Next.js](https://nextjs.org/docs/app/getting-started/fetching-data)
 
-Karena komponen dan query sama-sama berjalan di server, komponen dapat memanggil fungsi itu langsung. Melewati Route Handler aplikasi sendiri akan menambah request HTTP di antara keduanya. Request itu juga dapat gagal saat prerender pada waktu build, ketika server HTTP aplikasi belum berjalan. [Panduan Backend for Frontend Next.js](https://nextjs.org/docs/app/guides/backend-for-frontend#server-components)
+Komponen dan query sama-sama berjalan di server, jadi panggil fungsinya langsung. Melewati Route Handler aplikasi sendiri hanya menambah request HTTP di antara keduanya. Request itu juga bisa gagal saat prerender pada waktu build karena server HTTP aplikasi belum berjalan. [Panduan Backend for Frontend Next.js](https://nextjs.org/docs/app/guides/backend-for-frontend#server-components)
 
-Sebelum menulis query, tentukan data yang boleh diterima UI. Untuk contoh orders ini, datanya adalah ID pesanan, status, total, dan tanggal pembuatan. Kita mendeskripsikan field tersebut dengan schema Zod agar query dapat memeriksa nilai hasil dan UI menggunakan tipe TypeScript yang sesuai. Schema berada di `model/order.schema.ts` milik fitur, bersama schema input yang sudah ada:
+Sebelum menulis query, tentukan field yang boleh diterima UI. Contoh orders membutuhkan ID, status, total, dan tanggal pembuatan pesanan. Kita definisikan hasilnya dengan schema Zod agar query bisa memvalidasinya dan UI mendapat tipe TypeScript yang sesuai. Tambahkan schema ini ke `model/order.schema.ts`, di samping schema input yang sudah ada:
 
 ```ts
 // src/features/orders/model/order.schema.ts
@@ -39,9 +39,9 @@ export type OrderStatus = z.infer<typeof orderStatusSchema>
 export type OrderSummary = z.infer<typeof orderSummarySchema>
 ```
 
-Ini memperluas file schema dari [contoh struktur folder](./folder-structure#use-zod-schemas-and-infer-their-types); pertahankan definisi `orderStatusSchema` saat menambahkan `orderSummarySchema`. Zod memeriksa nilai saat runtime dan menginferensikan tipe TypeScript yang sesuai. [Dasar Zod](https://zod.dev/basics)
+Kode ini melengkapi file schema dari [contoh struktur folder](./folder-structure#use-zod-schemas-and-infer-their-types). Pertahankan `orderStatusSchema` saat menambahkan `orderSummarySchema`. Zod memvalidasi nilai saat runtime sekaligus menyediakan inferensi tipe TypeScript. [Dasar Zod](https://zod.dev/basics)
 
-Query membatasi pembacaan database pada akun dan memetakan record ke schema tersebut. Namanya `listOrders` karena mengembalikan koleksi. [Konvensi nama pembacaan](./folder-structure#name-reads-by-their-result-and-responsibility) menggunakan `get` untuk satu resource atau agregat dan `fetch` untuk fungsi bantu request HTTP/RPC.
+Query membatasi pencarian ke akun yang diizinkan, lalu mengubah record database menjadi bentuk hasil di atas. Namanya `listOrders` karena mengembalikan kumpulan pesanan. Dalam [konvensi nama query](./folder-structure#name-reads-by-their-result-and-responsibility), `get` dipakai untuk satu resource atau agregat, sedangkan `fetch` untuk helper request HTTP/RPC.
 
 ```ts
 // src/features/orders/order.queries.ts
@@ -79,29 +79,29 @@ export default async function OrdersPage() {
 }
 ```
 
-Panggilan berjalan langsung dari halaman ke fitur:
+Halaman memanggil fitur secara langsung:
 
 ```text
 Server Component → query fitur → database atau layanan eksternal
 ```
 
-Halaman menangani rendering. Fitur menentukan pesanan yang dapat dilihat akun dan field yang dikembalikan. Ketika route lain membutuhkan pembacaan yang sama, route mengimpor query langsung dari `order.queries.ts`.
+Halaman mengurus rendering. Fitur menentukan pesanan yang boleh dilihat akun dan field yang dikembalikan. Route lain yang membutuhkan data sama bisa mengimpor query langsung dari `order.queries.ts`.
 
-Hasilnya berupa data transfer object, atau DTO: field yang dibutuhkan UI dan boleh diterima pemanggil. Query memilih field secara eksplisit dan mengubah tanggal database menjadi string ISO. Contoh menggunakan klien bergaya Prisma dari `platform/database/client`.
+Hasil ini disebut data transfer object atau DTO: data yang dibutuhkan UI dan boleh diterima pemanggil. Query memilih field satu per satu dan mengubah tanggal database menjadi string ISO. Contoh memakai klien bergaya Prisma dari `platform/database/client`.
 
-Query ini memilih dan memetakan hasil sendiri. Ketika beberapa pembacaan berbagi pemetaan atau pemetaan membutuhkan modul terpisah agar jelas, [ekstrak mapper `toOrderSummary`](#extract-a-dto-mapper-when-reads-share-the-conversion) ke `order.dto.ts`. Field hasil harus aman bagi pemanggil pada kedua susunan. Schema Zod dan tipe hasil inferensi tetap di `model/`, agar kode browser dapat menggunakannya tanpa mengimpor mapper server.
+Pemetaan hasil masih berada di dalam query. Kalau beberapa query memakai konversi yang sama, atau konversinya lebih mudah dibaca dalam modul sendiri, [pisahkan mapper `toOrderSummary`](#extract-a-dto-mapper-when-reads-share-the-conversion) ke `order.dto.ts`. Dengan atau tanpa file mapper, field hasil harus tetap aman untuk pemanggil. Schema Zod dan tipe hasil inferensi tetap di `model/` agar browser bisa memakainya tanpa mengimpor kode server.
 
-`requireAccount` adalah operasi server publik fitur membership untuk memverifikasi sesi dan menentukan akun yang boleh digunakan pemanggil. Query memanggilnya secara internal agar setiap pemanggil menerima perlindungan yang sama. ID tervalidasi saja tidak mengotorisasi pembacaan. [Panduan perlindungan resource](./protected-resources) menjelaskan tempat pemeriksaan tersebut.
+`requireAccount` adalah operasi server publik dari membership. Tugasnya memverifikasi sesi dan menentukan akun yang boleh diakses. Query memanggilnya di dalam operasi supaya pemeriksaan berlaku bagi semua pemanggil. ID yang valid belum membuktikan hak akses. [Panduan perlindungan resource](./protected-resources) membahas penempatan pemeriksaan ini.
 
-Modul query khusus server, sehingga kredensial database dan implementasinya tetap di luar bundle klien. [Referensi Server Components React](https://react.dev/reference/rsc/server-components) menjelaskan pemisahan ini. Jika query membaca layanan eksternal, parsing response dengan schema Zod sebelum mengandalkan bentuknya.
+Modul query hanya berjalan di server, sehingga kredensial database dan implementasinya tidak masuk bundle browser. [Referensi Server Components React](https://react.dev/reference/rsc/server-components) menjelaskan pemisahan tersebut. Kalau query mengambil data dari layanan luar, parsing response dengan schema Zod sebelum memakai isinya.
 
-### Gunakan Server Actions untuk mutasi UI yang ditangani Next.js {#use-server-actions-for-ui-mutations-handled-by-next-js}
+### Pakai Server Actions untuk mutasi UI yang ditangani Next.js {#use-server-actions-for-ui-mutations-handled-by-next-js}
 
-Formulir pembatalan dapat mengirim ke aplikasi Next.js ini, yang memeriksa apakah akun boleh membatalkan pesanan lalu memperbarui layar. Gunakan Server Action untuk jalur ini.
+Form pembatalan bisa mengirim ke aplikasi Next.js ini, yang memeriksa hak akses, membatalkan pesanan, lalu memperbarui halaman. Server Action cocok untuk alur ini.
 
-Di sini, “Server Action” berarti mekanisme Next.js untuk memanggil React Server Function dari action atau transition, misalnya pengiriman formulir. Gunakan `.actions.ts` khusus untuk fungsi tersebut. [Panduan mutasi Next.js](https://nextjs.org/docs/app/getting-started/mutating-data)
+Di panduan ini, “Server Action” merujuk pada mekanisme Next.js untuk memanggil React Server Function dari action atau transition, misalnya saat form dikirim. Gunakan akhiran `.actions.ts` khusus untuk fungsi tersebut. [Panduan mutasi Next.js](https://nextjs.org/docs/app/getting-started/mutating-data)
 
-Input pembatalan berada dalam file schema fitur, yang sudah mengimpor Zod:
+Tambahkan schema input pembatalan ke file schema fitur yang sudah mengimpor Zod:
 
 ```ts
 // src/features/orders/model/order.schema.ts
@@ -112,7 +112,7 @@ export const cancelOrderInputSchema = z.object({
 export type CancelOrderInput = z.infer<typeof cancelOrderInputSchema>
 ```
 
-Action menggunakan schema ini untuk mem-parsing kiriman formulir sebelum memanggil use case. Pemeriksaan kepemilikan, aturan kelayakan, dan update pembatalan berada dalam use case sejak implementasi pertama:
+Action memakai schema ini untuk parsing isi form sebelum memanggil use case. Sejak implementasi pertama, pemeriksaan pemilik pesanan, aturan pembatalan, dan update database berada dalam use case:
 
 ```ts
 // src/features/orders/order.actions.ts
@@ -157,56 +157,56 @@ export function CancelOrderForm({
 }
 ```
 
-Tampilan detail menyediakan ID pesanan dan status yang ditampilkan untuk formulir. `canCancelOrder` adalah aturan murni bersama dari [contoh model](./folder-structure#extract-business-behavior-when-it-needs-its-own-module). Menyembunyikan kontrol tidak mengotorisasi request: action mem-parsing ID yang dikirim, sedangkan `cancelOrderUseCase` memverifikasi pemanggil, memvalidasi input-nya, serta memeriksa kepemilikan dan kelayakan pembatalan terhadap pesanan tersimpan terkini. [Penelusuran pembatalan](./folder-structure#follow-a-cancellation-from-the-form-to-the-stored-order) menunjukkan pemeriksaan itu dan update yang menolak perubahan status bersamaan.
+Tampilan detail memberikan ID dan status pesanan ke form. `canCancelOrder` memakai aturan murni bersama dari [contoh model](./folder-structure#extract-business-behavior-when-it-needs-its-own-module). Menyembunyikan tombol tidak mencegah orang mengirim request sendiri. Action tetap melakukan parsing ID yang dikirim. Lalu `cancelOrderUseCase` memverifikasi pemanggil, memvalidasi input-nya sendiri, serta memeriksa pemilik dan status terbaru di database. [Alur pembatalan](./folder-structure#follow-a-cancellation-from-the-form-to-the-stored-order) menunjukkan pemeriksaan tersebut beserta update yang menolak perubahan status bersamaan.
 
-Formulir yang dirender dalam Server Component dapat mengirim sebelum JavaScript dimuat atau ketika JavaScript dinonaktifkan. Client Component dapat mengimpor action dari file khusus `'use server'` ketika membutuhkan indikator pending, state optimistis, atau pemanggilan dari event handler. [Contoh Server Functions Next.js](https://nextjs.org/docs/app/getting-started/mutating-data#server-components)
+Form yang dirender oleh Server Component bisa dikirim sebelum JavaScript selesai dimuat, bahkan saat JavaScript dimatikan. Kalau perlu indikator pending, state optimistis, atau event handler, Client Component bisa mengimpor action dari file khusus `'use server'`. [Contoh Server Functions Next.js](https://nextjs.org/docs/app/getting-started/mutating-data#server-components)
 
-#### Perbarui layar setelah mutasi berhasil {#update-the-screen-after-the-mutation-succeeds}
+#### Perbarui halaman setelah mutasi berhasil {#update-the-screen-after-the-mutation-succeeds}
 
-Contoh memanggil [`refresh()`](https://nextjs.org/docs/app/api-reference/functions/refresh) setelah pembatalan berhasil. Ini menyegarkan router klien agar halaman dapat merender hasil terbaru dari query database langsung.
+Setelah pembatalan berhasil, contoh memanggil [`refresh()`](https://nextjs.org/docs/app/api-reference/functions/refresh). Fungsi ini me-refresh router klien agar halaman bisa merender hasil terbaru dari query database langsung.
 
-Jika nantinya query pesanan di-cache, menyegarkan halaman saja tidak membatalkan validitas data bertag. Action juga perlu merevalidasi data yang terpengaruh, menggunakan perilaku revalidasi yang sesuai dengan cara pembacaan di-cache. [Panduan mutasi Next.js](https://nextjs.org/docs/app/getting-started/mutating-data#refresh-data)
+Kalau query pesanan kemudian memakai cache, refresh halaman saja tidak menginvalidasi data bertag. Action juga perlu merevalidasi data yang berubah. Pilih cara revalidasi yang sesuai dengan cache query tersebut. [Panduan mutasi Next.js](https://nextjs.org/docs/app/getting-started/mutating-data#refresh-data)
 
-Contoh menunjukkan pengiriman yang berhasil. Untuk kegagalan yang diperkirakan, seperti input tidak valid atau pesanan yang tidak lagi bisa dibatalkan, kembalikan hasil yang dapat ditampilkan formulir. Sesuaikan action untuk `useActionState` agar pesan dan indikator pending muncul di samping kontrol. [Panduan penanganan error Next.js](https://nextjs.org/docs/app/getting-started/error-handling#server-functions)
+Contoh di atas memperlihatkan alur berhasil. Untuk kegagalan yang sudah diperkirakan, seperti input tidak valid atau pesanan yang sudah tidak boleh dibatalkan, kembalikan hasil yang bisa ditampilkan form. Sesuaikan action untuk `useActionState` agar pesan dan indikator pending muncul dekat kontrolnya. [Panduan penanganan error Next.js](https://nextjs.org/docs/app/getting-started/error-handling#server-functions)
 
-#### Periksa akses di dalam setiap Server Action {#check-access-inside-every-server-action}
+#### Periksa akses setiap kali Server Action dijalankan {#check-access-inside-every-server-action}
 
-Server Functions dapat dijangkau melalui request POST langsung. Pemanggil dapat mengirim request tanpa menggunakan formulir hasil render. [Panduan mutasi Next.js](https://nextjs.org/docs/app/getting-started/mutating-data#what-are-server-functions)
+Server Functions bisa dipanggil lewat request POST langsung. Pemanggil tidak harus memakai form yang kamu render. [Panduan mutasi Next.js](https://nextjs.org/docs/app/getting-started/mutating-data#what-are-server-functions)
 
-Setiap action harus menegakkan pemeriksaan berikut saat dieksekusi, langsung atau melalui operasi terlindungi yang dipanggil:
+Setiap action harus melakukan pemeriksaan berikut, baik sendiri maupun melalui operasi yang dipanggilnya:
 
-1. Autentikasi pemanggil ketika operasi membutuhkan akun.
-2. Otorisasi operasi terhadap resource tujuan.
-3. Validasi input tidak tepercaya dengan Zod.
-4. Kembalikan hanya data yang aman bagi pemanggil.
+1. Verifikasi identitas pemanggil jika operasi membutuhkan akun.
+2. Periksa izin terhadap resource yang dituju.
+3. Validasi input dari luar dengan Zod.
+4. Kembalikan hanya data yang boleh diterima pemanggil.
 5. Simpan rahasia dan implementasi server dalam modul khusus server.
 
-Perlakukan field tersembunyi `orderId` sebagai input pengguna. Periksa kepemilikan dan aturan pembatalan di server, meskipun UI hanya menampilkan tombol untuk pesanan yang tampak memenuhi syarat.
+Field tersembunyi `orderId` tetap input pengguna. Periksa pemilik pesanan dan aturan pembatalan di server, meskipun UI hanya menampilkan tombol saat pesanan terlihat bisa dibatalkan.
 
-#### Pisahkan pembacaan independen dari Server Actions {#keep-independent-reads-out-of-server-actions}
+#### Jangan gunakan Server Actions untuk query yang independen {#keep-independent-reads-out-of-server-actions}
 
-Server Functions dapat mengembalikan data, tetapi Server Actions dirancang untuk mutasi dari UI. Next.js mengantrekan panggilan action, sehingga menggunakannya untuk mengambil data independen menyebabkan eksekusi berurutan. [Panduan Backend for Frontend Next.js](https://nextjs.org/docs/app/guides/backend-for-frontend#server-actions)
+Server Functions bisa mengembalikan data, tetapi Server Actions dirancang untuk mutasi dari UI. Next.js mengantrekan panggilan action. Kalau beberapa query independen memakai jalur ini, eksekusinya menjadi berurutan. [Panduan Backend for Frontend Next.js](https://nextjs.org/docs/app/guides/backend-for-frontend#server-actions)
 
-Baca melalui query fitur saat rendering server. Gunakan HTTP atau RPC ketika kode browser perlu meminta data.
+Saat rendering server, panggil query fitur. Saat browser perlu meminta data, gunakan HTTP atau RPC.
 
-### Ambil data dari browser ketika interaksi membutuhkannya {#fetch-from-the-browser-when-the-interaction-needs-it}
+### Ambil data dari browser saat interaksi memerlukannya {#fetch-from-the-browser-when-the-interaction-needs-it}
 
-Sebagian layar membutuhkan data tambahan setelah render awal:
+Beberapa tampilan masih membutuhkan data baru setelah render pertama:
 
 - Hasil pencarian berubah saat pengguna mengetik.
 - Status pesanan diperbarui selama halaman terbuka.
-- Infinite scrolling memuat kelompok data berikutnya.
-- Pagination memperbarui daftar tanpa navigasi.
+- Infinite scrolling memuat data berikutnya.
+- Pagination mengganti isi daftar tanpa navigasi.
 - Request bergantung pada input dari API browser.
-- Beberapa tampilan yang terpasang menggunakan data cache yang sama.
+- Beberapa komponen yang sedang tampil memakai cache data yang sama.
 
-Pembacaan ini terjadi setelah halaman dimuat, sehingga browser membutuhkan cara meminta data dari server. Jalurnya dapat berupa Route Handler aplikasi, API eksternal, atau prosedur RPC.
+Untuk kebutuhan ini, browser harus bisa meminta data ke server melalui Route Handler, API luar, atau prosedur RPC.
 
-Request satu kali dapat menggunakan `fetch` langsung. Tambahkan library query ketika perlu mengoordinasikan caching, retry, penyegaran di latar belakang, atau request bersama beberapa komponen.
+Request sekali jalan bisa memakai `fetch` langsung. Tambahkan library query saat perlu mengatur cache, retry, refresh di latar belakang, atau request yang dipakai beberapa komponen.
 
-#### Gunakan Route Handler untuk menghubungkan HTTP dengan query fitur {#let-route-handlers-adapt-http-to-feature-queries}
+#### Hubungkan request HTTP ke query fitur lewat Route Handler {#let-route-handlers-adapt-http-to-feature-queries}
 
-[Route Handlers Next.js](https://nextjs.org/docs/app/getting-started/route-handlers) menggunakan API Web standar `Request` dan `Response`. Tempatkan handler di `app` dan panggil query fitur dari sana:
+[Route Handlers Next.js](https://nextjs.org/docs/app/getting-started/route-handlers) memakai API Web standar `Request` dan `Response`. Letakkan handler di `app`, lalu panggil query fitur dari sana:
 
 ```ts
 // src/app/api/orders/route.ts
@@ -219,15 +219,15 @@ export async function GET() {
 }
 ```
 
-Handler menangani request dan response HTTP. Query memverifikasi sesi, membatasi pembacaan pada akun yang diizinkan, dan mengembalikan ringkasan pesanan. Cuplikan ini menunjukkan jalur berhasil; ubah kegagalan autentikasi menjadi respons error HTTP yang sesuai.
+Handler mengurus request dan response HTTP. Query memverifikasi sesi, membatasi data ke akun yang diizinkan, lalu mengembalikan ringkasan pesanan. Contoh ini hanya menunjukkan alur berhasil; ubah kegagalan autentikasi menjadi response error HTTP yang sesuai.
 
-Penambahan pagination mengikuti pembagian yang sama: handler membaca nilai query string dan meneruskannya ke query fitur, yang memvalidasi input pagination sebelum menggunakannya.
+Pembagian tugasnya tetap sama saat menambah pagination. Handler membaca query string dan mengirim nilainya ke query fitur. Query memvalidasi input pagination sebelum menggunakannya.
 
-Route Handler juga sesuai untuk webhook, klien mobile, integrasi eksternal, serta respons seperti file atau feed. Fokuskan setiap handler pada penerjemahan request menjadi operasi fitur dan pengembalian respons yang sesuai.
+Route Handler juga bisa melayani webhook, aplikasi mobile, integrasi luar, serta response berupa file atau feed. Batasi handler pada penghubung antara request, operasi fitur, dan response yang dibutuhkan klien.
 
-### Gunakan Route Handler untuk mutasi melalui API {#use-route-handlers-for-mutations-consumed-through-an-api}
+### Sediakan mutasi API lewat Route Handler {#use-route-handlers-for-mutations-consumed-through-an-api}
 
-Aplikasi mobile atau integrasi eksternal membutuhkan endpoint dengan request dan response yang terdefinisi. Route Handler memvalidasi input dengan Zod dan mengimpor use case publik terlindungi langsung dari fitur orders. Use case memverifikasi pemanggil secara internal:
+Aplikasi mobile dan integrasi luar membutuhkan endpoint dengan format request dan response yang jelas. Route Handler memvalidasi input dengan Zod, lalu langsung mengimpor use case publik dari orders. Use case tersebut memverifikasi pemanggil di dalam operasinya:
 
 ```ts
 // src/app/api/orders/[orderId]/cancel/route.ts
@@ -247,17 +247,17 @@ export async function POST(
 }
 ```
 
-Action dan handler sama-sama memanggil `cancelOrderUseCase`, sehingga menegakkan aturan kepemilikan dan pembatalan yang sama. Setiap entry point menangani respons yang dibutuhkan pemanggilnya: action menyegarkan halaman, sementara handler mengembalikan respons HTTP.
+Action dan handler sama-sama memanggil `cancelOrderUseCase`, sehingga aturan pemilik pesanan dan pembatalannya tetap sama. Responsnya mengikuti kebutuhan pemanggil: action me-refresh halaman, sedangkan handler mengembalikan response HTTP.
 
-Use case adalah operasi server publik yang diimplementasikan di `cancel-order.use-case.ts` pada root fitur dan dilindungi dengan `import 'server-only'`. Operasi publik berada di samping repository privat dan mapper internal; [aturan import publik](./folder-structure#expose-the-operations-and-components-callers-need) menentukan ekspor yang boleh digunakan pemanggil.
+Use case berada di `cancel-order.use-case.ts` pada root fitur dan ditandai `import 'server-only'`. Operasi publik boleh berada satu folder dengan repository privat dan mapper internal. [Aturan import publik](./folder-structure#expose-the-operations-and-components-callers-need) menentukan ekspor mana yang boleh dipakai dari luar fitur.
 
-Contoh ini menunjukkan respons berhasil. Ubah kegagalan validasi, penolakan akses, dan penolakan pembatalan menjadi status HTTP yang dipilih dengan jelas serta body respons yang aman. Gunakan autentikasi sesuai konsumen API; contoh mengasumsikan pemanggil menggunakan sesi akun aplikasi.
+Untuk kegagalan validasi, akses ditolak, atau pembatalan ditolak, tentukan status HTTP dan body response yang aman. Contoh berhasil di atas menganggap klien memakai sesi akun aplikasi. Sesuaikan autentikasi dengan klien API yang sebenarnya.
 
 ### Panggil API yang sudah ada untuk mutasi {#call-an-existing-api-for-mutations}
 
-Backend yang sudah ada mungkin menyediakan pembatalan pesanan melalui HTTP atau RPC. Jika mendukung panggilan browser terautentikasi, tempatkan request itu di `order.api.ts`. Ini alternatif dari pengiriman melalui Server Action Next.js.
+Backend yang sudah ada mungkin menyediakan pembatalan pesanan lewat HTTP atau RPC. Kalau API itu mendukung request browser dengan autentikasi, letakkan fungsi request di `order.api.ts`. Kamu bisa memakai jalur ini sebagai pengganti Server Action Next.js.
 
-Gunakan ulang schema input pembatalan dari contoh Server Action. Fungsi request mem-parsing input dan mengirimkannya ke API:
+Pakai schema input pembatalan dari contoh sebelumnya. Fungsi request melakukan parsing input, lalu mengirimkannya ke API:
 
 ```ts
 // src/features/orders/order.api.ts
@@ -284,9 +284,9 @@ export async function cancelOrder(input: CancelOrderInput) {
 }
 ```
 
-Contoh mengasumsikan API menggunakan cookie sesi browser, mengizinkan request berkredensial dari frontend melalui CORS, dan mengembalikan `204 No Content` saat berhasil. API tetap mengautentikasi pemanggil, memvalidasi input, dan menegakkan aturan kepemilikan serta pembatalan. Parsing sisi klien memberikan umpan balik awal. [MDN: mengirim kredensial](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch#including_credentials)
+Contoh menganggap API memakai cookie sesi browser, mengizinkan request dengan kredensial dari frontend melalui CORS, dan mengembalikan `204 No Content` saat berhasil. API tetap harus memverifikasi pemanggil, memvalidasi input, serta memeriksa pemilik pesanan dan aturan pembatalan. Parsing di browser memberi umpan balik lebih awal kepada pengguna. [MDN: mengirim kredensial](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch#including_credentials)
 
-Komponen dapat memanggil fungsi langsung dan menggunakan state React untuk indikator request:
+Komponen bisa memanggil fungsi request langsung dan menyimpan statusnya dalam state React:
 
 ```tsx
 // src/features/orders/ui/CancelOrderButton.tsx
@@ -333,13 +333,13 @@ export function CancelOrderButton({ orderId }: { orderId: string }) {
 }
 ```
 
-[`useState`](https://react.dev/reference/react/useState) melacak indikator dalam komponen ini. Setelah berhasil, perbarui atau ambil ulang data pesanan lain yang ditampilkan tampilan induk. Jalur ini tidak membutuhkan file actions maupun TanStack Query. Jika fitur nantinya menggunakan TanStack, [mutation options](#share-mutation-configuration-when-several-consumers-need-it) dapat memanggil fungsi `cancelOrder` yang sama.
+[`useState`](https://react.dev/reference/react/useState) menyimpan status request komponen ini. Setelah berhasil, perbarui atau ambil ulang data pesanan lain yang ditampilkan komponen induk. Jalur ini tidak perlu file actions atau TanStack Query. Kalau nantinya memakai TanStack, [mutation options](#share-mutation-configuration-when-several-consumers-need-it) bisa memanggil fungsi `cancelOrder` yang sama.
 
-Jika API eksternal membutuhkan private key, simpan request itu di server dan sediakan operasinya melalui Server Action atau Route Handler. Kebutuhan kredensial API menentukan tempat request boleh berjalan. [Tanggung jawab server dan klien Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#when-to-use-server-and-client-components)
+Jika API luar membutuhkan private key, jalankan request di server dan sediakan operasinya lewat Server Action atau Route Handler. Kebutuhan kredensial menentukan di mana request boleh dijalankan. [Tanggung jawab server dan klien Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#when-to-use-server-and-client-components)
 
-### Teruskan data server ke interaksi klien {#pass-server-data-into-client-interaction}
+### Kirim data server ke komponen interaktif {#pass-server-data-into-client-interaction}
 
-Client Component tidak perlu mengambil ulang data hanya karena interaktif. Teruskan DTO yang dapat diserialisasi dari Server Component:
+Komponen yang interaktif tidak otomatis perlu mengambil data sendiri. Server Component bisa mengirim DTO yang bisa diserialisasi ke Client Component:
 
 ```tsx
 // Server Component
@@ -347,9 +347,9 @@ const order = await getOrderDetails({ accountId: account.id, orderId })
 return <OrderEditor initialOrder={order} />
 ```
 
-Di sini, server memperoleh `account` dari request terautentikasi. Ini sesuai untuk editor yang memuat pesanan dan membiarkan pengguna mengubah field secara lokal sebelum menyimpan. Tambahkan pengambilan data browser ketika editor juga membutuhkan data server baru selama terbuka.
+Server mendapatkan `account` dari request yang sudah diautentikasi. Cara ini cocok untuk editor yang memuat pesanan, lalu membiarkan pengguna mengubah field sebelum menyimpan. Tambahkan request browser kalau editor juga perlu mengambil data server terbaru selama masih terbuka.
 
-Anda juga dapat meneruskan promise ke Client Component dan membacanya dengan [API `use` React](https://react.dev/reference/react/use). Batas Suspense menampilkan fallback selama menunggu promise selesai:
+Kamu juga bisa mengirim promise ke Client Component dan membacanya dengan [API `use` React](https://react.dev/reference/react/use). Suspense menampilkan fallback selama promise belum selesai:
 
 ```tsx
 // Server Component
@@ -369,7 +369,7 @@ export function OrdersPanel() {
 }
 ```
 
-Query memperoleh dan memverifikasi akun sendiri; panel hanya meneruskan promise-nya ke komponen klien.
+Query mengambil dan memverifikasi akun sendiri. Panel hanya meneruskan promise ke komponen klien.
 
 ```tsx
 // src/features/orders/ui/InteractiveOrderList.tsx
@@ -389,19 +389,19 @@ export function InteractiveOrderList({
 }
 ```
 
-Untuk sebagian besar komponen, menunggu data lalu meneruskan prop yang dapat diserialisasi sudah cukup. Meneruskan promise memungkinkan UI di sekitarnya muncul sementara komponen ini menunggu data. Gunakan ketika bagian layar lain berguna secara mandiri, dengan fallback yang menunjukkan apa yang masih dimuat.
+Untuk kebanyakan komponen, menunggu data lalu mengirimkannya lewat props sudah cukup. Mengirim promise berguna kalau bagian halaman lain bisa tampil lebih dulu sambil komponen ini menunggu. Pilih fallback yang menjelaskan bagian mana yang masih dimuat.
 
-### Bagikan data dengan komponen yang bersarang jauh {#share-data-with-deeply-nested-components}
+### Bagikan data ke komponen yang jauh di bawah {#share-data-with-deeply-nested-components}
 
-Halaman orders mengambil pesanan dan meneruskannya melalui panel, tab, serta toolbar sebelum mencapai badge status. Komponen perantara itu kini menerima prop `order` yang tidak pernah digunakannya.
+Halaman orders mungkin meneruskan data pesanan lewat panel, tab, dan toolbar sebelum sampai ke badge status. Akibatnya, komponen perantara menerima prop `order` yang tidak mereka pakai sendiri.
 
-Pertahankan pengambilan data server sebagai pilihan awal untuk data rendering. Pilih cara berbagi hasil berdasarkan komponen konsumen dan apakah mereka membutuhkan pembaruan setelah halaman dimuat.
+Tetap mulai dengan pengambilan data di server untuk kebutuhan rendering. Cara membagikan hasilnya bergantung pada komponen yang memakainya dan apakah data perlu diperbarui setelah halaman dimuat.
 
-#### Ambil data di tempat Server Component membutuhkannya {#fetch-where-a-server-component-needs-the-data}
+#### Ambil data langsung di Server Component yang memerlukannya {#fetch-where-a-server-component-needs-the-data}
 
-Server Component bersarang dapat memanggil query fitur langsung. Halaman tidak harus memuat semua hasil untuk pohon komponen.
+Server Component yang berada jauh di dalam pohon komponen boleh memanggil query fitur langsung. Halaman tidak harus mengambil semua data untuk seluruh turunannya.
 
-Ketika beberapa Server Component membutuhkan pembacaan database yang sama, ekspor query bersama yang dibungkus `cache()` React:
+Kalau beberapa Server Component membutuhkan query database yang sama, ekspor satu query bersama yang dibungkus `cache()` React:
 
 ```ts
 // src/features/orders/order.queries.ts
@@ -415,13 +415,13 @@ export const getOrderDetailsForRender = cache(
 )
 ```
 
-Setiap Server Component mengimpor fungsi ekspor yang sama. Panggilan dengan ID akun dan pesanan yang sama menggunakan ulang hasil dalam request server. ID primitif juga menghindari cache miss akibat pembuatan objek input baru pada setiap panggilan. React menghapus memoization ini antar-request server. [Referensi `cache` React](https://react.dev/reference/react/cache)
+Semua komponen mengimpor fungsi yang sama. Panggilan dengan ID akun dan pesanan yang sama memakai ulang hasil selama satu request server. Argumen berupa ID primitif juga menghindari cache miss karena objek input baru dibuat setiap kali memanggil fungsi. React menghapus memoization ini antar-request server. [Referensi `cache` React](https://react.dev/reference/react/cache)
 
-Komponen memberikan ID pesanan dan lingkup akun yang diminta. Query dasarnya memverifikasi lingkup itu terhadap akun terautentikasi. Memoization tidak menggantikan otorisasi.
+Komponen mengirim ID pesanan dan akun yang diminta. Query di dalamnya tetap memverifikasi akun itu terhadap sesi aktif. Memoization tidak menggantikan pemeriksaan akses.
 
-#### Gunakan context ketika komponen turunan klien berbagi data dari server {#use-context-when-client-descendants-share-server-provided-data}
+#### Gunakan context untuk berbagi data server di komponen klien {#use-context-when-client-descendants-share-server-provided-data}
 
-Editor pesanan mungkin membutuhkan pesanan awal dalam beberapa tab dan kontrol. Jika komponen itu berbagi hasil yang dimuat tanpa menyegarkannya secara independen, sediakan DTO melalui context yang dibatasi pada fitur.
+Editor pesanan bisa memakai data awal yang sama di beberapa tab dan kontrol. Kalau semuanya cukup memakai hasil yang sudah dimuat tanpa refetch sendiri, bagikan DTO lewat context dalam fitur.
 
 ```tsx
 // src/features/orders/ui/OrderProvider.tsx
@@ -457,7 +457,7 @@ export function useOrder() {
 }
 ```
 
-Server Component meneruskan hasil terotorisasi ke provider:
+Server Component mengirim data yang sudah diperiksa hak aksesnya ke provider:
 
 ```tsx
 const order = await getOrderDetails({
@@ -472,7 +472,7 @@ return (
 )
 ```
 
-Client Component yang bersarang jauh membaca nilainya langsung:
+Client Component di bawahnya bisa langsung membaca nilai tersebut:
 
 ```tsx
 // src/features/orders/ui/OrderStatusBadge.tsx
@@ -486,15 +486,15 @@ export function OrderStatusBadge() {
 }
 ```
 
-Dengan provider mengelilingi editor pesanan, tab dan kontrol klien dapat membaca pesanan tanpa meneruskannya melalui setiap komponen perantara. Hanya Client Component yang dapat menggunakan context ini. Server Component yang diteruskan sebagai children tetap berupa Server Component, tetapi tidak dapat membaca nilai provider. [Context provider Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#context-providers)
+Dengan provider di sekitar editor, tab dan kontrol bisa membaca pesanan tanpa melewatkan prop melalui setiap komponen perantara. Context ini hanya bisa dibaca Client Component. Server Component yang dikirim sebagai children tetap menjadi Server Component, tetapi tidak bisa membaca nilai provider. [Context provider Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#context-providers)
 
-Provider membagikan pesanan dari server; perubahan formulir yang belum disimpan tetap berada dalam draft state editor. Provider juga tidak memberi cara mengambil ulang pesanan atau membatalkan validitas data lama setelah mutasi. Jika komponen membutuhkan pembaruan itu, [pendekatan TanStack Query di bawah](#use-tanstack-query-when-client-consumers-need-ongoing-updates) membahas langkah berikutnya.
+Provider membagikan data pesanan dari server. Perubahan form yang belum disimpan tetap masuk draft state editor. Context ini tidak menyediakan refetch atau invalidasi setelah mutasi. Kalau komponen mulai membutuhkan keduanya, gunakan [pendekatan TanStack Query di bawah](#use-tanstack-query-when-client-consumers-need-ongoing-updates).
 
-Ketika streaming memperbaiki pengalaman layar, provider dapat menerima promise yang dibuat server. Konsumen klien membaca promise dengan `use()` React di bawah batas Suspense. Next.js mendokumentasikan variasi ini untuk berbagi data server pada subtree klien. [Contoh promise melalui context Next.js](https://nextjs.org/docs/app/guides/single-page-applications#using-reacts-use-within-a-context-provider)
+Jika streaming membuat halaman lebih berguna saat data belum selesai dimuat, provider bisa menerima promise dari server. Komponen klien membacanya dengan `use()` React di dalam Suspense. Next.js memperlihatkan variasi ini dalam [contoh promise melalui context](https://nextjs.org/docs/app/guides/single-page-applications#using-reacts-use-within-a-context-provider).
 
-### Verifikasi akun yang diminta dalam pembacaan detail {#verify-the-requested-account-in-a-detail-read}
+### Verifikasi akun di dalam query detail {#verify-the-requested-account-in-a-detail-read}
 
-Contoh detail juga mengidentifikasi akun agar entri cache browser tetap terpisah. Perlakukan ID itu sebagai lingkup yang diminta dan verifikasi di dalam query. Definisikan input bersama schema yang ada:
+Contoh detail menyertakan ID akun supaya cache browser untuk setiap akun terpisah. ID ini hanya menyatakan akun yang diminta; query tetap harus memeriksanya. Tambahkan input berikut ke file schema yang ada:
 
 ```ts
 // src/features/orders/model/order.schema.ts
@@ -506,7 +506,7 @@ export const orderReferenceInputSchema = z.object({
 export type OrderReferenceInput = z.infer<typeof orderReferenceInputSchema>
 ```
 
-Tambahkan pembacaan detail ke modul query server yang sama. Pertahankan import dan implementasi `listOrders` di atas, lalu tambahkan import schema berikut:
+Tambahkan query detail ke modul query server yang sama. Pertahankan `listOrders` beserta import-nya, lalu tambahkan import schema berikut:
 
 ```ts
 // src/features/orders/order.queries.ts
@@ -535,11 +535,11 @@ export async function getOrderDetails(input: OrderReferenceInput) {
 }
 ```
 
-Contoh ini melayani satu konteks akun yang diizinkan per request. Fitur membership menentukan cara konteks itu dipilih dan diverifikasi. Halaman, handler HTTP, atau prosedur RPC dapat memanggil query ini; tidak ada yang bisa memberikan akses dengan menyuplai ID akun berbeda. Sesuaikan kegagalan yang diperkirakan dengan respons yang dibutuhkan setiap pemanggil.
+Contoh ini memakai satu konteks akun yang diizinkan per request. Membership menentukan cara memilih dan memverifikasi akun tersebut. Halaman, handler HTTP, dan prosedur RPC boleh memanggil query ini, tetapi tidak bisa memberi akses hanya dengan mengirim ID akun lain. Ubah kegagalan yang sudah diperkirakan menjadi respons yang sesuai bagi masing-masing pemanggil.
 
-### Ekstrak mapper DTO ketika pembacaan berbagi konversi {#extract-a-dto-mapper-when-reads-share-the-conversion}
+### Pisahkan mapper DTO saat beberapa query memakai konversi yang sama {#extract-a-dto-mapper-when-reads-share-the-conversion}
 
-File `order.dto.ts` terpisah bersifat opsional. Simpan pemetaan singkat dalam query sampai berbagi atau memisahkan konversi membuat kode lebih jelas. Pembacaan daftar dan detail di atas mengembalikan field sama dan mengonversi tanggal database yang sama, sehingga dapat berbagi satu mapper:
+`order.dto.ts` tidak wajib ada sejak awal. Biarkan pemetaan singkat berada dalam query sampai ada kebutuhan untuk berbagi konversi atau memisahkannya agar lebih mudah dibaca. Query daftar dan detail di atas memilih field yang sama dan mengubah tanggal dengan cara yang sama, sehingga bisa memakai satu mapper:
 
 ```ts
 // src/features/orders/order.dto.ts
@@ -561,9 +561,9 @@ export function toOrderSummary(row: {
 }
 ```
 
-Parameter mendeskripsikan field database terpilih, termasuk nilai `Date`. DTO hasil mengikuti `orderSummarySchema`, dengan `createdAt` dikonversi menjadi string. Simpan schema dan tipe `OrderSummary` hasil inferensinya di `model/` agar Client Component dapat menggunakan kontrak data tanpa mengimpor mapper server.
+Parameter mapper berisi field database yang dipilih, termasuk nilai `Date`. Hasilnya mengikuti `orderSummarySchema`, dengan `createdAt` berupa string. Simpan schema dan tipe `OrderSummary` hasil inferensi di `model/` agar Client Component bisa memakainya tanpa mengimpor mapper server.
 
-Dalam `order.queries.ts`, ganti import langsung `orderSummarySchema` dengan `toOrderSummary`. Pembacaan daftar menjadi:
+Di `order.queries.ts`, ganti import langsung `orderSummarySchema` dengan `toOrderSummary`. Query daftar menjadi:
 
 ```ts
 // src/features/orders/order.queries.ts
@@ -584,17 +584,17 @@ export async function listOrders() {
 }
 ```
 
-Pertahankan pembacaan detail dan import schema input-nya dalam modul query yang sama. Setelah pemeriksaan akun, pembacaan database terbatas, dan pemeriksaan pesanan tidak ditemukan yang sudah ada, ganti pemetaan inline dengan:
+Query detail dan import schema input-nya tetap di modul yang sama. Pertahankan pemeriksaan akun, batas query database, dan penanganan pesanan yang tidak ditemukan. Ganti bagian pemetaan hasilnya dengan:
 
 ```ts
 return toOrderSummary(row)
 ```
 
-Query tetap memverifikasi akses dan memilih field yang diizinkan. Mapper hanya mengonversi dan memvalidasi field itu; mapper tidak memuat data atau mengotorisasi pemanggil. Jaga tetap privat dalam fitur. Route, prosedur RPC, dan fitur lain tetap memanggil query publik.
+Query tetap memeriksa akses dan memilih field yang diizinkan. Mapper hanya mengonversi serta memvalidasi field itu. Ia tidak mengambil data atau memeriksa hak akses. Biarkan mapper privat dalam fitur; route, prosedur RPC, dan fitur lain tetap memakai query publik.
 
-### Mulai pembacaan independen bersama-sama {#start-independent-reads-together}
+### Jalankan query yang independen bersamaan {#start-independent-reads-together}
 
-Query terlindungi yang independen dapat dimulai bersama dan masing-masing memverifikasi pemanggil secara internal. Menunggu satu query sebelum memulai yang lain membuat pembacaan kedua menunggu tanpa perlu.
+Dua query yang tidak saling bergantung bisa dimulai bersamaan. Masing-masing tetap memverifikasi pemanggil di dalam operasinya. Menunggu query pertama selesai sebelum memulai yang kedua hanya menambah waktu tunggu.
 
 ```tsx
 export default async function DashboardPage() {
@@ -610,15 +610,15 @@ export default async function DashboardPage() {
 }
 ```
 
-Jika satu pembacaan lambat dan halaman sekitarnya berguna tanpa hasil itu, pindahkan pembacaan ke Server Component async yang lebih kecil di balik `<Suspense>`. Bagian halaman lain dapat muncul sementara komponen menunggu data. [Panduan streaming Next.js](https://nextjs.org/docs/app/getting-started/fetching-data#streaming)
+Kalau satu query lambat sementara bagian halaman lain sudah berguna tanpa hasilnya, pindahkan query tersebut ke Server Component async yang lebih kecil di dalam `<Suspense>`. Bagian lain bisa tampil sambil menunggu data. [Panduan streaming Next.js](https://nextjs.org/docs/app/getting-started/fetching-data#streaming)
 
 ## React Query {#react-query}
 
-### Tambahkan TanStack Query untuk caching dan pembaruan di latar belakang {#add-tanstack-query-for-caching-and-background-updates}
+### Pakai TanStack Query untuk cache dan pembaruan di browser {#add-tanstack-query-for-caching-and-background-updates}
 
-Jika layar pesanan perlu mengambil ulang data di latar belakang, mencoba ulang request gagal, atau berbagi data dengan tampilan lain yang terpasang, gunakan [TanStack Query](https://tanstack.com/query/latest/docs/framework/react/overview). Library ini melacak status request dan data server yang di-cache dalam browser.
+Gunakan [TanStack Query](https://tanstack.com/query/latest/docs/framework/react/overview) saat halaman pesanan perlu refetch di latar belakang, retry saat request gagal, atau berbagi data dengan komponen lain yang sedang tampil. Library ini mengelola status request dan cache data server di browser.
 
-Untuk pembacaan browser melalui API HTTP aplikasi ini, simpan request dalam `order.api.ts`:
+Untuk request browser ke API HTTP aplikasi ini, simpan fungsinya di `order.api.ts`:
 
 ```ts
 // src/features/orders/order.api.ts
@@ -640,7 +640,7 @@ export async function fetchOrderDetails(
 }
 ```
 
-Request API terkait dapat berbagi file ini. Ekspor definisi TanStack dari `order.query-options.ts`; fungsi bantu [`queryOptions`](https://tanstack.com/query/latest/docs/framework/react/guides/query-options) menyatukan key, fungsi request, dan kebijakan cache dengan inferensi tipe:
+Request API yang berkaitan boleh berada di file yang sama. Ekspor konfigurasi TanStack dari `order.query-options.ts`. Helper [`queryOptions`](https://tanstack.com/query/latest/docs/framework/react/guides/query-options) menyatukan key, fungsi request, dan pengaturan cache sambil mempertahankan inferensi tipe:
 
 ```ts
 // src/features/orders/order.query-options.ts
@@ -659,11 +659,11 @@ export function orderDetailsOptions(input: {
 }
 ```
 
-Tampilan detail ini menampilkan empat field dalam `OrderSummary`. Contoh mengasumsikan endpoint HTTP di `/api/accounts/[accountId]/orders/[orderId]`. Handler-nya meneruskan ID akun dan pesanan yang diminta ke query terlindungi `getOrderDetails` lalu menyesuaikan response. Query memverifikasi sesi, menolak ketidakcocokan akun, membatasi pembacaan pada kedua ID, dan mengembalikan DTO yang sama.
+Tampilan detail ini memakai empat field dari `OrderSummary`. Contoh menganggap endpoint tersedia di `/api/accounts/[accountId]/orders/[orderId]`. Handler mengirim ID akun dan pesanan ke `getOrderDetails`, lalu menyusun response. Query memverifikasi sesi, menolak akun yang tidak cocok, membatasi pencarian pada kedua ID, dan mengembalikan DTO yang sama.
 
-ID akun membedakan entri cache; ID itu tidak memberikan akses. Sertakan input yang mengubah hasil dalam [query key](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys). Hapus data akun saat mengakhiri sesi, dan batasi cache klien aplikasi dengan tepat saat berganti akun.
+ID akun membedakan entri cache, tetapi tidak membuktikan hak akses. Masukkan semua input yang memengaruhi hasil ke dalam [query key](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys). Hapus data akun saat sesi berakhir dan pastikan pergantian akun tidak memakai cache akun sebelumnya.
 
-Komponen menggunakan options langsung:
+Komponen bisa memakai options langsung:
 
 ```tsx
 // src/features/orders/ui/LiveOrderDetails.tsx
@@ -685,15 +685,15 @@ export function LiveOrderDetails(input: {
 }
 ```
 
-Ini mengasumsikan `QueryClientProvider` sudah dikonfigurasi. Tambahkan custom hook ketika mengoordinasikan perilaku React di luar penggunaan query. Options tetap tersedia bagi komponen, operasi cache, dan rendering server tanpa memanggil hook.
+Contoh ini menganggap `QueryClientProvider` sudah dipasang. Buat custom hook kalau ada perilaku React lain yang perlu diatur bersama query. Options tetap bisa dipakai komponen, operasi cache, dan kode rendering server tanpa memanggil hook.
 
-`order.queries.ts` menjalankan pembacaan server langsung. `order.api.ts` membuat request HTTP. `order.query-options.ts` mengembalikan konfigurasi; membuat options tidak menjalankan request tersebut. Jangan masukkan import khusus server ke modul API dan options, dan jangan beri `'use client'` ketika Server Component perlu memanggil factory options.
+Bedakan tugas ketiga file: `order.queries.ts` menjalankan query server, `order.api.ts` mengirim request HTTP, dan `order.query-options.ts` membuat konfigurasi. Memanggil factory options belum mengirim request. Modul API dan options harus bebas import khusus server. Jangan beri `'use client'` kalau Server Component perlu memanggil factory options tersebut.
 
-### Bagikan konfigurasi mutasi ketika beberapa konsumen membutuhkannya {#share-mutation-configuration-when-several-consumers-need-it}
+### Pisahkan konfigurasi mutasi saat dipakai beberapa komponen {#share-mutation-configuration-when-several-consumers-need-it}
 
-Formulir dapat memanggil Server Action langsung. Ketika UI membutuhkan state mutasi TanStack, fungsi mutasinya dapat memanggil Server Action, endpoint HTTP, atau prosedur RPC. Perbarui atau batalkan validitas query klien yang terpengaruh setelah berhasil agar tampilan yang terpasang menerima data yang berubah. [Invalidasi dari mutasi TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/invalidations-from-mutations)
+Form bisa memanggil Server Action langsung. Kalau UI membutuhkan state mutasi TanStack, `mutationFn` bisa memanggil Server Action, endpoint HTTP, atau prosedur RPC. Setelah berhasil, perbarui atau invalidasi query klien yang terpengaruh supaya komponen mendapat data terbaru. [Invalidasi dari mutasi TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/invalidations-from-mutations)
 
-Mutasi yang digunakan satu komponen dapat menyimpan konfigurasi di sana. Setelah beberapa konsumen membutuhkan konfigurasi yang sama, factory options memberi definisi bersama. Untuk [pembatalan melalui API eksternal](#call-an-existing-api-for-mutations), factory dapat menggunakan ulang fungsi request yang sudah ditulis:
+Konfigurasi mutasi yang hanya dipakai satu komponen cukup disimpan di sana. Saat beberapa pemakai membutuhkan konfigurasi sama, pisahkan ke factory options. Untuk [pembatalan lewat API luar](#call-an-existing-api-for-mutations), gunakan fungsi request yang sudah ada:
 
 ```ts
 // src/features/orders/order.mutation-options.ts
@@ -708,19 +708,19 @@ export function cancelOrderOptions() {
 }
 ```
 
-Factory ini dan tombol React biasa memanggil request API yang sama. Dengan `useMutation(cancelOrderOptions())`, komponen meneruskan `{ orderId }` ke `mutate` dan menambahkan handler `onSuccess` untuk membatalkan validitas query pesanan akun yang terpengaruh. Navigasi dan notifikasi tetap bersama komponen karena bergantung pada perilaku layar setelah pembatalan. [Contoh mutation options](https://tanstack.com/query/latest/docs/framework/react/typescript#typing-mutation-options) TanStack menunjukkan bagaimana factory juga dapat menyuplai konsumen status mutasi.
+Factory ini dan tombol React biasa memakai request API yang sama. Dengan `useMutation(cancelOrderOptions())`, komponen mengirim `{ orderId }` ke `mutate`, lalu menambahkan `onSuccess` untuk menginvalidasi query pesanan akun terkait. Navigasi dan notifikasi tetap di komponen karena mengikuti kebutuhan tampilan setelah pembatalan. [Contoh mutation options](https://tanstack.com/query/latest/docs/framework/react/typescript#typing-mutation-options) TanStack juga menunjukkan pemakaian factory untuk komponen yang memantau status mutasi.
 
-Untuk UI dengan Server Action, `mutationFn` dapat merujuk ekspor dari `order.actions.ts`. Action dalam panduan ini menerima `FormData`; itulah input untuk `mutate` pada versi tersebut. Impor modul khusus `'use server'` agar Next.js menyediakan fungsi yang dapat dipanggil klien. [Server Functions Next.js dalam Client Components](https://nextjs.org/docs/app/api-reference/directives/use-server#using-server-functions-in-a-client-component)
+Jika UI memakai Server Action, `mutationFn` bisa menunjuk ekspor dari `order.actions.ts`. Action dalam panduan ini menerima `FormData`, jadi versi tersebut juga mengirim `FormData` ke `mutate`. Impor dari file khusus `'use server'` agar Next.js menyediakan fungsi yang bisa dipanggil klien. [Server Functions Next.js dalam Client Components](https://nextjs.org/docs/app/api-reference/directives/use-server#using-server-functions-in-a-client-component)
 
-`order.mutation-options.ts` bersifat opsional. Pemanggil server memanggil operasi fitur yang sesuai langsung; mereka tidak membutuhkan mutation options untuk menjalankan penulisan.
+`order.mutation-options.ts` tetap opsional. Kode server cukup memanggil operasi fitur langsung untuk mengubah data.
 
-### Gunakan TanStack Query ketika konsumen klien membutuhkan pembaruan berkelanjutan {#use-tanstack-query-when-client-consumers-need-ongoing-updates}
+### Pakai cache query bersama untuk data klien yang terus berubah {#use-tanstack-query-when-client-consumers-need-ongoing-updates}
 
-Badge status pesanan, panel detail, dan kontrol pembatalan mungkin sama-sama membutuhkan data baru setelah pembatalan. Gunakan TanStack Query ketika beberapa tampilan klien harus berbagi data server dan menjaganya tetap terkini.
+Setelah pesanan dibatalkan, badge status, panel detail, dan kontrol pembatalan perlu menampilkan keadaan yang sama. TanStack Query cocok saat beberapa komponen klien harus berbagi data server dan terus mengikuti perubahannya.
 
-Setiap konsumen membaca query yang sama melalui QueryClient yang sama. Memperbarui atau membatalkan validitas query setelah pembatalan memungkinkan seluruh tampilan itu menerima data yang berubah. Jika Anda juga menginginkan prosedur bertipe dan options request hasil generasi, oRPC menyediakan [integrasi TanStack Query](https://orpc.dev/docs/integrations/tanstack-query), yang dibahas pada bagian berikutnya.
+Semua pemakai membaca query yang sama dari QueryClient yang sama. Update atau invalidasi setelah pembatalan membuat komponen-komponen tersebut mendapat perubahan data. Kalau kamu juga membutuhkan prosedur bertipe dan options request hasil generasi, oRPC menyediakan [integrasi TanStack Query](https://orpc.dev/docs/integrations/tanstack-query) yang dibahas setelah ini.
 
-Pembacaan awal tetap bisa dilakukan dalam Server Component. Isi cache query di server dan lakukan hydration di sekitar subtree klien, seperti pada [contoh prefetch](#prefetch-when-the-client-needs-the-same-data-afterward) nanti:
+Data awal tetap bisa diambil lewat Server Component. Isi cache query di server, lalu lakukan hydration di sekitar bagian UI klien seperti pada [contoh prefetch](#prefetch-when-the-client-needs-the-same-data-afterward):
 
 ```text
 Server Component → query fitur → cache query hasil hydration
@@ -730,13 +730,13 @@ Server Component → query fitur → cache query hasil hydration
                            mutasi → invalidasi query
 ```
 
-Badge status dan panel detail harus merender nilainya dari cache klien tersebut. Salinan terpisah yang dirender Server Component tidak berubah saat browser melakukan refetch, sehingga keduanya bisa menampilkan status pesanan berbeda. Contoh prefetch di bawah menunjukkan cara menyuplai data cache awal selama rendering server. [Rendering server dan kepemilikan data TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr#data-ownership-and-revalidation)
+Badge dan panel detail harus membaca nilai dari cache klien tersebut. Salinan status yang dirender terpisah oleh Server Component tidak ikut berubah saat browser melakukan refetch. Kalau keduanya ditampilkan, statusnya bisa berbeda. Contoh prefetch di bawah menunjukkan cara memasok data awal ke cache saat rendering server. [Rendering server dan kepemilikan data TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr#data-ownership-and-revalidation)
 
-Untuk dashboard interaktif, utamakan TanStack Query bagi data browser yang berubah melalui filter, polling, atau mutasi. Kami merekomendasikan oRPC untuk API bertipe bersama yang baru. API HTTP yang sudah ada dapat menyuplai cache query yang sama.
+Untuk dashboard interaktif, utamakan TanStack Query bagi data browser yang berubah lewat filter, polling, atau mutasi. Kami merekomendasikan oRPC saat membuat API bertipe bersama yang baru. Kalau sudah ada API HTTP, API itu bisa tetap menjadi sumber data cache query.
 
-### Lakukan prefetch ketika klien masih membutuhkan data yang sama setelahnya {#prefetch-when-the-client-needs-the-same-data-afterward}
+### Isi cache dari server jika browser masih memakai data setelah render {#prefetch-when-the-client-needs-the-same-data-afterward}
 
-Layar pesanan mungkin membutuhkan data selama rendering server lalu terus memperbaruinya di browser. Baca melalui query server fitur dan isi cache dengan key yang dikembalikan options bersama:
+Halaman pesanan bisa membutuhkan data saat rendering server, lalu terus memperbaruinya di browser. Panggil query server fitur dan simpan hasilnya dengan key dari options bersama:
 
 ```tsx
 // src/app/(authenticated)/orders/[orderId]/page.tsx
@@ -767,40 +767,40 @@ export default async function OrderPage({
 }
 ```
 
-Ini alternatif dari halaman yang merender DTO langsung. Contoh membuat QueryClient untuk render server ini, memanggil pembacaan langsung, dan menyimpan hasil dengan [`setQueryData`](https://tanstack.com/query/latest/docs/reference/QueryClient#queryclientsetquerydata). `dehydrate` dan `HydrationBoundary` memindahkan data itu ke cache klien. Aplikasi tetap membutuhkan penyiapan provider. [Rendering server lanjutan TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr)
+Cara ini bisa menggantikan halaman yang merender DTO langsung. Contoh membuat QueryClient untuk render server ini, menjalankan query langsung, lalu menyimpan hasil lewat [`setQueryData`](https://tanstack.com/query/latest/docs/reference/QueryClient#queryclientsetquerydata). `dehydrate` dan `HydrationBoundary` memindahkan hasil ke cache klien. Aplikasi tetap perlu memasang provider. [Rendering server lanjutan TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr)
 
-Browser dan server berbagi identitas query serta kontrak hasil. Contoh server ini tidak menjalankan fetch URL relatif dari options; ia mengakses query fitur langsung. Factory options lengkap juga dapat berjalan di kedua lingkungan ketika fungsi request dan penyiapan autentikasinya mendukung keduanya. Untuk panggilan ke data aplikasi sendiri, pertahankan jalur server langsung. [Pengambilan data server Next.js](https://nextjs.org/docs/app/guides/backend-for-frontend#server-components)
+Server dan browser memakai identitas query serta bentuk hasil yang sama. Server tidak menjalankan fungsi fetch URL relatif dari options; ia memanggil query fitur langsung. Factory options lengkap juga bisa dipakai di kedua lingkungan jika fungsi request dan autentikasinya mendukung keduanya. Untuk data aplikasi sendiri, pertahankan pemanggilan langsung dari server. [Pengambilan data server Next.js](https://nextjs.org/docs/app/guides/backend-for-frontend#server-components)
 
-`staleTime` pada options bersama memberi tahu TanStack Query berapa lama data dianggap baru, sehingga hydration tidak langsung memicu request lain. Tetapkan sesuai kebutuhan kesegaran layar. Di server, setiap request membutuhkan QueryClient sendiri, seperti contoh ini.
+`staleTime` menentukan berapa lama TanStack Query menganggap data masih baru, sehingga hydration tidak langsung memicu request berikutnya. Pilih nilainya sesuai kebutuhan tampilan. Di server, buat QueryClient terpisah untuk setiap request seperti dalam contoh.
 
-Setelah hydration, cache klien menyuplai pesanan yang ditampilkan dan pembaruan berikutnya. Jika Anda juga merender status pesanan terpisah dalam Server Component, refetch browser tidak memperbarui salinan itu. Tentukan komponen yang merender setiap nilai sebelum menambahkan kedua versi ke halaman. [Kepemilikan data dan revalidasi TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr#data-ownership-and-revalidation)
+Setelah hydration, cache klien menjadi sumber data pesanan yang ditampilkan dan diperbarui. Status yang dirender terpisah dalam Server Component tidak ikut diperbarui oleh refetch browser. Tentukan komponen mana yang menampilkan setiap nilai sebelum memasang kedua versi di halaman yang sama. [Kepemilikan data dan revalidasi TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr#data-ownership-and-revalidation)
 
-Mulai dengan query Server Component ketika halaman hanya membutuhkan data untuk rendering. Tambahkan cache dan hydration ini ketika interaksi browser terus menggunakan query setelah render awal.
+Kalau halaman hanya membutuhkan data untuk render, query Server Component sudah cukup. Tambahkan cache dan hydration saat interaksi browser terus memakai data itu setelah render awal.
 
 ## oRPC + React Query {#orpc-react-query}
 
-### Tambahkan oRPC ketika pemanggil membutuhkan API bertipe bersama {#add-orpc-when-callers-need-a-shared-typed-api}
+### Tambahkan oRPC untuk API bertipe yang dipakai bersama {#add-orpc-when-callers-need-a-shared-typed-api}
 
-Beberapa tampilan interaktif mungkin memanggil operasi pesanan yang sama. Anda perlu menjaga input request, tipe response, dan penanganan error tetap konsisten pada semua panggilan tersebut.
+Beberapa tampilan interaktif bisa memanggil operasi pesanan yang sama. Input, tipe response, dan penanganan error perlu tetap konsisten di semua pemanggil.
 
-Kami merekomendasikan oRPC ketika memperkenalkan API bertipe bersama yang baru. Setiap fitur mendefinisikan prosedur untuk operasinya, dan aplikasi menyediakannya melalui adapter HTTP. Kode browser memanggil prosedur melalui klien bertipe, dengan input dan hasil diperiksa oleh TypeScript. Jika API HTTP sudah ada, API itu dapat tetap menyuplai TanStack Query tanpa migrasi oRPC.
+Kami merekomendasikan oRPC saat membuat API bertipe bersama yang baru. Fitur mendefinisikan prosedur operasinya, lalu aplikasi menyediakannya lewat adapter HTTP. Browser memanggil prosedur melalui klien bertipe, sehingga TypeScript bisa memeriksa input dan hasilnya. API HTTP yang sudah ada tetap bisa dipakai oleh TanStack Query tanpa migrasi ke oRPC.
 
-oRPC mendefinisikan API yang dapat dipanggil dan membawa tipe input serta hasil ke klien. TanStack Query mengelola hasil cache, state request, dan refetch. Anda dapat memanggil klien oRPC langsung untuk request satu kali atau menggunakan [integrasi TanStack Query](https://orpc.dev/docs/integrations/tanstack-query) ketika browser membutuhkan siklus hidup tersebut.
+oRPC mendefinisikan operasi API dan membawa tipe input serta hasilnya ke klien. TanStack Query mengurus cache, status request, dan refetch. Klien oRPC bisa dipanggil langsung untuk request sekali jalan; gunakan [integrasi TanStack Query](https://orpc.dev/docs/integrations/tanstack-query) jika browser membutuhkan pengelolaan data tersebut.
 
-Pembacaan detail pesanan mengikuti jalur ini:
+Query detail pesanan mengikuti alur ini:
 
 ```text
 Client Component → TanStack Query → klien oRPC → adapter HTTP Next.js
   → prosedur detail pesanan → query fitur
 ```
 
-Contoh berikut menggunakan ulang query pesanan, use case pembatalan, dan schema dari panduan ini. Ikuti [panduan instalasi resmi](https://orpc.dev/docs/getting-started#installation) untuk paket oRPC; aplikasi juga membutuhkan provider TanStack Query yang dijelaskan sebelumnya.
+Contoh berikut memakai query pesanan, use case pembatalan, dan schema yang sudah dibahas. Ikuti [panduan instalasi resmi](https://orpc.dev/docs/getting-started#installation) untuk paket oRPC. Provider TanStack Query tetap diperlukan.
 
-#### Hubungkan request orders dengan operasi fitur yang ada {#adapt-order-requests-to-the-existing-feature-operations}
+#### Hubungkan request orders ke operasi fitur yang sudah ada {#adapt-order-requests-to-the-existing-feature-operations}
 
-Kedua prosedur mengidentifikasi pesanan dalam satu akun. Gunakan ulang `orderReferenceInputSchema` dari [pembacaan detail](#verify-the-requested-account-in-a-detail-read). Browser memberikan `accountId` agar identitas query mencakup akun yang dipilih. Server harus memeriksa pilihan itu terhadap request terautentikasi.
+Kedua prosedur menerima identitas pesanan dalam satu akun. Pakai `orderReferenceInputSchema` dari [query detail](#verify-the-requested-account-in-a-detail-read). Browser mengirim `accountId` supaya identitas query mencakup akun yang dipilih. Server tetap memeriksa akun itu terhadap request yang sudah diautentikasi.
 
-Definisikan prosedur di samping operasi server yang dipanggilnya:
+Letakkan prosedur di samping operasi server yang dipanggilnya:
 
 ```ts
 // src/features/orders/order.rpc.ts
@@ -836,15 +836,15 @@ export const orderRouter = {
 }
 ```
 
-Prosedur bersama memvalidasi input, memperoleh akun dari request, dan menolak ID akun berbeda. Middleware-nya meneruskan akun terautentikasi ke setiap handler. [Middleware oRPC](https://orpc.dev/docs/middleware#middleware-input)
+Prosedur dasar memvalidasi input, mengambil akun dari request, dan menolak ID akun yang berbeda. Middleware mengirim akun yang sudah diverifikasi ke setiap handler. [Middleware oRPC](https://orpc.dev/docs/middleware#middleware-input)
 
-Contoh ini mengasumsikan `requireAccount` menolak panggilan API tanpa autentikasi, bukan mengalihkan ke halaman login. Sesuaikan kegagalan autentikasi menjadi error oRPC `UNAUTHORIZED` pada batas API. Query dan use case juga memverifikasi akun secara internal, sehingga pemanggil server langsung mendapat perlindungan yang sama. Query membatasi pembacaan pada akun yang diminta; use case menegakkan kepemilikan, kelayakan pembatalan, dan pemeriksaan update bersamaan dari [penelusuran pembatalan](./folder-structure#follow-a-cancellation-from-the-form-to-the-stored-order).
+Contoh menganggap `requireAccount` menolak panggilan API tanpa autentikasi, tanpa redirect ke halaman login. Ubah kegagalan autentikasi menjadi error oRPC `UNAUTHORIZED` saat request masuk lewat API. Query dan use case tetap memverifikasi akun sendiri agar panggilan server langsung mendapat perlindungan yang sama. Query membatasi data ke akun yang diminta. Use case memeriksa pemilik, aturan pembatalan, dan perubahan status bersamaan seperti pada [alur pembatalan](./folder-structure#follow-a-cancellation-from-the-form-to-the-stored-order).
 
-Pembacaan mengembalikan DTO `OrderSummary` yang sudah ada. Pembatalan tidak mengembalikan data. UI di bawah menampilkan pesan kegagalan umum; ketika membutuhkan petunjuk pemulihan khusus, ubah kegagalan fitur yang dikenal menjadi error oRPC yang dipilih secara eksplisit. Jaga pesan error dan data aman bagi pemanggil, serta pisahkan tipe error khusus oRPC dari aturan bisnis murni. [Penanganan error oRPC](https://orpc.dev/docs/error-handling)
+Query mengembalikan DTO `OrderSummary` yang sudah ada. Pembatalan tidak mengembalikan data. UI di bawah memakai pesan error umum. Jika pengguna membutuhkan petunjuk untuk mengatasi kegagalan tertentu, petakan kegagalan fitur yang dikenal ke error oRPC yang sesuai. Pastikan pesan dan data error aman diterima pemanggil. Tipe error khusus oRPC tetap di luar aturan bisnis murni. [Penanganan error oRPC](https://orpc.dev/docs/error-handling)
 
-#### Pasang prosedur dan hubungkan klien {#mount-the-procedures-and-connect-the-client}
+#### Pasang prosedur dan sambungkan klien {#mount-the-procedures-and-connect-the-client}
 
-Aplikasi menyusun router API dari ekspor fitur:
+Susun router API aplikasi dari ekspor fitur:
 
 ```ts
 // src/app/api/rpc/router.ts
@@ -854,7 +854,7 @@ import { orderRouter } from '@/features/orders/order.rpc'
 export const router = { orders: orderRouter }
 ```
 
-Pasang melalui Route Handler catch-all agar path prosedur bersarang mencapai adapter:
+Pasang router lewat Route Handler catch-all agar path prosedur bertingkat bisa mencapai adapter:
 
 ```ts
 // src/app/api/rpc/[...rest]/route.ts
@@ -875,9 +875,9 @@ async function handleRequest(request: Request) {
 export { handleRequest as GET, handleRequest as POST }
 ```
 
-Route menghubungkan HTTP dengan router yang sudah disusun. Perilaku orders tetap dalam fitur. Lihat [adapter Next.js oRPC](https://orpc.dev/docs/adapters/next) untuk konfigurasi transport.
+Route menghubungkan HTTP ke router tersebut. Operasi orders tetap dikerjakan di fitur. Lihat konfigurasi transport dalam [adapter Next.js oRPC](https://orpc.dev/docs/adapters/next).
 
-Simpan link HTTP bersama di `platform`. Modul ini tidak mengimpor fitur apa pun:
+Simpan link HTTP bersama di `platform`. Modul ini tidak mengimpor fitur:
 
 ```ts
 // src/platform/rpc/client.ts
@@ -894,9 +894,9 @@ export const rpcLink = new RPCLink({
 })
 ```
 
-Link ini mengirim request browser ke origin yang sama, menggunakan cookie sesi aplikasi. URL sesuai dengan prefix handler. Aplikasi yang di-deploy dengan `basePath` Next.js harus menyertakan prefix tersebut dalam URL browser.
+Link mengirim request browser ke origin yang sama dengan memakai cookie sesi aplikasi. URL-nya mengikuti prefix handler. Jika deployment memakai `basePath` Next.js, sertakan prefix itu dalam URL browser.
 
-Fitur orders menyediakan tipe klien dan utilitas query-nya sendiri:
+Fitur orders menyediakan klien bertipe dan utilitas query-nya:
 
 ```ts
 // src/features/orders/order.rpc-client.ts
@@ -912,24 +912,24 @@ export const orderClient: RouterClient<{ orders: typeof orderRouter }> =
 export const orpc = createTanstackQueryUtils(orderClient)
 ```
 
-Key `orders` sesuai dengan router aplikasi. Klien ini hanya mengenali prosedur orders. Import modul server-nya hanya untuk tipe, sehingga implementasi prosedur tidak masuk bundle browser. oRPC mendukung penentuan tipe klien dari router server-nya. [Penyiapan klien oRPC](https://orpc.dev/docs/client/client-side#setup)
+Key `orders` mengikuti router aplikasi. Klien ini hanya mengenali prosedur orders. Import dari modul server hanya mengambil tipe, sehingga implementasi prosedur tidak masuk bundle browser. oRPC mendukung tipe klien yang diturunkan dari router server. [Setup klien oRPC](https://orpc.dev/docs/client/client-side#setup)
 
-File-file tersebut memiliki tanggung jawab berikut:
+Pembagian file-nya seperti ini:
 
-| File | Tanggung jawab |
+| File | Tugas |
 | --- | --- |
-| `features/orders/model/order.schema.ts` | Schema input bersama dan schema DTO |
-| `features/orders/order.rpc.ts` | Prosedur yang mengautentikasi, memvalidasi, dan memanggil operasi fitur |
+| `features/orders/model/order.schema.ts` | Schema input bersama dan DTO |
+| `features/orders/order.rpc.ts` | Prosedur yang memverifikasi pemanggil, memvalidasi input, dan memanggil operasi fitur |
 | `app/api/rpc/router.ts` | Menyusun prosedur fitur menjadi API aplikasi |
-| `app/api/rpc/[...rest]/route.ts` | Menyediakan API melalui HTTP |
-| `platform/rpc/client.ts` | Transport browser bersama |
+| `app/api/rpc/[...rest]/route.ts` | Menyediakan API lewat HTTP |
+| `platform/rpc/client.ts` | Transport browser yang dipakai bersama |
 | `features/orders/order.rpc-client.ts` | Klien orders bertipe dan utilitas TanStack Query |
 
-File schema digunakan bersama kode browser, jadi harus bebas dependensi khusus server. Fitur lain yang berjalan di server tetap dapat memanggil query dan use case publik langsung. Penambahan API tidak menjadikan repository atau mapper internal publik; keduanya tetap di balik operasi yang dijelaskan dalam [aturan dependensi folder](./folder-structure#keep-operation-modules-at-the-feature-root).
+Browser ikut memakai file schema, jadi file itu harus bebas dependensi khusus server. Kode server di fitur lain tetap bisa memanggil query dan use case publik langsung. Menambah API tidak membuat repository atau mapper internal menjadi publik. Keduanya tetap diakses melalui operasi fitur sesuai [aturan dependensi folder](./folder-structure#keep-operation-modules-at-the-feature-root).
 
-#### Baca melalui query options hasil generasi {#read-through-generated-query-options}
+#### Pakai query options yang dihasilkan oRPC {#read-through-generated-query-options}
 
-Factory options sebelumnya mendefinisikan request HTTP dan query key secara manual. Kini oRPC dapat menghasilkan keduanya, sehingga factory cukup menyediakan kebijakan kesegaran bersama:
+Sebelumnya, factory options menentukan request HTTP dan query key secara manual. oRPC bisa menghasilkan keduanya. Factory sekarang cukup menyimpan pengaturan kesegaran data yang dipakai bersama:
 
 ```ts
 // src/features/orders/order.query-options.ts
@@ -941,13 +941,13 @@ export function orderDetailsOptions(input: OrderReferenceInput) {
 }
 ```
 
-Komponen `LiveOrderDetails` yang ada tetap memanggil `useQuery(orderDetailsOptions(input))` dan merender state loading, error, serta berhasil. oRPC kini menyediakan fungsi request dan query key. Jalur ini tidak membutuhkan wrapper `order.api.ts`.
+`LiveOrderDetails` tetap memanggil `useQuery(orderDetailsOptions(input))` dan menampilkan loading, error, atau data. Fungsi request dan query key sekarang disediakan oRPC. Jalur ini tidak perlu wrapper `order.api.ts`.
 
-`staleTime` bersama menjadi alasan contoh ini tetap memiliki file `order.query-options.ts`. Jika hanya satu komponen membutuhkan query dan tidak ada konfigurasi bersama, komponen dapat memanggil `orpc.orders.details.queryOptions({ input })` langsung. Integrasi juga menyediakan mutation options dan fungsi bantu key. [Integrasi TanStack Query oRPC](https://orpc.dev/docs/integrations/tanstack-query)
+File `order.query-options.ts` masih berguna karena menyimpan `staleTime` bersama. Kalau query hanya dipakai satu komponen tanpa konfigurasi bersama, panggil `orpc.orders.details.queryOptions({ input })` langsung dari komponen. Integrasi ini juga menyediakan mutation options dan helper key. [Integrasi TanStack Query oRPC](https://orpc.dev/docs/integrations/tanstack-query)
 
-#### Batalkan pesanan dan invalidasi pembacaan yang terpengaruh {#cancel-the-order-and-invalidate-affected-reads}
+#### Batalkan pesanan, lalu invalidasi query yang terpengaruh {#cancel-the-order-and-invalidate-affected-reads}
 
-Kontrol pembatalan memanggil prosedur, lalu membatalkan validitas query pesanan setelah penulisan berhasil:
+Kontrol pembatalan memanggil prosedur. Setelah update berhasil, kontrol menginvalidasi query pesanan:
 
 ```tsx
 // src/features/orders/ui/CancelOrderButton.tsx
@@ -981,83 +981,83 @@ export function CancelOrderButton(input: OrderReferenceInput) {
 }
 ```
 
-Ini menggantikan tombol berbasis API sebelumnya. Render untuk pesanan yang dapat dibatalkan dan beri key berdasarkan ID akun serta pesanan jika tampilan sekitarnya berganti pesanan tanpa melepas kontrol. Use case selalu memeriksa status tersimpan terkini.
+Komponen ini menggantikan tombol API sebelumnya. Tampilkan untuk pesanan yang masih boleh dibatalkan. Jika halaman bisa berganti pesanan tanpa melepas kontrol, beri key dari ID akun dan pesanan. Use case tetap memeriksa status terbaru di database setiap kali dipanggil.
 
-`orpc.orders.key()` mencocokkan query di bawah router orders, termasuk pembacaan detail dan prosedur daftar pesanan yang ditambahkan di sana. Ini sengaja menginvalidasi seluruh query pesanan yang di-cache; query aktif yang cocok melakukan refetch. Persempit pilihan ketika cache membesar. Menunggu invalidasi menjaga mutasi berstatus pending sampai refetch selesai. [Invalidasi mutasi TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/invalidations-from-mutations)
+`orpc.orders.key()` mencocokkan query di bawah router orders, termasuk detail dan prosedur daftar yang ditambahkan ke router itu. Contoh sengaja menginvalidasi semua query pesanan dalam cache; query aktif yang cocok akan melakukan refetch. Persempit pilihan query saat cache membesar. Dengan menunggu invalidasi selesai, status mutasi tetap pending sampai refetch selesai. [Invalidasi mutasi TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/invalidations-from-mutations)
 
-Mutation options hasil generasi tidak menyimpulkan pembacaan mana yang berubah. Pilih query key yang terpengaruh secara eksplisit. Key oRPC juga berbeda dari key manual `['orders', ...]` sebelumnya, jadi migrasikan prefetch, update cache, dan invalidasi bersama-sama. Query HTTP biasa yang masih menggunakan key manual membutuhkan invalidasi sendiri.
+Mutation options hasil generasi tidak otomatis tahu query mana yang berubah. Kamu tetap harus memilih key yang terpengaruh. Key oRPC juga berbeda dari key manual `['orders', ...]` sebelumnya, jadi migrasikan prefetch, update cache, dan invalidasi bersama-sama. Query HTTP yang masih memakai key manual perlu invalidasi sendiri.
 
-Simpan konfigurasi mutasi untuk satu konsumen ini di samping kontrol. Ekstrak `order.mutation-options.ts` ketika beberapa konsumen menggunakannya bersama. Jika penulisan juga memengaruhi data hasil render server yang di-cache, revalidasi cache itu secara terpisah; invalidasi TanStack hanya memperbarui cache query klien.
+Karena baru dipakai satu kontrol, konfigurasi mutasi tetap di komponen. Pisahkan ke `order.mutation-options.ts` saat beberapa pemakai membutuhkannya. Jika mutasi juga mengubah data yang di-cache untuk render server, revalidasi cache tersebut secara terpisah. Invalidasi TanStack hanya mengurus cache query klien.
 
-#### Pertahankan jalur langsung untuk rendering server {#keep-server-rendering-on-a-direct-path}
+#### Tetap panggil query langsung saat rendering server {#keep-server-rendering-on-a-direct-path}
 
-Untuk Server Component, gunakan query fitur langsung sebagai pilihan awal. [Contoh hydration](#prefetch-when-the-client-needs-the-same-data-afterward) bekerja dengan `orderDetailsOptions` baru: ambil melalui `getOrderDetails`, lalu simpan DTO dengan query key hasil generasi sebelum dehydrate.
+Untuk Server Component, utamakan query fitur langsung. [Contoh hydration](#prefetch-when-the-client-needs-the-same-data-afterward) tetap berlaku dengan `orderDetailsOptions` yang baru: ambil data lewat `getOrderDetails`, lalu simpan DTO dengan query key hasil generasi sebelum menjalankan dehydrate.
 
-Membuat query options tidak mengirim request. Link browser menentukan URL hanya saat prosedur dipanggil, sehingga rendering server dapat menggunakan key options tanpa menjalankan transport browser. Jaga modul klien dan options bebas dari `'use client'` untuk penggunaan tersebut.
+Membuat query options belum mengirim request. Factory URL pada link baru dijalankan saat prosedur dipanggil. Jadi, server bisa memakai key tanpa menjalankan transport browser. Untuk mendukung penggunaan ini, jangan pasang `'use client'` pada modul klien dan options.
 
-Ketika pemanggil server membutuhkan validasi dan middleware prosedur, gunakan `call` atau `createRouterClient` oRPC untuk memanggilnya secara lokal. Berikan konteks request terautentikasi yang dibutuhkan prosedur. Panggilan lokal menghindari perjalanan HTTP ke API aplikasi sendiri. [Klien sisi server oRPC](https://orpc.dev/docs/client/server-side)
+Kalau kode server membutuhkan validasi dan middleware prosedur, gunakan `call` atau `createRouterClient` oRPC untuk memanggilnya langsung di server. Sertakan konteks request terautentikasi yang dibutuhkan prosedur. Cara ini tidak perlu request HTTP ke API aplikasi sendiri. [Klien sisi server oRPC](https://orpc.dev/docs/client/server-side)
 
-oRPC menambah prosedur dan konfigurasi transport yang perlu dirawat. Gunakan ketika panggilan browser bertipe dan perilaku API bersama membenarkan penyiapan itu. Halaman yang hanya membutuhkan pembacaan server langsung dapat tetap menggunakan query fitur.
+oRPC menambah prosedur dan konfigurasi transport yang perlu dirawat. Gunakan saat panggilan browser bertipe dan perilaku API bersama memang diperlukan. Halaman yang cukup memakai query server langsung bisa tetap memanggil query fitur.
 
 ## Memilih pendekatan {#choosing-an-approach}
 
-### Pilih strategi data untuk seluruh proyek {#choose-a-project-wide-data-strategy}
+### Tentukan strategi data untuk proyek {#choose-a-project-wide-data-strategy}
 
-Ketika setiap fitur memilih klien request dan aturan cache sendiri, developer harus mempelajari ulang alur data setiap kali bekerja pada fitur lain. Pilih strategi awal proyek dan gunakan secara konsisten untuk operasi yang sebanding.
+Kalau setiap fitur memilih klien request dan aturan cache sendiri, developer harus mempelajari alur baru setiap berpindah fitur. Tetapkan strategi awal proyek dan pakai pola yang sama untuk operasi yang sejenis.
 
-| Strategi | Pilih ketika | Aplikasi yang sesuai | Pekerjaan tambahan |
+| Strategi | Cocok ketika | Contoh aplikasi | Yang perlu dirawat |
 | --- | --- | --- | --- |
-| **Next.js native** | Pembacaan hasil render server dan pengiriman formulir mencakup sebagian besar interaksi. | Situs konten, portal pelanggan, atau alat internal dengan formulir sederhana. | Definisikan query fitur, Server Actions, dan endpoint HTTP yang diperlukan. |
-| **Next.js + React Query** | Tampilan browser membutuhkan data cache bersama, polling, penyegaran latar belakang, atau update optimistis. | Dashboard operasional atau workspace interaktif dengan API HTTP yang sudah ada. | Rawat query key, update cache, dan fungsi request pemanggil API. |
-| **Next.js + React Query + oRPC** | Anda mengendalikan API dan menginginkan operasi bertipe bersama antarfitur atau klien aplikasi. | Produk dengan klien web dan mobile yang menggunakan operasi bisnis sama. | Rawat kontrak prosedur, konteks request, penyiapan transport, dan aturan cache klien. |
+| **Next.js native** | Sebagian besar interaksi cukup dengan data dari server dan pengiriman form. | Situs konten, portal pelanggan, atau alat internal dengan form sederhana. | Query fitur, Server Actions, dan endpoint HTTP yang diperlukan. |
+| **Next.js + React Query** | Browser perlu cache bersama, polling, refresh di latar belakang, atau update optimistis. | Dashboard operasional atau workspace interaktif yang sudah punya API HTTP. | Query key, update cache, dan fungsi request API. |
+| **Next.js + React Query + oRPC** | Kamu mengendalikan API dan ingin berbagi operasi bertipe antarfitur atau klien. | Produk dengan aplikasi web dan mobile yang memakai operasi bisnis sama. | Kontrak prosedur, konteks request, transport, dan aturan cache klien. |
 
-Pilih berdasarkan kebutuhan aplikasi dan backend yang ada. Proyek besar dapat berhasil menggunakan API native Next.js. Pembaruan browser yang sering atau API bersama adalah alasan yang lebih berguna untuk menambah alat daripada ukuran proyek saja.
+Pilih berdasarkan kebutuhan aplikasi dan backend yang tersedia. Proyek besar pun bisa cukup memakai API native Next.js. Kebutuhan pembaruan di browser atau API bersama lebih menentukan daripada ukuran proyek semata.
 
-React Query mengelola data server yang di-cache dan state request bagi konsumen klien. oRPC menyediakan operasi bertipe dan terintegrasi dengan options React Query. Keduanya dapat bekerja bersama rendering server Next.js. [Panduan rendering server TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr), [integrasi oRPC](https://orpc.dev/docs/integrations/tanstack-query)
+React Query mengurus cache data server dan status request di klien. oRPC menyediakan operasi bertipe yang terhubung ke options React Query. Keduanya bisa dipakai bersama rendering server Next.js. [Panduan rendering server TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr), [integrasi oRPC](https://orpc.dev/docs/integrations/tanstack-query)
 
-### Terapkan strategi secara konsisten {#apply-the-strategy-consistently}
+### Pakai strategi yang sama untuk kebutuhan yang sama {#apply-the-strategy-consistently}
 
-Memilih library hanya sebagian dari keputusan. Tetapkan juga cara proyek menangani pembacaan server, request browser, mutasi, dan pembaruan setelah penulisan berhasil.
+Memilih library belum menyelesaikan semua keputusan. Tentukan juga cara mengambil data di server dan browser, mengirim mutasi, serta memperbarui data setelahnya.
 
-Contohnya, proyek yang memilih **React Query + oRPC** dapat mengikuti aturan berikut:
+Misalnya, proyek yang memilih **React Query + oRPC** bisa memakai aturan ini:
 
 | Operasi | Pilihan awal proyek |
 | --- | --- |
-| Membaca data selama rendering server | Panggil query server fitur langsung. |
-| Membaca data yang membutuhkan pembaruan browser berkelanjutan | Gunakan React Query dengan query options oRPC. |
-| Mengirim mutasi aplikasi dari browser | Gunakan React Query dengan mutation options oRPC. Prosedur memanggil use case fitur. |
-| Memperbarui browser setelah mutasi | Invalidasi atau perbarui query klien yang terpengaruh. Revalidasi data server yang di-cache secara terpisah jika terpengaruh. |
-| Menerima webhook | Gunakan Route Handler yang memvalidasi request dan memanggil operasi fitur. |
+| Mengambil data saat rendering server | Panggil query server fitur langsung. |
+| Mengambil data yang terus diperbarui di browser | Pakai React Query dengan query options oRPC. |
+| Mengirim mutasi dari browser | Pakai React Query dengan mutation options oRPC. Prosedur memanggil use case fitur. |
+| Memperbarui browser setelah mutasi | Invalidasi atau update query klien terkait. Revalidasi cache server secara terpisah jika ikut terpengaruh. |
+| Menerima webhook | Pakai Route Handler yang memvalidasi request dan memanggil operasi fitur. |
 
-Aturan ini memberi setiap jalur eksekusi tanggung jawab yang jelas. Kontributor dapat mengikuti pendekatan sama saat menambahkan fitur lain.
+Dengan pembagian ini, kontributor tahu jalur yang harus diikuti saat menambahkan operasi serupa di fitur lain.
 
-Gunakan [matriks operasi](#choose-the-default-that-matches-the-caller) dalam strategi yang dipilih. Ketika kebutuhan baru membenarkan library atau transport lain, perbarui strategi proyek dan dokumentasikan tempat pendekatan baru berlaku.
+Gunakan [tabel pilihan operasi](#choose-the-default-that-matches-the-caller) sesuai strategi proyek. Kalau kebutuhan baru memang memerlukan library atau transport lain, perbarui strategi dan catat bagian mana yang memakai pendekatan tersebut.
 
-### Pilih jalur data berdasarkan operasi {#choose-the-data-path-from-the-operation}
+### Pilih jalur data dari kebutuhan operasinya {#choose-the-data-path-from-the-operation}
 
 Sebelum menambahkan query atau mutasi, jawab tiga pertanyaan:
 
-1. **Apa yang dilakukan?** Pembacaan mengambil data. Mutasi mengubah state aplikasi atau memicu efek.
-2. **Siapa pemanggilnya?** Server Component, kode browser, atau klien lain seperti aplikasi mobile maupun integrasi eksternal?
-3. **Apa yang dibutuhkan pemanggil setelahnya?** Satu hasil, halaman yang disegarkan, atau data yang terus diperbarui melalui polling, penyegaran latar belakang, atau cache klien bersama?
+1. **Apa yang dikerjakan?** Query mengambil data. Mutasi mengubah state aplikasi atau memicu efek.
+2. **Siapa yang memanggil?** Server Component, kode browser, aplikasi mobile, atau integrasi luar?
+3. **Apa yang dibutuhkan setelahnya?** Satu hasil, halaman yang diperbarui, atau data yang terus berubah lewat polling, refresh di latar belakang, dan cache bersama?
 
-Mengubah filter, nomor halaman, atau parameter pencarian biasanya memilih data berbeda untuk dibaca. Klasifikasikan operasi berdasarkan tindakannya terhadap state aplikasi. Membuka menu atau mengubah field formulir yang belum disimpan dapat tetap dalam state komponen.
+Mengubah filter, halaman, atau parameter pencarian biasanya hanya memilih data lain untuk dibaca. Bedakan query dan mutasi dari dampaknya terhadap state aplikasi. Membuka menu atau mengedit field yang belum disimpan cukup ditangani state komponen.
 
-### Pilih jalur yang sesuai dengan pemanggil {#choose-the-default-that-matches-the-caller}
+### Sesuaikan jalur dengan pemanggilnya {#choose-the-default-that-matches-the-caller}
 
-Terapkan [strategi proyek yang dipilih](#choose-a-project-wide-data-strategy) pada setiap pemanggil. Gunakan konvensi request dan cache yang sama untuk operasi sebanding lintas fitur.
+Terapkan [strategi proyek](#choose-a-project-wide-data-strategy) pada masing-masing pemanggil. Operasi sejenis di fitur berbeda sebaiknya mengikuti cara request dan caching yang sama.
 
-| Situasi | Jalur dalam strategi terpilih | Perilaku pendukung |
+| Kebutuhan | Jalur yang dipakai | Pendukung |
 | --- | --- | --- |
-| Server Component membutuhkan data untuk rendering | Query fitur langsung dekat konsumen | `cache()` React untuk pembacaan database berulang selama request |
-| Client Component membutuhkan data awal | Prop yang dapat diserialisasi dari server | Promise dan `use()` ketika streaming memperbaiki pengalaman layar |
-| Komponen turunan klien yang jauh berbagi data yang dimuat | Context dalam lingkup fitur | Draft state saat mengedit secara lokal |
-| Kode browser membutuhkan pembacaan | Klien HTTP atau RPC proyek, melalui TanStack Query jika dipilih untuk proyek | Indikator loading dan error |
-| Tampilan klien membutuhkan data bersama yang terus diperbarui | TanStack Query dengan klien HTTP atau RPC proyek | Pengambilan data server dan hydration untuk render awal |
-| Formulir atau kontrol mengirim mutasi yang ditangani aplikasi Next.js ini | Jalur Server Action, HTTP, atau RPC pilihan proyek yang memanggil use case fitur | Indikator pending, pesan error yang diperkirakan, dan pembaruan data yang terpengaruh |
-| UI mengirim mutasi ke API HTTP atau RPC yang sudah ada | Klien API yang ada, melalui TanStack Query jika dipilih untuk proyek | Indikator mutasi dan pembaruan data yang terpengaruh |
-| Aplikasi mobile atau integrasi eksternal membutuhkan mutasi | Endpoint HTTP atau prosedur RPC proyek yang memanggil use case fitur | Autentikasi dan respons yang sesuai konsumen |
-| Webhook mengirim event | Route Handler yang memvalidasi event dan memanggil operasi fitur | Respons sesuai protokol webhook provider |
-| Interaksi hanya mengubah state UI lokal | State komponen | Library state ketika beberapa bagian klien perlu mengoordinasikan state tersebut |
+| Server Component mengambil data untuk render | Query fitur langsung, dekat komponen yang membutuhkan | `cache()` React untuk query database berulang dalam satu request |
+| Client Component membutuhkan data awal | Props yang bisa diserialisasi dari server | Promise dan `use()` jika streaming membantu halaman tampil lebih cepat |
+| Komponen klien yang jauh di bawah memakai data awal yang sama | Context dalam fitur | Draft state untuk perubahan yang belum disimpan |
+| Browser meminta data | Klien HTTP/RPC proyek, lewat TanStack Query jika itu pilihan proyek | Indikator loading dan error |
+| Beberapa komponen klien perlu data bersama yang terus diperbarui | TanStack Query dengan klien HTTP/RPC proyek | Pengambilan data server dan hydration untuk render awal |
+| Form atau kontrol mengirim mutasi ke aplikasi Next.js ini | Server Action, HTTP, atau RPC sesuai strategi proyek; semuanya memanggil use case fitur | Status pending, pesan kegagalan yang sudah diperkirakan, dan pembaruan data terkait |
+| UI mengirim mutasi ke API yang sudah ada | Klien API tersebut, lewat TanStack Query jika itu pilihan proyek | Status mutasi dan pembaruan data terkait |
+| Aplikasi mobile atau integrasi luar menjalankan mutasi | Endpoint HTTP atau prosedur RPC proyek yang memanggil use case fitur | Autentikasi dan response sesuai klien |
+| Webhook mengirim event | Route Handler yang memvalidasi event dan memanggil operasi fitur | Response sesuai protokol provider |
+| Interaksi hanya mengubah UI lokal | State komponen | Library state jika beberapa bagian klien perlu mengatur state bersama |
 
-Selanjutnya: [lindungi pembacaan dan mutasi pada batas fitur](./protected-resources).
+Selanjutnya: [periksa akses pada setiap query dan mutasi fitur](./protected-resources).

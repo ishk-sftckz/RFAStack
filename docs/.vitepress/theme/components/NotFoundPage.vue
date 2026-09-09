@@ -8,7 +8,7 @@ const { t, localeLink } = useLocale()
   <main class="not-found">
     <p class="manual-index">{{ t('PAGE / 404', 'HALAMAN / 404') }}</p>
     <h1>{{ t("This page doesn't exist.", 'Halaman ini tidak ditemukan.') }}</h1>
-    <p>{{ t('The link may be outdated, or the page may have moved.', 'Tautan mungkin sudah lama, atau halaman telah dipindahkan.') }}</p>
+    <p>{{ t('The link may be outdated, or the page may have moved.', 'Mungkin link-nya sudah tidak berlaku atau halamannya sudah pindah.') }}</p>
     <a class="manual-button" :href="localeLink('/')">{{ t('Return to the guide', 'Kembali ke panduan') }}</a>
   </main>
 </template>

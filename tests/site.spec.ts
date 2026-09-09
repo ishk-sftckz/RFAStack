@@ -530,7 +530,10 @@ test('language switching preserves the chapter and section in both directions', 
     } else {
       await page.getByRole('button', { name: menu, exact: true }).click()
     }
-    await page.getByRole('link', { name: label, exact: true }).filter({ visible: true }).click()
+    const languageLink = page.getByRole('link', { name: label, exact: true }).filter({ visible: true })
+    // VitePress adds the current fragment to locale links after hydration.
+    await expect(languageLink).toHaveAttribute('href', `/RFAStack/${prefix}folder-structure${section}`)
+    await languageLink.click()
     await expect(page).toHaveURL(new RegExp(`/RFAStack/${prefix}folder-structure${section}$`))
     await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible()
     await expect(page.locator(section)).toHaveCount(1)

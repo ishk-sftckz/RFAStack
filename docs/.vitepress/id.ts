@@ -3,7 +3,7 @@ import type { LocaleSpecificConfig, DefaultTheme } from 'vitepress'
 export const indonesian: LocaleSpecificConfig<DefaultTheme.Config> & { label: string } = {
   label: 'Bahasa Indonesia',
   lang: 'id',
-  description: 'Panduan arsitektur React full-stack untuk aplikasi Next.js, dengan aturan penempatan kode, alur data, dan perlindungan resource.',
+  description: 'Panduan arsitektur React full-stack untuk aplikasi Next.js. Pelajari cara menempatkan kode, mengatur alur data, dan memeriksa hak akses.',
   themeConfig: {
     nav: [
       { text: 'Panduan', link: '/id/background' },
