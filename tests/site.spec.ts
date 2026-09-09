@@ -341,6 +341,7 @@ test('chapter navigation follows the intended reading order', async ({ page }) =
   )
 
   await page.goto('./data-fetching-and-mutation')
+  await expect(page.locator('.VPSwitchAppearance').first()).toHaveAttribute('title', /.+/)
   await page.getByRole('link', { name: /Next chapter Protected Resources/ }).click()
   await expect(page).toHaveURL(/\/RFAStack\/protected-resources$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Protected Resources' })).toBeVisible()
@@ -458,4 +459,117 @@ test('unknown routes render the custom 404 page', async ({ page }) => {
     'href',
     '/RFAStack/',
   )
+})
+
+const indonesianRoutes = [
+  { path: './id/', heading: 'RFAStack' },
+  { path: './id/background', heading: 'Latar Belakang & Motivasi' },
+  { path: './id/concepts', heading: 'Konsep' },
+  { path: './id/folder-structure', heading: 'Struktur Folder' },
+  { path: './id/data-fetching-and-mutation', heading: 'Pengambilan Data & Mutasi' },
+  { path: './id/protected-resources', heading: 'Perlindungan Resource' },
+  { path: './id/caching', heading: 'Caching' },
+  { path: './id/examples', heading: 'Contoh Aplikasi' },
+] as const
+
+test('every Indonesian route renders localized content and metadata', async ({ page }) => {
+  for (const route of indonesianRoutes) {
+    const response = await page.goto(route.path)
+    expect(response?.ok()).toBe(true)
+    await expect(page.locator('html')).toHaveAttribute('lang', 'id')
+    await expect(page.getByRole('heading', { level: 1, name: route.heading })).toBeVisible()
+    await expect(page).toHaveTitle(route.path === './id/' ? 'RFAStack' : `${route.heading} · RFAStack`)
+    const canonical = `https://ishk-sftckz.github.io/RFAStack/${route.path.slice(2)}`
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', canonical)
+    await expect(page.locator('link[hreflang="id"]')).toHaveAttribute('href', canonical)
+    await expect(page.locator('link[hreflang="en"]')).toHaveAttribute('href', canonical.replace('/id/', '/'))
+    await expect(page.locator('meta[property="og:locale"]')).toHaveAttribute('content', 'id_ID')
+    if (route.path === './id/') {
+      await expect(page.locator('.reading-time')).toHaveCount(0)
+    } else {
+      await expect(page.locator('.vp-doc h1 + .reading-time')).toHaveText(/Sekitar [1-9]\d* menit baca/)
+      await expect(page.getByRole('link', { name: 'Edit halaman ini' })).toHaveAttribute(
+        'href', `https://github.com/ishk-sftckz/RFAStack/edit/main/docs/${route.path.slice(2)}.md`,
+      )
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  }
+})
+
+test('Indonesian homepage, chapter navigation, and sidebar stay in the locale', async ({ page }, testInfo) => {
+  await page.goto('./id/')
+  await expect(page.getByRole('link', { name: 'Baca panduan', exact: true })).toHaveAttribute('href', '/RFAStack/id/background')
+  await expect(page.getByRole('img', { name: 'Peta arsitektur RFAStack', exact: true })).toBeVisible()
+  const readingPath = page.getByRole('list', { name: 'Urutan baca RFAStack' })
+  const chapterPaths = ['background', 'concepts', 'data-fetching-and-mutation', 'protected-resources', 'caching', 'examples']
+  await expect(readingPath.locator('a')).toHaveCount(chapterPaths.length)
+  for (const [index, path] of chapterPaths.entries()) {
+    await expect(readingPath.locator('a').nth(index)).toHaveAttribute('href', `/RFAStack/id/${path}`)
+  }
+  await page.getByRole('link', { name: 'Baca panduan', exact: true }).click()
+  await page.getByRole('link', { name: /Bab berikutnya/ }).click()
+  await expect(page).toHaveURL(/\/RFAStack\/id\/concepts$/)
+  if (testInfo.project.name === 'mobile-chromium') {
+    await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  }
+  const sidebar = page.locator('.VPSidebar')
+  await expect(sidebar.getByRole('link', { name: 'Struktur Folder', exact: true })).toHaveAttribute('href', '/RFAStack/id/folder-structure')
+  await expect(sidebar.locator('.sidebar-brand')).toHaveAttribute('href', '/RFAStack/id/')
+  await expect(sidebar.locator('.sidebar-brand')).toHaveAttribute('aria-label', 'Beranda RFAStack')
+})
+
+test('language switching preserves the chapter and section in both directions', async ({ page }, testInfo) => {
+  const section = '#use-zod-schemas-and-infer-their-types'
+  await page.goto(`./folder-structure${section}`)
+  for (const [label, menu, prefix, heading] of [
+    ['Bahasa Indonesia', 'Change language', 'id/', 'Struktur Folder'],
+    ['English', 'Pilih bahasa', '', 'Folder Structure'],
+  ]) {
+    if (testInfo.project.name === 'mobile-chromium') {
+      await page.getByRole('button', { name: 'mobile navigation' }).click()
+    } else {
+      await page.getByRole('button', { name: menu, exact: true }).click()
+    }
+    await page.getByRole('link', { name: label, exact: true }).filter({ visible: true }).click()
+    await expect(page).toHaveURL(new RegExp(`/RFAStack/${prefix}folder-structure${section}$`))
+    await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible()
+    await expect(page.locator(section)).toHaveCount(1)
+  }
+})
+
+test('Indonesian local search returns localized guide links', async ({ page }) => {
+  await page.goto('./id/')
+  await page.getByRole('button', { name: 'Cari dokumentasi', exact: true }).click()
+  await page.locator('#localsearch-input').fill('keanggotaan')
+  const results = page.locator('#localsearch-list a.result')
+  await expect(results.first()).toBeVisible()
+  const links = await results.evaluateAll((anchors) => anchors.map((anchor) => anchor.getAttribute('href')))
+  expect(links.every((href) => href?.startsWith('/RFAStack/id/'))).toBe(true)
+  await results.first().click()
+  await expect(page).toHaveURL(/\/RFAStack\/id\/.+#/)
+})
+
+test('Indonesian guide links and section anchors resolve within the Pages base path', async ({ page }) => {
+  await page.goto('./id/')
+  const broken = await page.evaluate(async (routes) => {
+    const documents = new Map<string, Document>()
+    for (const route of routes) {
+      const url = new URL(route.path.replace('./', '/RFAStack/'), location.origin)
+      documents.set(url.pathname, new DOMParser().parseFromString(await (await fetch(url)).text(), 'text/html'))
+    }
+    const failures: string[] = []
+    for (const [path, document] of documents) {
+      for (const anchor of document.querySelectorAll<HTMLAnchorElement>('.vp-doc a[href], .chapter-list a[href]')) {
+        const url = new URL(anchor.getAttribute('href')!, `${location.origin}${path}`)
+        if (url.origin !== location.origin) continue
+        const target = documents.get(url.pathname)
+        if (!url.pathname.startsWith('/RFAStack/id/') || !target ||
+          (url.hash && !target.getElementById(decodeURIComponent(url.hash.slice(1))))) {
+          failures.push(`${path} -> ${url.pathname}${url.hash}`)
+        }
+      }
+    }
+    return failures
+  }, indonesianRoutes)
+  expect(broken).toEqual([])
 })

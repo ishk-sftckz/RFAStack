@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 const root = process.cwd()
@@ -19,6 +19,9 @@ const publicFiles = [
   'examples/react-query-http/README.md',
   'examples/react-query-orpc/README.md',
   'docs/.vitepress/config.ts',
+  'docs/.vitepress/id.ts',
+  'docs/.vitepress/theme/components/HomePage.vue',
+  ...readdirSync(join(root, 'docs/id')).filter((file) => file.endsWith('.md')).map((file) => `docs/id/${file}`),
 ]
 
 function read(relativePath: string) {
@@ -84,4 +87,22 @@ test('examples explain distinct requirements and link their runnable source', ()
   }
   expect(guide).toContain('separate backend')
   expect(guide).toContain('command-line client')
+})
+
+test('Indonesian guides preserve the source examples, citations, and section structure', () => {
+  const guides = readdirSync(join(root, 'docs')).filter((file) => file.endsWith('.md') && file !== 'index.md')
+  const code = (source: string) => [...source.matchAll(/^```([^\n]*)\n[\s\S]*?^```/gm)]
+    .filter((block) => !['mermaid', 'text'].includes(block[1])).map((block) => block[0])
+  const links = (source: string) => [...source.matchAll(/\]\(([^\s)]+)\)/g)].map((link) => link[1])
+  const headings = (source: string) => source.replace(/^```[^\n]*\n[\s\S]*?^```/gm, '')
+    .match(/^#{1,6} /gm)
+
+  for (const guide of guides) {
+    const english = read(`docs/${guide}`)
+    const indonesian = read(`docs/id/${guide}`)
+    expect(code(indonesian), `${guide}: runnable examples stay aligned`).toEqual(code(english))
+    expect(links(indonesian), `${guide}: citations and cross-references stay aligned`).toEqual(links(english))
+    expect(headings(indonesian), `${guide}: every section is translated`).toEqual(headings(english))
+    expect(indonesian).not.toMatch(/@@CODE|terjemahan menyusul/i)
+  }
 })

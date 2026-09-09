@@ -26,7 +26,9 @@ export function readingTime(markdown: MarkdownRenderer) {
     const words = text.match(/\S+/g)?.length ?? 0
     const minutes = Math.max(1, Math.ceil(words / 200))
     const label = new state.Token('html_block', '', 0)
-    label.content = `<div class="reading-time">About ${minutes} min read</div>\n`
+    const isIndonesian = state.env.relativePath?.startsWith('id/')
+    const textLabel = isIndonesian ? `Sekitar ${minutes} menit baca` : `About ${minutes} min read`
+    label.content = `<div class="reading-time">${textLabel}</div>\n`
     state.tokens.splice(titleEnd + 1, 0, label)
   })
 }

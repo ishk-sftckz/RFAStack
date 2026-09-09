@@ -10,6 +10,8 @@ The guide connects code ownership with the decisions you make across a full-stac
 
 [Read the docs →](https://ishk-sftckz.github.io/RFAStack/background)
 
+[Baca dalam Bahasa Indonesia →](https://ishk-sftckz.github.io/RFAStack/id/background)
+
 ## Keep business behavior with its feature
 
 ```text

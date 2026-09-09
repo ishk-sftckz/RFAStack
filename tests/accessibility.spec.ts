@@ -1,12 +1,15 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 
-const routes = ['./', './background', './concepts', './folder-structure', './data-fetching-and-mutation', './protected-resources', './caching', './examples']
+const englishRoutes = ['./', './background', './concepts', './folder-structure', './data-fetching-and-mutation', './protected-resources', './caching', './examples']
+const routes = [...englishRoutes, ...englishRoutes.map((route) => route.replace('./', './id/'))]
 
 for (const route of routes) {
   test(`${route} has no detectable WCAG A or AA violations`, async ({ page }) => {
     await page.goto(route)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    // VitePress sets the appearance control's accessible name after hydration.
+    await expect(page.locator('.VPSwitchAppearance').first()).toHaveAttribute('title', /.+/)
 
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
 

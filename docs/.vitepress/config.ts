@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import { readingTime } from './reading-time'
+import { indonesian, indonesianSearch } from './id'
 
 const siteUrl = 'https://ishk-sftckz.github.io/RFAStack/'
 const tagline = 'An Opinionated React Fullstack Architecture for Next.js Applications'
@@ -9,6 +10,10 @@ export default withMermaid(
   defineConfig({
     base: '/RFAStack/',
     lang: 'en-US',
+    locales: {
+      root: { label: 'English', lang: 'en-US' },
+      id: indonesian,
+    },
     title: 'RFAStack',
     titleTemplate: ':title · RFAStack',
     description: tagline,
@@ -33,8 +38,19 @@ export default withMermaid(
       ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
     ],
     transformHead({ pageData }) {
-      const path = pageData.relativePath === 'index.md' ? '' : pageData.relativePath.replace(/\.md$/, '')
-      return [['link', { rel: 'canonical', href: `${siteUrl}${path}` }]]
+      if (pageData.isNotFound) return []
+      const path = pageData.relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '')
+      const sourcePath = path.replace(/^id\//, '')
+      const description = pageData.description || (path.startsWith('id/') ? indonesian.description : tagline)
+      return [
+        ['link', { rel: 'canonical', href: `${siteUrl}${path}` }],
+        ['link', { rel: 'alternate', hreflang: 'en', href: `${siteUrl}${sourcePath}` }],
+        ['link', { rel: 'alternate', hreflang: 'id', href: `${siteUrl}id/${sourcePath}` }],
+        ['link', { rel: 'alternate', hreflang: 'x-default', href: `${siteUrl}${sourcePath}` }],
+        ['meta', { property: 'og:description', content: description }],
+        ['meta', { property: 'og:title', content: pageData.title === 'RFAStack' ? `RFAStack — ${tagline}` : `${pageData.title} · RFAStack` }],
+        ['meta', { property: 'og:locale', content: path.startsWith('id/') ? 'id_ID' : 'en_US' }],
+      ]
     },
     vite: {
       optimizeDeps: {
@@ -105,7 +121,7 @@ export default withMermaid(
           ],
         },
       ],
-      search: { provider: 'local', options: { detailedView: true } },
+      search: { provider: 'local', options: { detailedView: true, locales: { id: indonesianSearch } } },
       outline: { level: [2, 3], label: 'On this page' },
       editLink: {
         pattern: 'https://github.com/ishk-sftckz/RFAStack/edit/main/docs/:path',
