@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import { existsSync } from 'node:fs'
 import { defineConfig, devices } from '@playwright/test'
 
@@ -18,7 +19,12 @@ export default defineConfig({
     command: 'bun run db:migrate && bun run db:reset && bun run build && bun run start',
     url: 'http://localhost:3102',
     reuseExistingServer: false,
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 10000 },
     timeout: 180000,
-    env: { CACHE_TRACE: '1', E2E_TEST: '1', CACHE_TRACE_FILE: 'test-results/cache-trace.jsonl' },
+    env: {
+      CACHE_TRACE: '1',
+      E2E_TEST: '1',
+      CACHE_TRACE_FILE: resolve('test-results/cache-trace.jsonl'),
+    },
   },
 })

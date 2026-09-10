@@ -5,14 +5,22 @@ import { resolve, relative, dirname } from 'node:path'
 const errors: string[] = []
 
 const modules = new Map(
-  [...new Bun.Glob('{src,backend}/**/*.{ts,tsx}').scanSync('.')].map((file) => [
+  [...new Bun.Glob('{apps,packages}/*/src/**/*.{ts,tsx}').scanSync('.')].map((file) => [
     file,
     ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true),
   ]),
 )
 
+function parts(file: string) {
+  return file
+    .replace('apps/web/src/', 'web/')
+    .replace('apps/api/src/', 'api/')
+    .replace('packages/contracts/src/', 'contracts/')
+    .split('/')
+}
+
 for (const [file, source] of modules) {
-  const from = file.split('/')
+  const from = parts(file)
   const client = source.statements.some(
     (statement) =>
       ts.isExpressionStatement(statement) &&
@@ -21,10 +29,16 @@ for (const [file, source] of modules) {
   )
 
   function check(specifier: string, typeOnly = false, schemaReference = false) {
+    if (specifier === '@rfastack/http-api' && from[0] === 'web' && typeOnly) return
+    if (specifier.startsWith('@rfastack/http-contracts/') && from[0] !== 'contracts') return
+    if (specifier.startsWith('@rfastack/')) {
+      errors.push(`${file}: forbidden workspace dependency ${specifier}`)
+      return
+    }
     const unresolved = specifier.startsWith('@/')
-      ? `src/${specifier.slice(2)}`
+      ? `apps/${from[0]}/src/${specifier.slice(2)}`
       : specifier.startsWith('@backend/')
-        ? `backend/${specifier.slice(9)}`
+        ? `apps/api/src/${specifier.slice(9)}`
         : specifier.startsWith('.')
           ? relative(process.cwd(), resolve(dirname(file), specifier))
           : ''
@@ -34,7 +48,7 @@ for (const [file, source] of modules) {
     }
 
     const target = relative(process.cwd(), resolve(unresolved))
-    const to = target.split('/')
+    const to = parts(target)
 
     if (from[0] !== to[0]) {
       errors.push(`${file}: frontend/backend dependencies must cross HTTP: ${specifier}`)
@@ -50,9 +64,9 @@ for (const [file, source] of modules) {
 
     const foreignFeature = to[1] === 'features' && (from[1] !== 'features' || from[2] !== to[2])
 
-    const mountsTransport = from[1] === 'app' || file === 'backend/server.ts'
+    const mountsTransport = from[1] === 'app' || file === 'apps/api/src/app.ts'
     const mountsAuth =
-      /^src\/app\/api\/auth\/.*route\.ts$/.test(file) || file === 'backend/server.ts'
+      /^apps\/web\/src\/app\/api\/auth\/.*route\.ts$/.test(file) || file === 'apps/api/src/app.ts'
     const publicServerOperation =
       /\.(queries|actions|use-case)(\.[cm]?tsx?)?$/.test(target) ||
       (mountsTransport && /\.rpc(\.[cm]?tsx?)?$/.test(target)) ||

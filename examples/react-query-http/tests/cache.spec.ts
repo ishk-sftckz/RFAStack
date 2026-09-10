@@ -62,10 +62,10 @@ test('an expired session cannot reuse warmed protected server data', async ({ pa
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 
   try {
-    await pool.query(
-      'UPDATE auth_session SET "expiresAt" = NOW() - INTERVAL \'1 hour\' WHERE "userId" = $1',
-      ['south'],
-    )
+    await pool.query('UPDATE auth_session SET "expiresAt" = $1 WHERE "userId" = $2', [
+      new Date(0).toISOString(),
+      'south',
+    ])
   } finally {
     await pool.end()
   }

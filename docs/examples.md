@@ -12,10 +12,12 @@ Runnable examples show how routes, feature code, and a database work together. C
 | Application | Use it to study | Source and setup |
 | --- | --- | --- |
 | Customer order portal | Server-rendered pages and forms using native Next.js queries and Server Actions. | [Native Next.js](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/next-native) |
-| Fulfillment dashboard | A polling queue using React Query and a separate backend over HTTP. | [React Query + HTTP](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-http) |
+| Fulfillment dashboard | A polling queue using React Query, Eden Fetch, and a separate backend built with Elysia in a Turborepo workspace. | [React Query + HTTP](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-http) |
 | B2B ordering | Typed operations shared by a browser and a command-line client. | [React Query + oRPC](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-orpc) |
 
 Start with the customer portal for pages and forms. Use the dashboard when your browser needs ongoing updates from an HTTP service, or B2B ordering when you want to share a typed API across clients. The [data-fetching guide](./data-fetching-and-mutation#choose-the-default-that-matches-the-caller) explains these choices.
+
+The dashboard keeps Next.js in `apps/web`, Elysia in `apps/api`, and shared schemas in `packages/contracts`. [Eden Fetch](https://elysiajs.com/eden/fetch) checks requests against the Elysia route types while React Query manages polling and cached results. [Turborepo](https://turborepo.dev/docs/core-concepts/internal-packages) coordinates the workspace tasks. Browser mutations pass through Next.js so it can invalidate its server caches before responding.
 
 ## Run it locally
 
@@ -30,7 +32,7 @@ Each application keeps routes in `app`, business rules in `features`, integratio
 Pick one workflow to trace:
 
 - **Customer portal:** follow `checkout.actions.ts` into `create-order.use-case.ts`. The server reads product prices and stores the order.
-- **Fulfillment dashboard:** start with `fulfillment.api.ts`, then open `backend/features/fulfillment`. The backend checks the operator's warehouse before changing a shipment.
+- **Fulfillment dashboard:** start with `apps/web/src/features/fulfillment/fulfillment.api.ts`, then open `apps/api/src/features/fulfillment`. The backend checks the operator's warehouse before changing a shipment.
 - **B2B ordering:** follow `order.rpc.ts` into `decide-order.use-case.ts`. The use case checks company membership, approver permissions, and order status.
 
 To follow shared authorization, open the customer portal's [order queries](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/orders/order.queries.ts). List, detail, and delivery reads share one file and use `withMembership` from the membership query module. The [membership wrapper example](./folder-structure#share-membership-checks-through-the-query-module) explains how that check stays with each operation.

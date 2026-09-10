@@ -732,7 +732,7 @@ Server Component → feature query → hydrated query cache
 
 The status badge and details panel should render their values from that client cache. A separate copy rendered by a Server Component won’t change when the browser refetches, so the two could show different order statuses. The prefetching example below shows how to supply the initial cache data during server rendering. [TanStack server rendering and data ownership](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr#data-ownership-and-revalidation)
 
-For an interactive dashboard, prefer TanStack Query for browser data that changes through filtering, polling, or mutations. We recommend oRPC for a new shared typed API. An existing HTTP API can supply the same query cache.
+For an interactive dashboard, prefer TanStack Query for browser data that changes through filtering, polling, or mutations. Choose the API client to match the backend. With Elysia, [Eden Fetch](https://elysiajs.com/eden/fetch) infers request and response types from the backend’s exported app type. Keep those requests in the feature’s `.api.ts` module and use them from query options; React Query still manages the cached results and request state. The [HTTP dashboard example](./examples) demonstrates this arrangement.
 
 ### Prefetch when the client needs the same data afterward
 
@@ -779,11 +779,11 @@ Start with a Server Component query when the page only needs data for rendering.
 
 ## oRPC + React Query
 
-### Add oRPC when callers need a shared typed API
+### Add oRPC when shared procedures fit the API {#add-orpc-when-callers-need-a-shared-typed-api}
 
 Several interactive views may call the same order operations. You then need to keep request inputs, response types, and error handling consistent across those calls.
 
-We recommend oRPC when you introduce a new shared typed API. Each feature defines procedures for its operations, and the application exposes those procedures through an HTTP adapter. Browser code calls them through a typed client, with the inputs and results checked by TypeScript. If you already have an HTTP API, it can continue supplying TanStack Query without an oRPC migration.
+Use oRPC when you want to define the API as shared typed procedures with common middleware and generated React Query options. Each feature defines procedures for its operations, and the application exposes those procedures through an HTTP adapter. Browser code calls them through a typed client, with the inputs and results checked by TypeScript. An HTTP client such as Eden Fetch can already provide typed requests; choose oRPC when its procedure model fits how you want to expose feature operations.
 
 oRPC defines the callable API and carries its input and result types to the client. TanStack Query manages cached results, request state, and refetching. You can call an oRPC client directly for a one-off request or use its [TanStack Query integration](https://orpc.dev/docs/integrations/tanstack-query) when the browser needs that lifecycle.
 
@@ -1008,8 +1008,8 @@ When each feature chooses its own request client and cache rules, developers hav
 | Strategy | Choose it when | Typical application | Additional work |
 | --- | --- | --- | --- |
 | **Next.js native** | Server-rendered reads and form submissions cover most interactions. | A content site, customer portal, or internal tool with straightforward forms. | Define feature queries, Server Actions, and any required HTTP endpoints. |
-| **Next.js + React Query** | Browser views need shared cached data, polling, background refresh, or optimistic updates. | An operations dashboard or interactive workspace using an existing HTTP API. | Maintain query keys, cache updates, and the request functions that call the API. |
-| **Next.js + React Query + oRPC** | You control the API and want typed operations shared across features or application clients. | A product with web and mobile clients using the same business operations. | Maintain procedure contracts, request context, transport setup, and client cache rules. |
+| **Next.js + React Query** | Browser views need shared cached data, polling, background refresh, or optimistic updates. | An operations dashboard calling an HTTP API through fetch or a typed client such as Eden Fetch. | Maintain query keys, cache updates, and the request functions that call the API. |
+| **Next.js + React Query + oRPC** | You control the API and want shared procedures, common middleware, and generated query options. | A product with web and mobile clients using the same business operations. | Maintain procedure contracts, request context, transport setup, and client cache rules. |
 
 Choose from the application’s requirements and existing backend. A large project can use Next.js native APIs successfully. Frequent browser updates or a shared API are more useful reasons to introduce additional tools than project size alone.
 

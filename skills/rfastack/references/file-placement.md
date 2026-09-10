@@ -58,7 +58,13 @@ Route-only presentation belongs in `app/.../_components`. UI that expresses busi
 
 A workflow such as checkout owns a use case that calls inventory and orders through their public queries and use cases. Each participating feature retains its rules and persistence. Simple composition of feature views stays in a page. Start business coordination with direct typed calls; introduce events when delayed work and independent failure fit the workflow.
 
-Platform configures integration clients and factories. Keep feature-specific requests and persistence in the feature, including when they use those clients. Add a workspace package when multiple applications need a stable reusable contract.
+Platform configures integration clients and factories. Keep feature-specific requests and persistence in the feature, including when they use those clients.
+
+## Preserve ownership across workspace applications
+
+Apply feature, platform, and shared responsibilities within each application. Use Next.js routing conventions in the web application and the backend framework’s entry points for its HTTP adapters. Web features own UI, API requests, and browser cache policy; backend features own protected reads, business mutations, and persistence.
+
+Extract a contract package when multiple applications need the same input or response schemas. Group exports by their owning feature and keep them safe for browser imports. Keep database clients and server operations inside the backend. Consult the [HTTP example README](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-http#readme) when implementing the Bun workspace and Turborepo arrangement; its tooling is an example choice.
 
 ## Name operations by their role
 

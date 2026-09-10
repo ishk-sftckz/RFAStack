@@ -1,6 +1,6 @@
 # Choose the data path from the caller
 
-Keep a consistent project strategy for comparable operations. Choose Next.js native reads and Server Actions when rendering and forms cover the interaction. Add TanStack Query when browser consumers need shared cached results, polling, background updates, or coordinated request state. Add oRPC when you control the API and shared typed operations justify procedure and transport setup. Project size alone does not justify either library.
+Keep a consistent project strategy for comparable operations. Choose Next.js native reads and Server Actions when rendering and forms cover the interaction. Add TanStack Query when browser consumers need shared cached results, polling, background updates, or coordinated request state. Choose the API client to match the backend: Eden Fetch provides typed HTTP requests for Elysia; oRPC fits shared procedures, common middleware, and generated query options. Project size alone does not justify either library.
 
 | Caller and need | Execution path |
 | --- | --- |
@@ -32,6 +32,12 @@ Keep HTTP request functions in `<entity>.api.ts`; check response status and pars
 Include the selected account, resource IDs, and relevant filters in query identity. The server verifies the selected account independently. A context provider shares data but supplies no refetch or invalidation mechanism by itself.
 
 When hydrating, create a request-scoped server `QueryClient`, call the protected feature query directly, and populate the exact key the browser will use. Keep the authorized DTO shape identical for server seeding and browser refetch. Shared option modules must be safe in both environments; use their keys without executing a browser HTTP link on the server. Choose one owner for a displayed value or explicitly refresh each copy. [TanStack advanced server rendering](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr)
+
+## Elysia and Eden Fetch
+
+When the backend uses Elysia, Eden Fetch can infer request and response types from its exported app type. Use `import type` for the API dependency; keep server implementations out of the frontend runtime. Put shared browser-safe schemas in a workspace package when both applications need runtime validation. Keep business operations inside backend features and query keys and invalidation in the frontend's query options. [Eden Fetch](https://elysiajs.com/eden/fetch)
+
+The HTTP example uses `apps/web`, `apps/api`, and `packages/contracts` under Bun workspaces and Turborepo. Browser requests pass through Next.js handlers that preserve the Elysia success response and invalidate server caches after mutations. Server reads call Elysia directly. When adding an endpoint, align both HTTP adapters; a type imported from Elysia cannot verify a separately implemented Next.js response. Test their status and body contracts together.
 
 ## oRPC
 

@@ -732,7 +732,7 @@ Server Component → query fitur → cache query hasil hydration
 
 Badge dan panel detail harus membaca nilai dari cache klien tersebut. Salinan status yang dirender terpisah oleh Server Component tidak ikut berubah saat browser melakukan refetch. Kalau keduanya ditampilkan, statusnya bisa berbeda. Contoh prefetch di bawah menunjukkan cara memasok data awal ke cache saat rendering server. [Rendering server dan kepemilikan data TanStack](https://tanstack.com/query/latest/docs/framework/react/guides/advanced-ssr#data-ownership-and-revalidation)
 
-Untuk dashboard interaktif, utamakan TanStack Query bagi data browser yang berubah lewat filter, polling, atau mutasi. Kami merekomendasikan oRPC saat membuat API bertipe bersama yang baru. Kalau sudah ada API HTTP, API itu bisa tetap menjadi sumber data cache query.
+Untuk dashboard interaktif, utamakan TanStack Query bagi data browser yang berubah lewat filter, polling, atau mutasi. Pilih klien API sesuai backend. Untuk Elysia, [Eden Fetch](https://elysiajs.com/eden/fetch) mengambil tipe request dan response dari tipe aplikasi yang diekspor backend. Simpan request tersebut di modul `.api.ts` fitur dan panggil dari query options; React Query tetap mengurus cache hasil dan status request. [Contoh dashboard HTTP](./examples) menunjukkan susunan ini.
 
 ### Isi cache dari server jika browser masih memakai data setelah render {#prefetch-when-the-client-needs-the-same-data-afterward}
 
@@ -779,11 +779,11 @@ Kalau halaman hanya membutuhkan data untuk render, query Server Component sudah 
 
 ## oRPC + React Query {#orpc-react-query}
 
-### Tambahkan oRPC untuk API bertipe yang dipakai bersama {#add-orpc-when-callers-need-a-shared-typed-api}
+### Tambahkan oRPC jika prosedur bersama cocok untuk API {#add-orpc-when-callers-need-a-shared-typed-api}
 
 Beberapa tampilan interaktif bisa memanggil operasi pesanan yang sama. Input, tipe response, dan penanganan error perlu tetap konsisten di semua pemanggil.
 
-Kami merekomendasikan oRPC saat membuat API bertipe bersama yang baru. Fitur mendefinisikan prosedur operasinya, lalu aplikasi menyediakannya lewat adapter HTTP. Browser memanggil prosedur melalui klien bertipe, sehingga TypeScript bisa memeriksa input dan hasilnya. API HTTP yang sudah ada tetap bisa dipakai oleh TanStack Query tanpa migrasi ke oRPC.
+Gunakan oRPC saat kamu ingin mendefinisikan API sebagai prosedur bertipe yang dipakai bersama, dengan middleware bersama dan options React Query hasil generasi. Fitur mendefinisikan prosedur operasinya, lalu aplikasi menyediakannya lewat adapter HTTP. Browser memanggil prosedur melalui klien bertipe, sehingga TypeScript bisa memeriksa input dan hasilnya. Klien HTTP seperti Eden Fetch sudah bisa menyediakan request bertipe; pilih oRPC jika model prosedurnya cocok dengan cara kamu menyediakan operasi fitur.
 
 oRPC mendefinisikan operasi API dan membawa tipe input serta hasilnya ke klien. TanStack Query mengurus cache, status request, dan refetch. Klien oRPC bisa dipanggil langsung untuk request sekali jalan; gunakan [integrasi TanStack Query](https://orpc.dev/docs/integrations/tanstack-query) jika browser membutuhkan pengelolaan data tersebut.
 
@@ -1008,8 +1008,8 @@ Kalau setiap fitur memilih klien request dan aturan cache sendiri, developer har
 | Strategi | Cocok ketika | Contoh aplikasi | Yang perlu dirawat |
 | --- | --- | --- | --- |
 | **Next.js native** | Sebagian besar interaksi cukup dengan data dari server dan pengiriman form. | Situs konten, portal pelanggan, atau alat internal dengan form sederhana. | Query fitur, Server Actions, dan endpoint HTTP yang diperlukan. |
-| **Next.js + React Query** | Browser perlu cache bersama, polling, refresh di latar belakang, atau update optimistis. | Dashboard operasional atau workspace interaktif yang sudah punya API HTTP. | Query key, update cache, dan fungsi request API. |
-| **Next.js + React Query + oRPC** | Kamu mengendalikan API dan ingin berbagi operasi bertipe antarfitur atau klien. | Produk dengan aplikasi web dan mobile yang memakai operasi bisnis sama. | Kontrak prosedur, konteks request, transport, dan aturan cache klien. |
+| **Next.js + React Query** | Browser perlu cache bersama, polling, refresh di latar belakang, atau update optimistis. | Dashboard operasional yang memanggil API HTTP lewat fetch atau klien bertipe seperti Eden Fetch. | Query key, update cache, dan fungsi request API. |
+| **Next.js + React Query + oRPC** | Kamu mengendalikan API dan ingin memakai prosedur bersama, middleware bersama, serta query options hasil generasi. | Produk dengan aplikasi web dan mobile yang memakai operasi bisnis sama. | Kontrak prosedur, konteks request, transport, dan aturan cache klien. |
 
 Pilih berdasarkan kebutuhan aplikasi dan backend yang tersedia. Proyek besar pun bisa cukup memakai API native Next.js. Kebutuhan pembaruan di browser atau API bersama lebih menentukan daripada ukuran proyek semata.
 

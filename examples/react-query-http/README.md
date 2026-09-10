@@ -1,7 +1,8 @@
 # Fulfillment dashboard
 
 Use this example when your browser needs ongoing updates from an HTTP service. React Query polls the
-shipment queue; a separate backend checks permissions and stores shipment changes.
+shipment queue through Eden Fetch; a separate Elysia backend checks permissions and stores shipment
+changes. This example is a Bun workspace managed with Turborepo.
 
 ## Run the application
 
@@ -46,9 +47,45 @@ seconds. Reload to update the server-rendered summary after delivery.
 The backend starts with the app on port 4102. Operators can access their assigned warehouse; the
 north supervisor can also edit product prices.
 
-Follow `src/features/fulfillment/fulfillment.api.ts` through the HTTP adapters to
-`backend/features/fulfillment`. The frontend owns requests and presentation. The backend owns
+Follow `apps/web/src/features/fulfillment/fulfillment.api.ts` through the HTTP adapters to
+`apps/api/src/features/fulfillment`. The frontend owns requests and presentation. The backend owns
 warehouse checks, shipment rules, and database access.
+
+## Follow the workspace boundaries
+
+```text
+apps/
+  web/                 Next.js pages, React Query, and Eden Fetch
+  api/                 Elysia routes, feature operations, and database access
+packages/
+  contracts/           Shared Zod schemas and input/output types
+```
+
+Run commands from this example's root. Bun installs all three workspace packages with one lockfile.
+Turborepo runs development servers together and orders builds and type checks by package
+dependencies. The contracts package exports TypeScript source for Bun and Next.js to compile; it has
+no separate build step. See [Bun workspaces](https://bun.com/docs/pm/workspaces) and
+[Turborepo internal packages](https://turborepo.dev/docs/core-concepts/internal-packages).
+
+The API exports only its `App` type to other packages. The web app uses `edenFetch<App>('/api')`, so
+request paths, methods, bodies, and results follow the Elysia routes. Keep that dependency as
+`import type`; backend implementation code stays in the API process. Shared schemas live in
+`packages/contracts`, and each feature exposes its own model module.
+[Eden Fetch](https://elysiajs.com/eden/fetch) supplies the typed requests; query keys, polling, and
+invalidation remain explicit in the React Query options.
+
+Browser requests use the Next.js origin. For example, `/api/fulfillment/shipments` forwards to
+Elysia's `/fulfillment/shipments`. Next.js forwards the session cookie, preserves the successful
+response body, and invalidates the returned cache tag after a mutation. Server-rendered reads call
+Elysia directly through the server-only Eden client. Auth keeps its Better Auth client and
+forwarding route; carrier events reach Elysia directly and verify the original request bytes before
+parsing.
+
+Keep local environment values in the example root's `.env`. The root scripts use a Bun entry point
+to load that file before starting the native Turborepo process and its package tasks. `turbo.json`
+declares the variables passed to those tasks and includes `.env` changes in cache inputs. Supply the
+same variables through the environment in CI or hosting. See
+[Turborepo environment variables](https://turborepo.dev/docs/crafting-your-repository/using-environment-variables).
 
 ## Observe cache reads
 

@@ -12,10 +12,12 @@ Pilih contoh yang kebutuhannya paling dekat dengan aplikasimu. Setelah berjalan 
 | Aplikasi | Yang bisa dipelajari | Source dan cara menjalankan |
 | --- | --- | --- |
 | Portal pesanan pelanggan | Halaman dan form dengan query server serta Server Actions bawaan Next.js. | [Next.js native](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/next-native) |
-| Dashboard pengiriman | Antrean yang diperbarui lewat polling, memakai React Query dan backend HTTP terpisah. | [React Query + HTTP](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-http) |
+| Dashboard pengiriman | Antrean polling dengan React Query, Eden Fetch, dan backend Elysia terpisah dalam workspace Turborepo. | [React Query + HTTP](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-http) |
 | Pemesanan B2B | Operasi API dengan tipe input dan hasil yang dipakai bersama oleh browser dan klien command-line. | [React Query + oRPC](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-orpc) |
 
 Mulai dari portal pelanggan kalau kebutuhan utamanya halaman dan form. Pilih dashboard kalau browser perlu terus mengambil pembaruan dari layanan HTTP. Contoh B2B cocok untuk mempelajari API bertipe yang dipakai beberapa klien. Alasannya dijelaskan dalam [panduan pengambilan data](./data-fetching-and-mutation#choose-the-default-that-matches-the-caller).
+
+Dashboard menempatkan Next.js di `apps/web`, Elysia di `apps/api`, dan schema bersama di `packages/contracts`. [Eden Fetch](https://elysiajs.com/eden/fetch) memeriksa tipe request berdasarkan route Elysia, sementara React Query mengelola polling dan cache hasilnya. [Turborepo](https://turborepo.dev/docs/core-concepts/internal-packages) mengatur task antar-package. Mutasi dari browser melewati Next.js agar cache server bisa diinvalidasi sebelum respons dikirim.
 
 ## Jalankan di lokal {#run-it-locally}
 
@@ -30,7 +32,7 @@ Ketiga aplikasi memakai pembagian yang sama: route di `app`, aturan bisnis di `f
 Pilih salah satu alur berikut:
 
 - **Portal pelanggan:** ikuti `checkout.actions.ts` ke `create-order.use-case.ts`. Server mengambil harga produk lalu menyimpan pesanan.
-- **Dashboard pengiriman:** mulai dari `fulfillment.api.ts`, lalu buka `backend/features/fulfillment`. Sebelum mengubah pengiriman, backend memeriksa gudang yang boleh diakses operator.
+- **Dashboard pengiriman:** mulai dari `apps/web/src/features/fulfillment/fulfillment.api.ts`, lalu buka `apps/api/src/features/fulfillment`. Sebelum mengubah pengiriman, backend memeriksa gudang yang boleh diakses operator.
 - **Pemesanan B2B:** ikuti `order.rpc.ts` ke `decide-order.use-case.ts`. Use case memeriksa keanggotaan perusahaan, izin approver, dan status pesanan.
 
 Untuk melihat pemeriksaan akses yang dipakai bersama, buka [query pesanan](https://github.com/ishk-sftckz/RFAStack/blob/main/examples/next-native/src/features/orders/order.queries.ts) di portal pelanggan. Query daftar, detail, dan pengiriman berada dalam satu file. Semuanya memakai `withMembership` dari modul query membership, sehingga pemeriksaan keanggotaan tetap dijalankan pada setiap operasi. [Contoh wrapper membership](./folder-structure#share-membership-checks-through-the-query-module) membahas polanya.

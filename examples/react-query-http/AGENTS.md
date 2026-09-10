@@ -1,14 +1,12 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# HTTP example boundaries
 
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your
-training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's
-directory; in monorepos the `next` package may not be visible from the repo root) before writing any
-code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at
-`node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates
-the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
+- Run workspace commands from this directory so Bun loads the root `.env` before Turborepo starts
+  tasks.
+- Keep API runtime imports inside `apps/api`; the web app may import only the API package's exported
+  type.
+- Put browser-safe shared schemas in `packages/contracts`; it must not import either application.
+- Match Elysia and Next.js adapter response bodies. Next.js owns immediate server-cache invalidation
+  after browser mutations.
+- Keep signed carrier bodies unparsed until signature verification and Better Auth bodies unparsed
+  until its handler runs.
+- Preserve the backend outbox and the runtime and feature import checks when moving code.

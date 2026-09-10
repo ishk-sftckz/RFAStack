@@ -65,7 +65,13 @@ test('operators pack and dispatch, then receive a signed carrier event', async (
 }) => {
   await login(page)
   await page.getByRole('button', { name: 'shipment-north', exact: true }).click()
+  const packedResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/fulfillment/shipments') &&
+      response.request().method() === 'POST',
+  )
   await page.getByRole('button', { name: 'Pack shipment-north' }).click()
+  expect(await (await packedResponse).json()).toEqual({ tag: 'warehouse:warehouse-north' })
   await expect(page.getByText('shipment-north: packed', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Dispatch shipment-north' }).click()
   await expect(page.getByText('shipment-north: dispatched', { exact: true })).toBeVisible()
@@ -95,7 +101,7 @@ test('backend and frontend enforce warehouse, role, and origin boundaries', asyn
   page,
   request,
 }) => {
-  expect((await request.get('http://127.0.0.1:4102/shipments')).status()).toBe(401)
+  expect((await request.get('http://127.0.0.1:4102/fulfillment/shipments')).status()).toBe(401)
   await login(page, 'south')
   await expect(page.getByRole('button', { name: 'shipment-north', exact: true })).toHaveCount(0)
   const origin = { Origin: 'http://localhost:3102' }
@@ -133,7 +139,13 @@ test('supervisors update prices and preferences, and logout isolates cached data
 }) => {
   await login(page, 'supervisor')
   await page.getByLabel('Notebook price in cents').fill('1400')
+  const priceResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/fulfillment/products') &&
+      response.request().method() === 'POST',
+  )
   await page.getByRole('button', { name: 'Update Notebook' }).click()
+  expect(await (await priceResponse).json()).toEqual({ tag: 'catalog' })
   await expect(page.getByText('Notebook: $14.00', { exact: true })).toBeVisible()
   await page.getByLabel('Delivery speed').selectOption('express')
   await page.getByLabel('Default queue status').selectOption('dispatched')
@@ -198,7 +210,7 @@ test('membership owns the protected preferences endpoint', async ({ page, reques
     data: input,
   })
   expect(saved.ok()).toBeTruthy()
-  expect(await saved.json()).toEqual({ saved: true })
+  expect(await saved.json()).toEqual({ tag: 'preferences:north' })
   await page.reload()
   await expect(page.getByText('Saved delivery preference: express')).toBeVisible()
   await expect(page.getByLabel('Status filter')).toHaveValue('packed')

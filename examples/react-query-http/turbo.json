@@ -1,0 +1,36 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "globalDependencies": [".env*"],
+  "globalEnv": [
+    "DATABASE_URL",
+    "BETTER_AUTH_URL",
+    "BETTER_AUTH_SECRET",
+    "BACKEND_URL",
+    "INTEGRATION_SECRET",
+    "CACHE_TRACE",
+    "CACHE_TRACE_FILE",
+    "E2E_TEST"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "start": {
+      "cache": false,
+      "persistent": true
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": []
+    },
+    "@rfastack/http-web#typecheck": {
+      "dependsOn": ["^typecheck"],
+      "outputs": [".next/types/**", "tsconfig.tsbuildinfo"]
+    }
+  }
+}

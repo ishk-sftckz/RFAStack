@@ -200,6 +200,14 @@ Add `order.queries.ts` when a server caller needs a direct feature read, and `or
 
 Keep `order.api.ts` safe for browser imports. A shared HTTP or RPC client’s setup belongs in `platform`; the order-specific requests belong here. Calls that require private credentials stay in the feature’s server implementation and use server-only platform clients. [Next.js server and client responsibilities](https://nextjs.org/docs/app/getting-started/server-and-client-components#when-to-use-server-and-client-components)
 
+## Keep feature ownership across workspace applications
+
+When the frontend and backend live in one monorepo, apply the feature, platform, and shared responsibilities within each application. Next.js keeps its routes and page composition in `app`; the backend uses its framework’s entry points to call feature operations.
+
+For example, an orders feature in `apps/web` owns its UI, API requests, and browser cache policy. The corresponding feature in `apps/api` owns protected reads, business mutations, and persistence. Keeping them in one repository does not change which application authorizes a cancellation or writes the order.
+
+Extract a package such as `packages/contracts` when both applications need the same input or response schemas. Keep its exports safe for browser imports and grouped by the feature that defines their meaning. Database clients and server operations stay in the backend. The [HTTP example README](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-http#readme) covers the Bun workspace and Turborepo setup for this arrangement.
+
 ## Put definitions and pure business behavior in `model/`
 
 A cancellation input schema can accept a valid order ID while the order itself is already shipped. Valid input is only one part of deciding whether the operation can proceed.
@@ -306,7 +314,7 @@ Expose queries and use cases as the feature’s public server operations. Routes
 
 When using RPC, expose the procedure exports from `order.rpc.ts` for the application's router to mount. Cross-feature business calls still use public queries and use cases.
 
-Mount a provider's HTTP API directly in its application entry point. The auth Route Handler imports the configured instance from `auth.provider.ts` and exports its `handler` as `GET` and `POST`. The separate backend mounts that handler in `backend/server.ts`. Keep provider imports limited to these auth entry points; other features call `auth.queries.ts` for session verification. The HTTP frontend forwards auth requests through `platform/auth/server.ts`.
+Mount a provider's HTTP API directly in its application entry point. The auth Route Handler imports the configured instance from `auth.provider.ts` and exports its `handler` as `GET` and `POST`. The separate backend mounts that handler in `apps/api/src/app.ts`. Keep provider imports limited to these auth entry points; other features call `auth.queries.ts` for session verification. The HTTP frontend forwards auth requests through `platform/auth/server.ts`.
 
 Mark ordinary server modules with `import 'server-only'`, including public queries and use cases. Next.js uses that marker to reject accidental Client Component imports. A Server Action module uses `'use server'` so the UI can invoke its exports through Next.js. Keep browser API and query-option modules free of server-only dependencies. [Next.js runtime boundaries](https://nextjs.org/docs/app/getting-started/server-and-client-components#preventing-environment-poisoning), [Server Functions](https://nextjs.org/docs/app/api-reference/directives/use-server)
 

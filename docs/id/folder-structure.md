@@ -200,6 +200,14 @@ Tambahkan `order.queries.ts` saat kode server perlu mengambil data fitur secara 
 
 Pastikan `order.api.ts` aman diimpor browser. Konfigurasi klien HTTP atau RPC bersama berada di `platform`, sedangkan request khusus pesanan berada di fitur. Request yang memakai kredensial privat harus tetap di server dan menggunakan klien platform khusus server. [Tanggung jawab server dan klien Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#when-to-use-server-and-client-components)
 
+## Pertahankan kepemilikan fitur antar-aplikasi dalam workspace {#keep-feature-ownership-across-workspace-applications}
+
+Saat frontend dan backend berada dalam satu monorepo, terapkan pembagian tanggung jawab fitur, platform, dan shared di setiap aplikasi. Next.js tetap menyimpan route dan penyusunan halaman di `app`; backend memakai entry point framework-nya untuk memanggil operasi fitur.
+
+Misalnya, fitur orders di `apps/web` mengurus UI, request API, dan kebijakan cache browser. Fitur yang sama di `apps/api` mengurus query dengan pemeriksaan akses, mutasi bisnis, dan penyimpanan data. Menyatukan keduanya dalam satu repository tidak mengubah aplikasi mana yang memeriksa izin pembatalan atau menyimpan pesanan.
+
+Buat package seperti `packages/contracts` saat kedua aplikasi membutuhkan schema input atau response yang sama. Pastikan ekspornya aman diimpor browser dan kelompokkan menurut fitur yang menentukan makna datanya. Klien database dan operasi server tetap berada di backend. [README contoh HTTP](https://github.com/ishk-sftckz/RFAStack/tree/main/examples/react-query-http#readme) menjelaskan pengaturan Bun workspace dan Turborepo untuk susunan ini.
+
 ## Simpan definisi data dan aturan murni di `model/` {#put-definitions-and-pure-business-behavior-in-model}
 
 ID pesanan bisa lolos validasi schema meskipun pesanannya sudah dikirim. Jadi, input yang valid belum cukup untuk mengizinkan pembatalan.
@@ -306,7 +314,7 @@ Sediakan query dan use case sebagai operasi server publik fitur. Route dan fitur
 
 Jika memakai RPC, ekspor prosedur dari `order.rpc.ts` untuk dipasang di router aplikasi. Operasi bisnis antarfitur tetap memanggil query dan use case publik secara langsung.
 
-Pasang API HTTP provider di entry point aplikasi. Route Handler auth mengimpor instance dari `auth.provider.ts`, lalu mengekspor `handler`-nya sebagai `GET` dan `POST`. Untuk backend terpisah, pasang handler di `backend/server.ts`. Batasi import provider pada entry point auth ini. Fitur lain memakai `auth.queries.ts` untuk memverifikasi sesi, sementara frontend HTTP meneruskan request auth lewat `platform/auth/server.ts`.
+Pasang API HTTP provider di entry point aplikasi. Route Handler auth mengimpor instance dari `auth.provider.ts`, lalu mengekspor `handler`-nya sebagai `GET` dan `POST`. Untuk backend terpisah, pasang handler di `apps/api/src/app.ts`. Batasi import provider pada entry point auth ini. Fitur lain memakai `auth.queries.ts` untuk memverifikasi sesi, sementara frontend HTTP meneruskan request auth lewat `platform/auth/server.ts`.
 
 Tandai modul server biasa, termasuk query dan use case publik, dengan `import 'server-only'`. Next.js akan menolak import yang tidak sengaja masuk ke Client Component. Modul Server Action memakai `'use server'` agar UI bisa memanggilnya melalui Next.js. Modul API browser dan query options harus bebas dependensi khusus server. [Batas runtime Next.js](https://nextjs.org/docs/app/getting-started/server-and-client-components#preventing-environment-poisoning), [Server Functions](https://nextjs.org/docs/app/api-reference/directives/use-server)
 

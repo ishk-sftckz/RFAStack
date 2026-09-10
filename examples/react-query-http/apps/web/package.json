@@ -1,0 +1,31 @@
+{
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "name": "@rfastack/http-web",
+  "scripts": {
+    "dev": "bun --bun next dev -p 3102",
+    "build": "bun --bun next build",
+    "start": "bun --bun next start -p 3102",
+    "typecheck": "bun --bun next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "better-auth": "1.7.3",
+    "zod": "4.3.6",
+    "server-only": "0.0.1",
+    "@tanstack/react-query": "5.102.8",
+    "@elysia/eden": "1.4.10",
+    "@rfastack/http-contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.15",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3",
+    "@rfastack/http-api": "workspace:*",
+    "elysia": "1.4.30"
+  }
+}

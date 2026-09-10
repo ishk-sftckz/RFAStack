@@ -4,10 +4,10 @@
   "type": "module",
   "packageManager": "bun@1.4.0",
   "scripts": {
-    "dev": "bun run --parallel dev:next dev:backend",
-    "build": "bun --bun next build",
-    "start": "bun run --parallel start:next start:backend",
-    "typecheck": "bun --bun next typegen && tsc --noEmit",
+    "dev": "bun scripts/workspace.ts dev",
+    "build": "bun scripts/workspace.ts build",
+    "start": "bun scripts/workspace.ts start",
+    "typecheck": "bun scripts/workspace.ts typecheck && tsc --noEmit",
     "check:boundaries": "bun scripts/check-boundaries.ts",
     "db:up": "docker compose up -d --wait",
     "db:generate": "drizzle-kit generate",
@@ -18,22 +18,7 @@
     "test:unit": "vitest run",
     "carrier": "bun scripts/carrier.ts",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "dev:next": "bun --bun next dev -p 3102",
-    "start:next": "bun --bun next start -p 3102",
-    "dev:backend": "bun --watch backend/server.ts",
-    "start:backend": "bun backend/server.ts"
-  },
-  "dependencies": {
-    "next": "16.3.4",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
-    "better-auth": "1.7.3",
-    "drizzle-orm": "0.45.2",
-    "pg": "8.16.3",
-    "zod": "4.3.6",
-    "server-only": "0.0.1",
-    "@tanstack/react-query": "5.102.8"
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
@@ -46,10 +31,22 @@
     "typescript": "5.9.3",
     "vitest": "3.2.4",
     "@types/bun": "1.3.10",
-    "prettier": "3.6.2"
+    "prettier": "3.6.2",
+    "better-auth": "1.7.3",
+    "drizzle-orm": "0.45.2",
+    "pg": "8.16.3",
+    "turbo": "2.10.12",
+    "@elysia/eden": "1.4.10",
+    "elysia": "1.4.30",
+    "@rfastack/http-api": "workspace:*",
+    "@rfastack/http-contracts": "workspace:*"
   },
   "engines": {
     "node": ">=22"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }

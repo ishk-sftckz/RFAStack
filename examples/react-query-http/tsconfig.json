@@ -13,16 +13,11 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@backend/*": ["./backend/*"]
+      "@/*": ["./apps/web/src/*"],
+      "@backend/*": ["./apps/api/src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
+  "include": ["tests/**/*.ts", "scripts/**/*.ts", "*.config.ts"],
   "exclude": ["node_modules"]
 }

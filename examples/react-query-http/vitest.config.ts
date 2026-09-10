@@ -9,8 +9,8 @@ if (existsSync('.env')) {
 export default defineConfig({
   resolve: {
     alias: {
-      '@': resolve('src'),
-      '@backend': resolve('backend'),
+      '@': resolve('apps/web/src'),
+      '@backend': resolve('apps/api/src'),
       'server-only': resolve('tests/server-only.ts'),
     },
   },
